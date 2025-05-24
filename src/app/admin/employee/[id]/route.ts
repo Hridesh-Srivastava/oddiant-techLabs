@@ -1,13 +1,13 @@
+// app/admin/employee/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } } // This is the correct signature
 ) {
   try {
-    const { params } = context;
     const employeeId = params.id;
 
     if (!employeeId) {
@@ -17,17 +17,17 @@ export async function GET(
       );
     }
 
-    // Connect to database
+    // Database connection
     const { db } = await connectToDatabase();
 
-    // Find employee by ID
+    // Employee query
     let employee;
     try {
       employee = await db
         .collection("employees")
         .findOne({ _id: new ObjectId(employeeId) });
     } catch (error) {
-      console.error("Error finding employee by ID:", error);
+      console.error("MongoDB query error:", error);
       return NextResponse.json(
         { success: false, message: "Invalid employee ID format" },
         { status: 400 }
@@ -41,26 +41,22 @@ export async function GET(
       );
     }
 
-    // Remove sensitive information
-    const { password, ...employeeData } = employee;
+    // Remove sensitive data
+    const { password, ...safeEmployeeData } = employee;
 
-    // Add cache control headers to prevent caching
+    // Response headers
     const headers = new Headers();
-    headers.append("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
-    headers.append("Pragma", "no-cache");
-    headers.append("Expires", "0");
+    headers.set("Cache-Control", "no-store, max-age=0");
+    headers.set("Pragma", "no-cache");
 
     return NextResponse.json(
-      { success: true, employee: employeeData },
-      {
-        status: 200,
-        headers: headers,
-      }
+      { success: true, employee: safeEmployeeData },
+      { status: 200, headers }
     );
   } catch (error) {
-    console.error("Error fetching employee:", error);
+    console.error("Server error:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to fetch employee" },
+      { success: false, message: "Internal server error" },
       { status: 500 }
     );
   }
