@@ -1,38 +1,27 @@
-// app/admin/employee/[id]/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } } // This is the correct signature
+  request: Request,
+  { params }: { params: { id: string } }
 ) {
   try {
     const employeeId = params.id;
 
-    if (!employeeId) {
-      return NextResponse.json(
-        { success: false, message: "Employee ID is required" },
-        { status: 400 }
-      );
-    }
-
-    // Database connection
-    const { db } = await connectToDatabase();
-
-    // Employee query
-    let employee;
-    try {
-      employee = await db
-        .collection("employees")
-        .findOne({ _id: new ObjectId(employeeId) });
-    } catch (error) {
-      console.error("MongoDB query error:", error);
+    // Validate employee ID format first
+    if (!ObjectId.isValid(employeeId)) {
       return NextResponse.json(
         { success: false, message: "Invalid employee ID format" },
         { status: 400 }
       );
     }
+
+    const { db } = await connectToDatabase();
+
+    const employee = await db.collection("employees").findOne({ 
+      _id: new ObjectId(employeeId) 
+    });
 
     if (!employee) {
       return NextResponse.json(
@@ -41,20 +30,22 @@ export async function GET(
       );
     }
 
-    // Remove sensitive data
+    // Remove sensitive fields
     const { password, ...safeEmployeeData } = employee;
 
-    // Response headers
-    const headers = new Headers();
-    headers.set("Cache-Control", "no-store, max-age=0");
-    headers.set("Pragma", "no-cache");
-
     return NextResponse.json(
-      { success: true, employee: safeEmployeeData },
-      { status: 200, headers }
+      { success: true, data: safeEmployeeData },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+          "CDN-Cache-Control": "no-store",
+          "Vercel-CDN-Cache-Control": "no-store"
+        }
+      }
     );
   } catch (error) {
-    console.error("Server error:", error);
+    console.error("Database error:", error);
     return NextResponse.json(
       { success: false, message: "Internal server error" },
       { status: 500 }
