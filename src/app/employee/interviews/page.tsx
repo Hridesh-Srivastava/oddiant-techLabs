@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Calendar, User, Clock, ArrowUpRight } from "lucide-react"
 import { toast, Toaster } from "sonner"
 import { EmployeeNavbar } from "@/components/layout/employee-navbar"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface Interview {
   _id: string
@@ -50,12 +49,18 @@ export default function InterviewsPage() {
 
       const data = await response.json()
 
-      // Sort interviews by date
-      const sortedInterviews = data.interviews.sort((a: Interview, b: Interview) => {
-        return new Date(a.date).getTime() - new Date(b.date).getTime()
-      })
+      // Filter and sort interviews by date - only future interviews
+      const now = new Date()
+      const filteredInterviews = data.interviews
+        .filter((interview: Interview) => {
+          const interviewDate = new Date(interview.date)
+          return interviewDate >= now && interview.status !== "cancelled" && interview.status !== "expired"
+        })
+        .sort((a: Interview, b: Interview) => {
+          return new Date(a.date).getTime() - new Date(b.date).getTime()
+        })
 
-      setInterviews(sortedInterviews)
+      setInterviews(filteredInterviews)
     } catch (error) {
       console.error("Error fetching interviews:", error)
       toast.error("Failed to load interviews")
@@ -79,36 +84,20 @@ export default function InterviewsPage() {
   // Filter interviews for today's interviews
   const today = new Date()
   today.setHours(0, 0, 0, 0)
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
 
   const todayInterviews = interviews.filter((interview) => {
     const interviewDate = new Date(interview.date)
     interviewDate.setHours(0, 0, 0, 0)
-    return (
-      interviewDate.getTime() === today.getTime() &&
-      (interview.status === "scheduled" || interview.status === "confirmed")
-    )
+    return interviewDate.getTime() === today.getTime()
   })
 
   // Filter interviews for upcoming interviews (future dates only)
   const upcomingInterviews = interviews.filter((interview) => {
     const interviewDate = new Date(interview.date)
     interviewDate.setHours(0, 0, 0, 0)
-    return (
-      interviewDate.getTime() > today.getTime() &&
-      (interview.status === "scheduled" || interview.status === "confirmed" || interview.status === "rescheduled")
-    )
-  })
-
-  // Filter interviews for past interviews or completed/cancelled interviews
-  const pastInterviews = interviews.filter((interview) => {
-    const interviewDate = new Date(interview.date)
-    interviewDate.setHours(0, 0, 0, 0)
-    return (
-      interviewDate.getTime() < today.getTime() ||
-      interview.status === "completed" ||
-      interview.status === "cancelled" ||
-      interview.status === "expired"
-    )
+    return interviewDate.getTime() >= tomorrow.getTime()
   })
 
   return (
@@ -177,114 +166,52 @@ export default function InterviewsPage() {
               </CardContent>
             </Card>
 
-            {/* Upcoming/Past Interviews */}
+            {/* Upcoming Interviews */}
             <Card>
-              <CardContent className="pt-6">
-                <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="mb-4">
-                    <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-                    <TabsTrigger value="past">Past</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="upcoming">
-                    {upcomingInterviews.length > 0 ? (
-                      <div className="space-y-4">
-                        {upcomingInterviews.map((interview) => (
-                          <div
-                            key={interview._id}
-                            onClick={() => router.push(`/employee/interviews/${interview._id}`)}
-                            className="flex items-start border rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                          >
-                            <div className="bg-purple-100 dark:bg-purple-900 p-3 rounded-full mr-4">
-                              <Calendar className="h-6 w-6 text-purple-600 dark:text-purple-300" />
+              <CardHeader>
+                <CardTitle className="text-xl">Upcoming Interviews</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {upcomingInterviews.length > 0 ? (
+                  <div className="space-y-4">
+                    {upcomingInterviews.map((interview) => (
+                      <div
+                        key={interview._id}
+                        onClick={() => router.push(`/employee/interviews/${interview._id}`)}
+                        className="flex items-start border rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      >
+                        <div className="bg-purple-100 dark:bg-purple-900 p-3 rounded-full mr-4">
+                          <Calendar className="h-6 w-6 text-purple-600 dark:text-purple-300" />
+                        </div>
+                        <div className="flex-1 mr-4">
+                          <h3 className="font-medium mb-1">{interview.position}</h3>
+                          <div className="flex flex-wrap gap-2 text-sm text-gray-500 dark:text-gray-400">
+                            <div className="flex items-center">
+                              <User className="h-4 w-4 mr-1" />
+                              {interview.candidate?.name || "Unknown Candidate"}
                             </div>
-                            <div className="flex-1 mr-4">
-                              <h3 className="font-medium mb-1">{interview.position}</h3>
-                              <div className="flex flex-wrap gap-2 text-sm text-gray-500 dark:text-gray-400">
-                                <div className="flex items-center">
-                                  <User className="h-4 w-4 mr-1" />
-                                  {interview.candidate?.name || "Unknown Candidate"}
-                                </div>
-                                <div className="flex items-center">
-                                  <Calendar className="h-4 w-4 mr-1" />
-                                  {formatDate(interview.date)}
-                                </div>
-                                <div className="flex items-center">
-                                  <Clock className="h-4 w-4 mr-1" />
-                                  {interview.time}
-                                </div>
-                              </div>
+                            <div className="flex items-center">
+                              <Calendar className="h-4 w-4 mr-1" />
+                              {formatDate(interview.date)}
                             </div>
-                            <ArrowUpRight className="h-5 w-5 text-gray-400" />
+                            <div className="flex items-center">
+                              <Clock className="h-4 w-4 mr-1" />
+                              {interview.time}
+                            </div>
                           </div>
-                        ))}
+                        </div>
+                        <ArrowUpRight className="h-5 w-5 text-gray-400" />
                       </div>
-                    ) : (
-                      <div className="text-center py-12 border rounded-lg">
-                        <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          No upcoming interviews
-                        </h3>
-                        <p className="text-gray-500 dark:text-gray-400">Schedule an interview to get started</p>
-                      </div>
-                    )}
-                  </TabsContent>
-
-                  <TabsContent value="past">
-                    {pastInterviews.length > 0 ? (
-                      <div className="space-y-4">
-                        {pastInterviews.map((interview) => (
-                          <div
-                            key={interview._id}
-                            onClick={() => router.push(`/employee/interviews/${interview._id}`)}
-                            className="flex items-start border rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                          >
-                            <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-full mr-4">
-                              <Calendar className="h-6 w-6 text-gray-600 dark:text-gray-300" />
-                            </div>
-                            <div className="flex-1 mr-4">
-                              <div className="flex justify-between">
-                                <h3 className="font-medium mb-1">{interview.position}</h3>
-                                <span
-                                  className={`text-xs font-medium px-2 py-1 rounded-full ${
-                                    interview.status === "completed"
-                                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                                      : interview.status === "expired"
-                                        ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                                        : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                                  }`}
-                                >
-                                  {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
-                                </span>
-                              </div>
-                              <div className="flex flex-wrap gap-2 text-sm text-gray-500 dark:text-gray-400">
-                                <div className="flex items-center">
-                                  <User className="h-4 w-4 mr-1" />
-                                  {interview.candidate?.name || "Unknown Candidate"}
-                                </div>
-                                <div className="flex items-center">
-                                  <Calendar className="h-4 w-4 mr-1" />
-                                  {formatDate(interview.date)}
-                                </div>
-                                <div className="flex items-center">
-                                  <Clock className="h-4 w-4 mr-1" />
-                                  {interview.time}
-                                </div>
-                              </div>
-                            </div>
-                            <ArrowUpRight className="h-5 w-5 text-gray-400" />
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-12 border rounded-lg">
-                        <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          No past interviews
-                        </h3>
-                        <p className="text-gray-500 dark:text-gray-400">Past interviews will appear here</p>
-                      </div>
-                    )}
-                  </TabsContent>
-                </Tabs>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 border rounded-lg">
+                    <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      No upcoming interviews
+                    </h3>
+                    <p className="text-gray-500 dark:text-gray-400">Schedule an interview to get started</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </>

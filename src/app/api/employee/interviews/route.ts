@@ -16,79 +16,82 @@ export async function GET(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Find employee to get company ID
+    // Find employee to get company information
     const employee = await db.collection("employees").findOne({ _id: new ObjectId(userId) })
 
     if (!employee) {
       return NextResponse.json({ message: "Employee not found" }, { status: 404 })
     }
 
-    // Get company ID for data isolation
-    const companyId = employee.companyId || employee._id.toString()
+    console.log("Fetching interviews for employee:", userId)
 
-    // Get interviews for this employee only - proper data isolation
-    const interviews = await db
-      .collection("interviews")
-      .find({
-        $or: [{ scheduledBy: new ObjectId(userId) }, { employeeId: new ObjectId(userId) }, { companyId: companyId }],
-      })
-      .toArray()
-
-    // Get current date for filtering
+    // Get current date and time for filtering
+    const now = new Date()
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    // Automatically delete or mark expired interviews
-    const pastInterviews = interviews.filter((interview) => {
-      const interviewDate = new Date(interview.date)
-      interviewDate.setHours(0, 0, 0, 0)
-      return interviewDate < today && interview.status === "scheduled"
+    // First, automatically delete or mark expired interviews that are past
+    const expiredResult = await db.collection("interviews").deleteMany({
+      date: { $lt: today },
+      status: { $in: ["scheduled", "confirmed"] },
     })
 
-    if (pastInterviews.length > 0) {
-      console.log(`Updating ${pastInterviews.length} past interviews to "expired" status`)
+    console.log(`Deleted ${expiredResult.deletedCount} past interviews`)
 
-      // Update expired interviews in the database
-      const bulkOps = pastInterviews.map((interview) => ({
-        updateOne: {
-          filter: { _id: interview._id },
-          update: {
-            $set: {
-              status: "expired",
-              updatedAt: new Date(),
-            },
+    // Also delete very old expired interviews (older than 7 days)
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+    const oldExpiredResult = await db.collection("interviews").deleteMany({
+      date: { $lt: sevenDaysAgo },
+      status: "expired",
+    })
+
+    console.log(`Deleted ${oldExpiredResult.deletedCount} old expired interviews`)
+
+    // Get only current and future interviews for this employee
+    const interviews = await db
+      .collection("interviews")
+      .find({
+        $and: [
+          // Date filter - only today and future dates
+          { date: { $gte: today } },
+          // Employee/Company filter for data isolation
+          {
+            $or: [
+              { scheduledBy: new ObjectId(userId) },
+              { employeeId: new ObjectId(userId) },
+              { createdBy: new ObjectId(userId) },
+              { companyId: employee._id.toString() },
+              { companyName: employee.companyName },
+            ],
           },
-        },
-      }))
+          // Status filter - exclude cancelled and expired
+          { status: { $nin: ["cancelled", "expired", "deleted"] } },
+        ],
+      })
+      .sort({ date: 1, time: 1 }) // Sort by date and time ascending
+      .toArray()
 
-      await db.collection("interviews").bulkWrite(bulkOps)
-
-      // Update the interview objects in memory as well
-      for (const interview of interviews) {
-        const interviewDate = new Date(interview.date)
-        interviewDate.setHours(0, 0, 0, 0)
-
-        if (interviewDate < today && interview.status === "scheduled") {
-          interview.status = "expired"
-        }
-      }
-    }
+    console.log(`Found ${interviews.length} current/future interviews for employee ${userId}`)
 
     // Format interviews with candidate details
     const formattedInterviews = await Promise.all(
       interviews.map(async (interview) => {
-        // Try to get candidate details
         let candidateName = "Unknown Candidate"
         let candidateEmail = ""
 
         try {
           if (interview.candidateId) {
-            // Try candidates collection first
-            let candidate = await db.collection("candidates").findOne({ _id: new ObjectId(interview.candidateId) })
+            // Try to get candidate from both collections
+            let candidate = await db.collection("candidates").findOne({
+              _id: new ObjectId(interview.candidateId),
+            })
 
-            // If not found, try students collection
             if (!candidate) {
-              candidate = await db.collection("students").findOne({ _id: new ObjectId(interview.candidateId) })
+              candidate = await db.collection("students").findOne({
+                _id: new ObjectId(interview.candidateId),
+              })
             }
 
             if (candidate) {
@@ -111,30 +114,23 @@ export async function GET(request: NextRequest) {
             email: candidateEmail,
           },
           position: interview.position,
-          date: new Date(interview.date).toISOString(),
+          date: interview.date,
           time: interview.time,
           status: interview.status,
-          jobId: interview.jobId || undefined,
+          jobId: interview.jobId,
           meetingLink: interview.meetingLink,
           notes: interview.notes,
           duration: interview.duration,
+          scheduledBy: interview.scheduledBy,
+          employeeId: interview.employeeId,
+          companyId: interview.companyId,
         }
       }),
     )
 
-    // Add cache control headers to prevent caching
-    const headers = new Headers()
-    headers.append("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
-    headers.append("Pragma", "no-cache")
-    headers.append("Expires", "0")
+    console.log(`Returning ${formattedInterviews.length} formatted interviews`)
 
-    return NextResponse.json(
-      { success: true, interviews: formattedInterviews },
-      {
-        status: 200,
-        headers: headers,
-      },
-    )
+    return NextResponse.json({ success: true, interviews: formattedInterviews }, { status: 200 })
   } catch (error) {
     console.error("Error fetching interviews:", error)
     return NextResponse.json({ success: false, message: "Failed to fetch interviews" }, { status: 500 })
@@ -158,27 +154,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 })
     }
 
+    // Validate that the interview date is not in the past
+    const interviewDate = new Date(date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    if (interviewDate < today) {
+      return NextResponse.json(
+        { success: false, message: "Cannot schedule interview for a past date" },
+        { status: 400 },
+      )
+    }
+
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Find employee to get company ID
+    // Find employee to get company information
     const employee = await db.collection("employees").findOne({ _id: new ObjectId(userId) })
 
     if (!employee) {
       return NextResponse.json({ message: "Employee not found" }, { status: 404 })
     }
 
-    // Get company ID for data isolation
-    const companyId = employee.companyId || employee._id.toString()
-
     // Find candidate (check both collections)
     let candidate = null
-
     try {
-      // Try candidates collection first
       candidate = await db.collection("candidates").findOne({ _id: new ObjectId(candidateId) })
-
-      // If not found, try students collection
       if (!candidate) {
         candidate = await db.collection("students").findOne({ _id: new ObjectId(candidateId) })
       }
@@ -190,7 +191,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Candidate not found" }, { status: 404 })
     }
 
-    // Create new interview
+    // Create new interview with proper data isolation
     const newInterview = {
       candidateId: new ObjectId(candidateId),
       jobId: jobId ? new ObjectId(jobId) : null,
@@ -198,33 +199,39 @@ export async function POST(request: NextRequest) {
       date: new Date(date),
       time,
       duration: Number.parseInt(duration, 10) || 60,
-      interviewers,
+      interviewers: Array.isArray(interviewers) ? interviewers : [],
       meetingLink,
       notes,
-      companyId: companyId,
+      // Data isolation fields
       scheduledBy: new ObjectId(userId),
-      employeeId: new ObjectId(userId), // Added for proper data isolation
+      employeeId: new ObjectId(userId),
+      companyId: employee._id.toString(),
+      companyName: employee.companyName,
+      // Status and timestamps
       status: "scheduled",
       createdAt: new Date(),
       updatedAt: new Date(),
+      createdBy: new ObjectId(userId),
     }
+
+    console.log("Creating interview with data:", newInterview)
 
     const result = await db.collection("interviews").insertOne(newInterview)
 
-    // If jobId is provided, update the job's interview count
+    console.log("Interview created with ID:", result.insertedId)
+
+    // Update job's interview count if jobId is provided
     if (jobId) {
       await db.collection("jobs").updateOne({ _id: new ObjectId(jobId) }, { $inc: { interviews: 1 } })
     }
 
-    // Update candidate status to "Interview" if applicable
+    // Update candidate status
     if (candidate) {
-      // Try to update in candidates collection
       await db.collection("candidates").updateOne({ _id: new ObjectId(candidateId) }, { $set: { status: "Interview" } })
 
-      // Try to update in students collection
       await db.collection("students").updateOne({ _id: new ObjectId(candidateId) }, { $set: { status: "Interview" } })
 
-      // Update job application status
+      // Update job application status if applicable
       if (jobId) {
         await db.collection("job_applications").updateOne(
           {
@@ -250,7 +257,6 @@ export async function POST(request: NextRequest) {
 
     // Send email notification to candidate
     try {
-      // Get candidate email - handle different collection schemas
       const candidateEmail = candidate.email
       const candidateName =
         candidate.name || `${candidate.firstName || ""} ${candidate.lastName || ""}`.trim() || "Candidate"
@@ -295,7 +301,6 @@ export async function POST(request: NextRequest) {
       }
     } catch (emailError) {
       console.error("Error sending interview notification email:", emailError)
-      // Continue with the process even if email fails
     }
 
     return NextResponse.json(

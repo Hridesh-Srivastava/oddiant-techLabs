@@ -10,39 +10,32 @@ export async function GET() {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    // Find all past interviews that are still scheduled
-    const pastInterviews = await db
-      .collection("interviews")
-      .find({
-        date: { $lt: today },
-        status: "scheduled",
-      })
-      .toArray()
+    // Delete all past interviews that are still scheduled/confirmed
+    const pastInterviewsResult = await db.collection("interviews").deleteMany({
+      date: { $lt: today },
+      status: { $in: ["scheduled", "confirmed"] },
+    })
 
-    console.log(`Found ${pastInterviews.length} past interviews to mark as expired`)
+    console.log(`Deleted ${pastInterviewsResult.deletedCount} past interviews`)
 
-    if (pastInterviews.length > 0) {
-      // Update all past interviews to expired status
-      const bulkOps = pastInterviews.map((interview) => ({
-        updateOne: {
-          filter: { _id: interview._id },
-          update: {
-            $set: {
-              status: "expired",
-              updatedAt: new Date(),
-            },
-          },
-        },
-      }))
+    // Delete very old completed/expired interviews (older than 30 days)
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-      const result = await db.collection("interviews").bulkWrite(bulkOps)
-      console.log(`Updated ${result.modifiedCount} interviews to expired status`)
-    }
+    const oldInterviewsResult = await db.collection("interviews").deleteMany({
+      date: { $lt: thirtyDaysAgo },
+      status: { $in: ["completed", "expired", "cancelled"] },
+    })
+
+    console.log(`Deleted ${oldInterviewsResult.deletedCount} old completed/expired interviews`)
 
     return NextResponse.json(
       {
         success: true,
-        message: `Processed ${pastInterviews.length} past interviews`,
+        message: `Cleanup completed successfully`,
+        deletedPast: pastInterviewsResult.deletedCount,
+        deletedOld: oldInterviewsResult.deletedCount,
+        totalDeleted: pastInterviewsResult.deletedCount + oldInterviewsResult.deletedCount,
       },
       { status: 200 },
     )

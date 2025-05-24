@@ -4,7 +4,19 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, User, Calendar, Clock, MapPin, Video, Edit, Trash2, Briefcase } from "lucide-react"
+import {
+  ArrowLeft,
+  User,
+  Calendar,
+  Clock,
+  MapPin,
+  Video,
+  Edit,
+  Trash2,
+  Briefcase,
+  MessageSquare,
+  Star,
+} from "lucide-react"
 import { toast, Toaster } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -30,8 +42,9 @@ interface Interview {
     phone: string
     role: string
     status: string
+    avatar?: string
   }
-  jobId: string
+  jobId?: string
   job?: {
     jobTitle: string
   }
@@ -44,6 +57,14 @@ interface Interview {
   notes: string
   status: string
   location?: string
+  feedback?: Array<{
+    rating: number
+    strengths: string
+    weaknesses: string
+    recommendation: string
+    submittedBy: string
+    submittedAt: string
+  }>
 }
 
 export default function InterviewDetailsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -59,24 +80,43 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
     const fetchInterview = async () => {
       try {
         setIsLoading(true)
-        const response = await fetch(`/api/employee/interviews/${interviewId}`)
+        console.log("Fetching interview with ID:", interviewId)
+
+        const response = await fetch(`/api/employee/interviews/${interviewId}`, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        })
+
+        console.log("Response status:", response.status)
 
         if (!response.ok) {
-          throw new Error("Failed to fetch interview details")
+          const errorData = await response.json().catch(() => ({ message: "Unknown error" }))
+          throw new Error(errorData.message || "Failed to fetch interview details")
         }
 
         const data = await response.json()
-        console.log("Interview data:", data.interview) // Debug log
+        console.log("Interview data received:", data)
+
+        if (!data.success || !data.interview) {
+          throw new Error("Invalid response format")
+        }
+
         setInterview(data.interview)
       } catch (error) {
         console.error("Error fetching interview:", error)
-        toast.error("Failed to load interview details")
+        toast.error(error instanceof Error ? error.message : "Failed to load interview details")
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchInterview()
+    if (interviewId) {
+      fetchInterview()
+    }
   }, [interviewId])
 
   const handleDelete = async () => {
@@ -106,15 +146,33 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
     try {
       const date = new Date(dateString)
       if (isNaN(date.getTime())) return "Not specified"
-      return date.toLocaleDateString()
+      return date.toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
     } catch (e) {
       console.error("Date formatting error:", e)
       return "Not specified"
     }
   }
 
+  const formatTime = (timeString: string) => {
+    if (!timeString) return "Not specified"
+    try {
+      const [hours, minutes] = timeString.split(":")
+      const hour = Number.parseInt(hours, 10)
+      const ampm = hour >= 12 ? "PM" : "AM"
+      const hour12 = hour % 12 || 12
+      return `${hour12}:${minutes} ${ampm}`
+    } catch (error) {
+      return timeString
+    }
+  }
+
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "scheduled":
         return <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">Scheduled</Badge>
       case "completed":
@@ -123,9 +181,24 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
         return <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">Cancelled</Badge>
       case "rescheduled":
         return <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300">Rescheduled</Badge>
+      case "expired":
+        return <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">Expired</Badge>
       default:
-        return <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">{status}</Badge>
+        return (
+          <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">{status || "Unknown"}</Badge>
+        )
     }
+  }
+
+  const isInterviewCompleted = () => {
+    if (!interview) return false
+    const interviewDate = new Date(interview.date)
+    const now = new Date()
+    return interviewDate < now || interview.status?.toLowerCase() === "completed"
+  }
+
+  const hasFeedback = () => {
+    return interview?.feedback && interview.feedback.length > 0
   }
 
   if (isLoading) {
@@ -173,10 +246,12 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Interview Details</h1>
           <div className="flex space-x-2">
-            <Button variant="outline" onClick={() => router.push(`/employee/interviews/${interviewId}/reschedule`)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Reschedule
-            </Button>
+            {!isInterviewCompleted() && (
+              <Button variant="outline" onClick={() => router.push(`/employee/interviews/${interviewId}/reschedule`)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Reschedule
+              </Button>
+            )}
             <Button
               variant="outline"
               className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -196,7 +271,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
                 Position: {interview.position || interview.job?.jobTitle || "Not specified"}
               </CardDescription>
             </div>
-            {getStatusBadge(interview.status || "scheduled")}
+            {getStatusBadge(interview.status)}
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -225,7 +300,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
                   <Clock className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium">Time</p>
-                    <p>{interview.time || "Not specified"}</p>
+                    <p>{formatTime(interview.time)}</p>
                     {interview.duration && <p className="text-sm text-gray-500">{interview.duration} minutes</p>}
                   </div>
                 </div>
@@ -293,15 +368,104 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
               </>
             )}
 
+            {/* Feedback Section */}
+            {isInterviewCompleted() && (
+              <>
+                <Separator />
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-medium">Interview Feedback</h3>
+                    {!hasFeedback() && (
+                      <Button onClick={() => router.push(`/employee/interviews/${interviewId}/feedback`)}>
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Add Feedback
+                      </Button>
+                    )}
+                  </div>
+
+                  {hasFeedback() ? (
+                    <div className="space-y-4">
+                      {interview.feedback?.map((feedback, index) => (
+                        <Card key={index} className="p-4">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-center">
+                              <div className="flex items-center mr-4">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`h-4 w-4 ${
+                                      star <= feedback.rating ? "text-yellow-500 fill-yellow-500" : "text-gray-300"
+                                    }`}
+                                  />
+                                ))}
+                                <span className="ml-2 text-sm font-medium">{feedback.rating}/5</span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-medium">{feedback.submittedBy}</p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(feedback.submittedAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div>
+                              <p className="text-sm font-medium text-green-700 dark:text-green-400">Strengths:</p>
+                              <p className="text-sm">{feedback.strengths}</p>
+                            </div>
+
+                            <div>
+                              <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                                Areas for Improvement:
+                              </p>
+                              <p className="text-sm">{feedback.weaknesses}</p>
+                            </div>
+
+                            <div>
+                              <p className="text-sm font-medium text-blue-700 dark:text-blue-400">Recommendation:</p>
+                              <p className="text-sm">{feedback.recommendation}</p>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+
+                      <Button
+                        variant="outline"
+                        onClick={() => router.push(`/employee/interviews/${interviewId}/feedback`)}
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Add Additional Feedback
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                      <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h4 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">No Feedback Yet</h4>
+                      <p className="text-gray-500 dark:text-gray-400 mb-4">
+                        Add your feedback about this interview to help with the hiring decision.
+                      </p>
+                      <Button onClick={() => router.push(`/employee/interviews/${interviewId}/feedback`)}>
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Add Feedback
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
             <div className="flex justify-center space-x-4 mt-6">
               <Button variant="outline" onClick={() => router.push(`/employee/candidates/${interview.candidateId}`)}>
                 <User className="h-4 w-4 mr-2" />
                 View Candidate Profile
               </Button>
-              <Button onClick={() => router.push(`/employee/interviews/${interviewId}/join`)}>
-                <Video className="h-4 w-4 mr-2" />
-                Join Meeting
-              </Button>
+              {!isInterviewCompleted() && interview.meetingLink && (
+                <Button onClick={() => router.push(`/employee/interviews/${interviewId}/join`)}>
+                  <Video className="h-4 w-4 mr-2" />
+                  Join Meeting
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

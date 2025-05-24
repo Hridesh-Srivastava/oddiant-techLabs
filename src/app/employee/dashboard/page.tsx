@@ -1,12 +1,18 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { toast, Toaster } from "sonner"
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast, Toaster } from "sonner";
 import {
   User,
   Briefcase,
@@ -23,183 +29,192 @@ import {
   UserCog,
   BarChart,
   ClipboardCheck,
-} from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Separator } from "@/components/ui/separator"
-import { CandidateSelectionProvider } from "@/components/candidate-selection-context"
-import { useCandidateSelection } from "@/components/candidate-selection-context"
-import { CandidatesFilterBar } from "@/components/candidates/candidates-filter-bar"
-import { FilterDropdown } from "@/components/ats/filter-dropdown"
-import { FilterPanel } from "@/components/ats/filter-panel"
-import { CandidateList } from "@/components/ats/candidate-list"
-import AvatarUpload from "@/components/avatar-upload"
-import JobPostingForm from "@/components/job-posting-form"
-import withAuth from "@/components/auth/withAuth"
-import type { Employee } from "@/types"
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { CandidateSelectionProvider } from "@/components/candidate-selection-context";
+import { useCandidateSelection } from "@/components/candidate-selection-context";
+import { CandidatesFilterBar } from "@/components/candidates/candidates-filter-bar";
+import { FilterDropdown } from "@/components/ats/filter-dropdown";
+import { FilterPanel } from "@/components/ats/filter-panel";
+import { CandidateList } from "@/components/ats/candidate-list";
+import AvatarUpload from "@/components/avatar-upload";
+import JobPostingForm from "@/components/job-posting-form";
+import withAuth from "@/components/auth/withAuth";
+import type { Employee } from "@/types";
 
 interface EmployeeData {
-  _id: string
-  firstName: string
-  lastName: string
-  email: string
-  alternativeEmail?: string
-  designation: string
-  companyName: string
-  companyLocation: string
-  phone: string
-  profileCompleted: boolean
-  avatar?: string
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  alternativeEmail?: string;
+  designation: string;
+  companyName: string;
+  companyLocation: string;
+  phone: string;
+  profileCompleted: boolean;
+  avatar?: string;
   notificationSettings?: {
-    emailNotifications: boolean
-    applicationUpdates: boolean
-    interviewReminders: boolean
-  }
+    emailNotifications: boolean;
+    applicationUpdates: boolean;
+    interviewReminders: boolean;
+  };
 }
 
 interface Candidate {
-  _id: string
-  name: string
-  email: string
-  role: string
-  status: string
-  avatar?: string
-  appliedDate: string
-  skills: string[]
-  location: string
-  yearsOfExperience: number
-  currentPosition: string
-  content: string
-  firstName: string
-  lastName: string
-  phone: string
-  website: string
-  experience: any[]
-  education: any[]
-  matchScore: number
-  gender: string
-  state: string
-  currentSalary: number
-  age: number
-  industry?: string
-  collection?: string
-  employerId: string // Added for data isolation
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  avatar?: string;
+  appliedDate: string;
+  skills: string[];
+  location: string;
+  yearsOfExperience: number;
+  currentPosition: string;
+  content: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  website: string;
+  experience: any[];
+  education: any[];
+  matchScore: number;
+  gender: string;
+  state: string;
+  currentSalary: number;
+  age: number;
+  industry?: string;
+  collection?: string;
+  employerId: string; // Added for data isolation
 }
 
 interface JobPosting {
-  _id: string
-  jobTitle: string
-  department: string
-  jobType: string
-  jobLocation: string
-  applicants?: number
-  daysLeft?: number
-  interviews?: number
-  createdAt: string
-  updatedAt?: string
-  employerId: string // Added for data isolation
+  _id: string;
+  jobTitle: string;
+  department: string;
+  jobType: string;
+  jobLocation: string;
+  applicants?: number;
+  daysLeft?: number;
+  interviews?: number;
+  createdAt: string;
+  updatedAt?: string;
+  employerId: string; // Added for data isolation
 }
 
 interface Interview {
-  _id: string
+  _id: string;
   candidate: {
-    name: string
-    email: string
-  }
-  position: string
-  date: string
-  time: string
-  jobId?: string
-  status: string
-  meetingLink?: string
-  notes?: string
-  duration?: number
-  employerId: string // Added for data isolation
+    name: string;
+    email: string;
+  };
+  position: string;
+  date: string;
+  time: string;
+  jobId?: string;
+  status: string;
+  meetingLink?: string;
+  notes?: string;
+  duration?: number;
+  employerId: string; // Added for data isolation
 }
 
 interface DashboardStats {
-  activeCandidates: number
-  openPositions: number
-  interviewsToday: number
-  hiringSuccessRate: number
+  activeCandidates: number;
+  openPositions: number;
+  interviewsToday: number;
+  hiringSuccessRate: number;
 }
 
 // Define props interface for EmployeeDashboard
 interface EmployeeDashboardProps {
-  userData: Employee | null
+  userData: Employee | null;
 }
 
 // Main component with typed props
 function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const tabParam = searchParams.get("tab")
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
 
-  const [employee, setEmployee] = useState<EmployeeData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState(tabParam || "overview")
-  const [candidates, setCandidates] = useState<Candidate[]>([])
-  const [filteredCandidates, setFilteredCandidates] = useState<Candidate[]>([])
-  const [jobPostings, setJobPostings] = useState<JobPosting[]>([])
-  const [interviews, setInterviews] = useState<Interview[]>([])
+  const [employee, setEmployee] = useState<EmployeeData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState(tabParam || "overview");
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [filteredCandidates, setFilteredCandidates] = useState<Candidate[]>([]);
+  const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
+  const [interviews, setInterviews] = useState<Interview[]>([]);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
     activeCandidates: 0,
     openPositions: 0,
     interviewsToday: 0,
     hiringSuccessRate: 0,
-  })
+  });
   const [notificationSettings, setNotificationSettings] = useState({
     emailNotifications: true,
     applicationUpdates: true,
     interviewReminders: true,
-  })
+  });
   const [personalInfo, setPersonalInfo] = useState({
     firstName: "",
     lastName: "",
     email: "",
     alternativeEmail: "",
     phone: "",
-  })
+  });
   const [passwordInfo, setPasswordInfo] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
-  })
-  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
-  const [isUpdatingNotifications, setIsUpdatingNotifications] = useState(false)
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [lastRefreshed, setLastRefreshed] = useState(new Date())
-  const [isExporting, setIsExporting] = useState(false)
-  const [isSingleExporting, setIsSingleExporting] = useState<string | null>(null)
-  const [emailError, setEmailError] = useState("")
-  const [globalSearchTerm, setGlobalSearchTerm] = useState("")
+  });
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isUpdatingNotifications, setIsUpdatingNotifications] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState(new Date());
+  const [isExporting, setIsExporting] = useState(false);
+  const [isSingleExporting, setIsSingleExporting] = useState<string | null>(
+    null
+  );
+  const [emailError, setEmailError] = useState("");
+  const [globalSearchTerm, setGlobalSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<{
-    candidates: Candidate[]
-    jobs: JobPosting[]
-    interviews: Interview[]
+    candidates: Candidate[];
+    jobs: JobPosting[];
+    interviews: Interview[];
   }>({
     candidates: [],
     jobs: [],
     interviews: [],
-  })
-  const [showSearchResults, setShowSearchResults] = useState(false)
+  });
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   // Get candidate selection context
-  const { selectedCandidates, toggleCandidateSelection, selectAllCandidates, clearSelectedCandidates, isSelected } =
-    useCandidateSelection()
+  const {
+    selectedCandidates,
+    toggleCandidateSelection,
+    selectAllCandidates,
+    clearSelectedCandidates,
+    isSelected,
+  } = useCandidateSelection();
 
   // ATS State Variables
-  const [atsResumes, setAtsResumes] = useState<Candidate[]>([])
-  const [atsFilteredResumes, setAtsFilteredResumes] = useState<Candidate[]>([])
-  const [atsSelectedResume, setAtsSelectedResume] = useState<Candidate | null>(null)
-  const [atsSearchTerm, setAtsSearchTerm] = useState("")
-  const [atsIsLoading, setAtsIsLoading] = useState(true)
-  const [atsIsExporting, setAtsIsExporting] = useState(false)
+  const [atsResumes, setAtsResumes] = useState<Candidate[]>([]);
+  const [atsFilteredResumes, setAtsFilteredResumes] = useState<Candidate[]>([]);
+  const [atsSelectedResume, setAtsSelectedResume] = useState<Candidate | null>(
+    null
+  );
+  const [atsSearchTerm, setAtsSearchTerm] = useState("");
+  const [atsIsLoading, setAtsIsLoading] = useState(true);
+  const [atsIsExporting, setAtsIsExporting] = useState(false);
   const [atsFilters, setAtsFilters] = useState({
     mandatoryKeywords: [],
     preferredKeywords: [],
@@ -220,37 +235,41 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
       laptop: false,
     },
     shiftPreference: "",
-  })
+  });
 
-  const [atsHighlightKeywords, setAtsHighlightKeywords] = useState(true)
+  const [atsHighlightKeywords, setAtsHighlightKeywords] = useState(true);
 
   // Column filter states for ATS candidates
-  const [candidateNameFilter, setCandidateNameFilter] = useState<string[]>([])
-  const [positionFilter, setPositionFilter] = useState<string[]>([])
-  const [statusFilter, setStatusFilter] = useState<string[]>([])
-  const [appliedDateFilter, setAppliedDateFilter] = useState<string[]>([])
+  const [candidateNameFilter, setCandidateNameFilter] = useState<string[]>([]);
+  const [positionFilter, setPositionFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [appliedDateFilter, setAppliedDateFilter] = useState<string[]>([]);
 
   // Sort states
-  const [candidateNameSort, setCandidateNameSort] = useState<"asc" | "desc" | null>(null)
-  const [positionSort, setPositionSort] = useState<"asc" | "desc" | null>(null)
-  const [statusSort, setStatusSort] = useState<"asc" | "desc" | null>(null)
-  const [appliedDateSort, setAppliedDateSort] = useState<"asc" | "desc" | null>(null)
+  const [candidateNameSort, setCandidateNameSort] = useState<
+    "asc" | "desc" | null
+  >(null);
+  const [positionSort, setPositionSort] = useState<"asc" | "desc" | null>(null);
+  const [statusSort, setStatusSort] = useState<"asc" | "desc" | null>(null);
+  const [appliedDateSort, setAppliedDateSort] = useState<"asc" | "desc" | null>(
+    null
+  );
 
   // Effect to update the URL when tab changes
   useEffect(() => {
     if (activeTab !== tabParam) {
-      router.push(`/employee/dashboard?tab=${activeTab}`, { scroll: false })
+      router.push(`/employee/dashboard?tab=${activeTab}`, { scroll: false });
     }
-  }, [activeTab, router, tabParam])
+  }, [activeTab, router, tabParam]);
 
   // Global search function
   const handleGlobalSearch = useCallback(() => {
     if (!globalSearchTerm.trim()) {
-      setShowSearchResults(false)
-      return
+      setShowSearchResults(false);
+      return;
     }
 
-    const searchTermLower = globalSearchTerm.toLowerCase()
+    const searchTermLower = globalSearchTerm.toLowerCase();
 
     // Search in candidates
     const matchedCandidates = candidates.filter(
@@ -259,8 +278,8 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
         candidate.email.toLowerCase().includes(searchTermLower) ||
         candidate.role.toLowerCase().includes(searchTermLower) ||
         candidate.status.toLowerCase().includes(searchTermLower) ||
-        candidate.location.toLowerCase().includes(searchTermLower),
-    )
+        candidate.location.toLowerCase().includes(searchTermLower)
+    );
 
     // Search in jobs
     const matchedJobs = jobPostings.filter(
@@ -268,8 +287,8 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
         job.jobTitle.toLowerCase().includes(searchTermLower) ||
         job.department.toLowerCase().includes(searchTermLower) ||
         job.jobType.toLowerCase().includes(searchTermLower) ||
-        job.jobLocation.toLowerCase().includes(searchTermLower),
-    )
+        job.jobLocation.toLowerCase().includes(searchTermLower)
+    );
 
     // Search in interviews
     const matchedInterviews = interviews.filter(
@@ -278,46 +297,46 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
         interview.candidate.email.toLowerCase().includes(searchTermLower) ||
         interview.position.toLowerCase().includes(searchTermLower) ||
         interview.status.toLowerCase().includes(searchTermLower) ||
-        interview.date.toLowerCase().includes(searchTermLower),
-    )
+        interview.date.toLowerCase().includes(searchTermLower)
+    );
 
     setSearchResults({
       candidates: matchedCandidates,
       jobs: matchedJobs,
       interviews: matchedInterviews,
-    })
+    });
 
-    setShowSearchResults(true)
-  }, [globalSearchTerm, candidates, jobPostings, interviews])
+    setShowSearchResults(true);
+  }, [globalSearchTerm, candidates, jobPostings, interviews]);
 
   // Effect to trigger search when search term changes
   useEffect(() => {
     if (globalSearchTerm.trim()) {
-      handleGlobalSearch()
+      handleGlobalSearch();
     } else {
-      setShowSearchResults(false)
+      setShowSearchResults(false);
     }
-  }, [globalSearchTerm, handleGlobalSearch])
+  }, [globalSearchTerm, handleGlobalSearch]);
 
   // Handle search result click
   const handleSearchResultClick = (type: string, id: string) => {
-    setShowSearchResults(false)
+    setShowSearchResults(false);
 
     if (type === "candidate") {
-      router.push(`/employee/candidates/${id}`)
+      router.push(`/employee/candidates/${id}`);
     } else if (type === "job") {
-      router.push(`/employee/jobs/${id}`)
+      router.push(`/employee/jobs/${id}`);
     } else if (type === "interview") {
-      router.push(`/employee/interviews/${id}`)
+      router.push(`/employee/interviews/${id}`);
     }
-  }
+  };
 
   // Memoized fetch functions to avoid recreating them on every render
   const fetchCandidates = useCallback(async () => {
     try {
       if (!employee || !employee._id) {
-        console.log("No employee data available, skipping candidate fetch")
-        return
+        console.log("No employee data available, skipping candidate fetch");
+        return;
       }
 
       const response = await fetch("/api/employee/candidates", {
@@ -328,20 +347,25 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
           Pragma: "no-cache",
           Expires: "0",
         },
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch candidates")
+        throw new Error("Failed to fetch candidates");
       }
 
-      const data = await response.json()
+      const data = await response.json();
 
       // Filter candidates to only show those belonging to the current employee
       const employeeCandidates = data.candidates.filter((candidate: any) => {
-        return candidate.employerId === employee._id || candidate.companyId === employee._id
-      })
+        return (
+          candidate.employerId === employee._id ||
+          candidate.companyId === employee._id
+        );
+      });
 
-      console.log(`Filtered ${data.candidates.length} candidates to ${employeeCandidates.length} for this employee`)
+      console.log(
+        `Filtered ${data.candidates.length} candidates to ${employeeCandidates.length} for this employee`
+      );
 
       // Format the data
       const formattedCandidates = employeeCandidates.map((candidate: any) => ({
@@ -371,27 +395,27 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
         industry: candidate.industry || "",
         collection: candidate.collection || "candidates",
         employerId: candidate.employerId || employee._id, // Ensure employerId is set
-      }))
+      }));
 
-      setCandidates(formattedCandidates)
-      setFilteredCandidates(formattedCandidates)
+      setCandidates(formattedCandidates);
+      setFilteredCandidates(formattedCandidates);
 
       // Update dashboard stats
       setDashboardStats((prev) => ({
         ...prev,
         activeCandidates: formattedCandidates.length,
-      }))
+      }));
     } catch (error) {
-      console.error("Error fetching candidates:", error)
-      toast.error("Failed to load candidates")
+      console.error("Error fetching candidates:", error);
+      toast.error("Failed to load candidates");
     }
-  }, [employee])
+  }, [employee]);
 
   const fetchJobPostings = useCallback(async () => {
     try {
       if (!employee || !employee._id) {
-        console.log("No employee data available, skipping job postings fetch")
-        return
+        console.log("No employee data available, skipping job postings fetch");
+        return;
       }
 
       const response = await fetch("/api/employee/jobs", {
@@ -401,31 +425,40 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
           "Cache-Control": "no-cache",
           Pragma: "no-cache",
         },
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch job postings")
+        throw new Error("Failed to fetch job postings");
       }
 
-      const data = await response.json()
+      const data = await response.json();
 
       // Filter jobs to only show those belonging to the current employee
       const employeeJobs = data.jobs.filter((job: any) => {
-        return job.employerId === employee._id || job.companyId === employee._id
-      })
+        return (
+          job.employerId === employee._id || job.companyId === employee._id
+        );
+      });
 
-      console.log(`Filtered ${data.jobs.length} jobs to ${employeeJobs.length} for this employee`)
+      console.log(
+        `Filtered ${data.jobs.length} jobs to ${employeeJobs.length} for this employee`
+      );
 
       // Format the data
       const formattedJobs = employeeJobs.map((job: any) => {
         // Calculate days left based on job duration or default to 30 days
-        const createdDate = new Date(job.createdAt)
-        const durationDays = job.duration || 30
-        const expiryDate = new Date(createdDate)
-        expiryDate.setDate(createdDate.getDate() + durationDays)
+        const createdDate = new Date(job.createdAt);
+        const durationDays = job.duration || 30;
+        const expiryDate = new Date(createdDate);
+        expiryDate.setDate(createdDate.getDate() + durationDays);
 
-        const today = new Date()
-        const daysLeft = Math.max(0, Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)))
+        const today = new Date();
+        const daysLeft = Math.max(
+          0,
+          Math.ceil(
+            (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+          )
+        );
 
         return {
           _id: job._id,
@@ -437,124 +470,129 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
           daysLeft: daysLeft,
           interviews: job.interviews || 0,
           createdAt: new Date(job.createdAt).toLocaleDateString(),
-          updatedAt: job.updatedAt ? new Date(job.updatedAt).toISOString() : undefined,
+          updatedAt: job.updatedAt
+            ? new Date(job.updatedAt).toISOString()
+            : undefined,
           employerId: job.employerId || employee._id, // Ensure employerId is set
-        }
-      })
+        };
+      });
 
-      setJobPostings(formattedJobs)
+      setJobPostings(formattedJobs);
 
       // Update dashboard stats
       setDashboardStats((prev) => ({
         ...prev,
         openPositions: formattedJobs.length,
-      }))
+      }));
     } catch (error) {
-      console.error("Error fetching job postings:", error)
-      toast.error("Failed to load job postings")
+      console.error("Error fetching job postings:", error);
+      toast.error("Failed to load job postings");
     }
-  }, [employee])
+  }, [employee]);
 
   const fetchInterviews = useCallback(async () => {
     try {
       if (!employee || !employee._id) {
-        console.log("No employee data available, skipping interviews fetch")
-        return
+        console.log("No employee data available, skipping interviews fetch");
+        return;
       }
 
       const response = await fetch("/api/employee/interviews", {
-        // Add cache busting parameter to prevent caching
         cache: "no-store",
         headers: {
-          "Cache-Control": "no-cache",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
           Pragma: "no-cache",
+          Expires: "0",
         },
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch interviews")
+        throw new Error("Failed to fetch interviews");
       }
 
-      const data = await response.json()
+      const data = await response.json();
+      console.log("Fetched interviews data:", data);
 
-      // Filter interviews to only show those belonging to the current employee
-      const employeeInterviews = data.interviews.filter((interview: any) => {
+      // Filter only current and future interviews
+      const now = new Date();
+      const currentInterviews = data.interviews.filter((interview: any) => {
+        const interviewDate = new Date(interview.date);
         return (
-          interview.scheduledBy === employee._id ||
-          interview.employeeId === employee._id ||
-          interview.companyId === employee._id
-        )
-      })
-
-      console.log(`Filtered ${data.interviews.length} interviews to ${employeeInterviews.length} for this employee`)
+          interviewDate >= now &&
+          interview.status !== "cancelled" &&
+          interview.status !== "expired"
+        );
+      });
 
       // Format the data
-      const formattedInterviews = employeeInterviews.map((interview: any) => {
-        const interviewDate = new Date(interview.date)
-        return {
-          _id: interview._id,
-          candidate: interview.candidate,
-          position: interview.position,
-          date: interviewDate.toLocaleDateString(),
-          time: interview.time,
-          jobId: interview.jobId || undefined,
-          status: interview.status || "Scheduled",
-          meetingLink: interview.meetingLink,
-          notes: interview.notes,
-          duration: interview.duration,
-          employerId: interview.scheduledBy || employee._id, // Ensure employerId is set
-        }
-      })
+      const formattedInterviews = currentInterviews.map((interview: any) => ({
+        _id: interview._id,
+        candidate: interview.candidate,
+        position: interview.position,
+        date: new Date(interview.date).toLocaleDateString(),
+        time: interview.time,
+        jobId: interview.jobId,
+        status: interview.status || "scheduled",
+        meetingLink: interview.meetingLink,
+        notes: interview.notes,
+        duration: interview.duration,
+        employerId: interview.scheduledBy || employee._id,
+      }));
 
-      setInterviews(formattedInterviews)
+      setInterviews(formattedInterviews);
 
       // Count today's interviews
-      const today = new Date().toDateString()
-      const todayInterviews = employeeInterviews.filter(
-        (interview: any) => new Date(interview.date).toDateString() === today,
-      ).length
+      const today = new Date().toDateString();
+      const todayInterviews = formattedInterviews.filter(
+        (interview: any) => new Date(interview.date).toDateString() === today
+      ).length;
 
       // Update dashboard stats
       setDashboardStats((prev) => ({
         ...prev,
         interviewsToday: todayInterviews,
-        hiringSuccessRate: 78, // Default value, could be calculated based on actual data
-      }))
+      }));
 
-      // Update job postings with interview counts
-      updateJobPostingsWithInterviewCounts(formattedInterviews)
+      console.log(
+        `Set ${formattedInterviews.length} interviews, ${todayInterviews} today`
+      );
     } catch (error) {
-      console.error("Error fetching interviews:", error)
-      toast.error("Failed to load interviews")
+      console.error("Error fetching interviews:", error);
+      toast.error("Failed to load interviews");
     }
-  }, [employee])
+  }, [employee]);
 
   // Update job postings with interview counts
-  const updateJobPostingsWithInterviewCounts = useCallback((interviewsData: Interview[]) => {
-    setJobPostings((prevJobs) => {
-      return prevJobs.map((job) => {
-        // Count interviews for this job
-        const jobInterviews = interviewsData.filter(
-          (interview) => interview.jobId === job._id || interview.position.includes(job.jobTitle),
-        ).length
+  const updateJobPostingsWithInterviewCounts = useCallback(
+    (interviewsData: Interview[]) => {
+      setJobPostings((prevJobs) => {
+        return prevJobs.map((job) => {
+          // Count interviews for this job
+          const jobInterviews = interviewsData.filter(
+            (interview) =>
+              interview.jobId === job._id ||
+              interview.position.includes(job.jobTitle)
+          ).length;
 
-        return {
-          ...job,
-          interviews: jobInterviews,
-        }
-      })
-    })
-  }, [])
+          return {
+            ...job,
+            interviews: jobInterviews,
+          };
+        });
+      });
+    },
+    []
+  );
 
   // Effect to fetch employee data on mount
   useEffect(() => {
     const fetchEmployeeData = async () => {
       try {
-        setIsLoading(true)
+        setIsLoading(true);
 
         // Use the user data passed from withAuth HOC
         if (userData) {
-          setEmployee(userData)
+          setEmployee(userData);
 
           // Initialize personal info form
           setPersonalInfo({
@@ -563,15 +601,15 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
             email: userData.email || "",
             alternativeEmail: userData.alternativeEmail || "",
             phone: userData.phone || "",
-          })
+          });
 
           // Initialize notification settings
           if (userData.notificationSettings) {
-            setNotificationSettings(userData.notificationSettings)
+            setNotificationSettings(userData.notificationSettings);
           }
 
           // Fetch dashboard data
-          await fetchDashboardData()
+          await fetchDashboardData();
         } else {
           // Fallback to API call if user data is not available
           const response = await fetch("/api/employee/profile", {
@@ -581,19 +619,19 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
               Pragma: "no-cache",
               Expires: "0",
             },
-          })
+          });
 
           if (response.status === 401) {
-            router.push("/auth/employee/login")
-            return
+            router.push("/auth/employee/login");
+            return;
           }
 
           if (!response.ok) {
-            throw new Error("Failed to fetch employee data")
+            throw new Error("Failed to fetch employee data");
           }
 
-          const data = await response.json()
-          setEmployee(data.employee)
+          const data = await response.json();
+          setEmployee(data.employee);
 
           // Initialize personal info form
           setPersonalInfo({
@@ -602,46 +640,52 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
             email: data.employee.email || "",
             alternativeEmail: data.employee.alternativeEmail || "",
             phone: data.employee.phone || "",
-          })
+          });
 
           // Initialize notification settings
           if (data.employee.notificationSettings) {
-            setNotificationSettings(data.employee.notificationSettings)
+            setNotificationSettings(data.employee.notificationSettings);
           }
 
           // Fetch dashboard data
-          await fetchDashboardData()
+          await fetchDashboardData();
         }
       } catch (error) {
-        toast.error("Error loading profile data")
-        console.error(error)
+        toast.error("Error loading profile data");
+        console.error(error);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchEmployeeData()
-  }, [router, userData])
+    fetchEmployeeData();
+  }, [router, userData]);
 
   // Effect to fetch data after employee data is loaded
   useEffect(() => {
     if (employee && employee._id) {
       // Fetch additional data
-      Promise.all([fetchCandidates(), fetchJobPostings(), fetchInterviews()]).catch((error) => {
-        console.error("Error fetching dashboard data:", error)
-      })
+      Promise.all([
+        fetchCandidates(),
+        fetchJobPostings(),
+        fetchInterviews(),
+      ]).catch((error) => {
+        console.error("Error fetching dashboard data:", error);
+      });
     }
-  }, [employee, fetchCandidates, fetchJobPostings, fetchInterviews])
+  }, [employee, fetchCandidates, fetchJobPostings, fetchInterviews]);
 
   // Fetch dashboard data from the new API endpoint
   const fetchDashboardData = async () => {
     try {
       if (!employee || !employee._id) {
-        console.log("No employee data available, skipping dashboard stats fetch")
-        return
+        console.log(
+          "No employee data available, skipping dashboard stats fetch"
+        );
+        return;
       }
 
-      setIsRefreshing(true)
+      setIsRefreshing(true);
       const response = await fetch("/api/employee/dashboard/stats", {
         cache: "no-store",
         headers: {
@@ -649,111 +693,120 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
           Pragma: "no-cache",
           Expires: "0",
         },
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch dashboard data")
+        throw new Error("Failed to fetch dashboard data");
       }
 
-      const data = await response.json()
-      setDashboardStats(data.stats)
+      const data = await response.json();
+      console.log("Dashboard stats:", data.stats);
+      setDashboardStats(data.stats);
     } catch (error) {
-      console.error("Error fetching dashboard data:", error)
-      // Don't show error toast as this is a background fetch
+      console.error("Error fetching dashboard data:", error);
     } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
-  }
+  };
 
   // Effect to update job postings with interview counts whenever interviews change
   useEffect(() => {
-    updateJobPostingsWithInterviewCounts(interviews)
-  }, [interviews, updateJobPostingsWithInterviewCounts])
+    updateJobPostingsWithInterviewCounts(interviews);
+  }, [interviews, updateJobPostingsWithInterviewCounts]);
 
   // Effect to refresh data when tab changes
   useEffect(() => {
     if (activeTab === "jobs" || activeTab === "interviews") {
-      refreshData(false)
+      refreshData(false);
     }
-  }, [activeTab])
+  }, [activeTab]);
 
   // Function to refresh all data
   const refreshData = async (showToast = true) => {
     try {
       if (!employee || !employee._id) {
-        console.log("No employee data available, skipping data refresh")
-        return
+        console.log("No employee data available, skipping data refresh");
+        return;
       }
 
-      setIsRefreshing(true)
+      setIsRefreshing(true);
 
-      await Promise.all([fetchDashboardData(), fetchCandidates(), fetchJobPostings(), fetchInterviews()])
+      await Promise.all([
+        fetchDashboardData(),
+        fetchCandidates(),
+        fetchJobPostings(),
+        fetchInterviews(),
+      ]);
 
-      setLastRefreshed(new Date())
+      setLastRefreshed(new Date());
 
       if (showToast) {
-        toast.success("Data refreshed successfully")
+        toast.success("Data refreshed successfully");
       }
     } catch (error) {
-      console.error("Error refreshing data:", error)
+      console.error("Error refreshing data:", error);
       if (showToast) {
-        toast.error("Failed to refresh data")
+        toast.error("Failed to refresh data");
       }
     } finally {
-      setIsRefreshing(false)
+      setIsRefreshing(false);
     }
-  }
+  };
 
   const handleLogout = async () => {
     try {
       const response = await fetch("/api/auth/logout", {
         method: "POST",
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Logout failed")
+        throw new Error("Logout failed");
       }
 
-      router.push("/auth/employee/login")
+      router.push("/auth/employee/login");
     } catch (error) {
-      toast.error("Logout failed")
+      toast.error("Logout failed");
     }
-  }
+  };
 
   const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return emailRegex.test(email)
-  }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
   const handleSavePersonalInfo = async () => {
     try {
       // Reset error state
-      setEmailError("")
+      setEmailError("");
 
       // Validate email
       if (personalInfo.email && !validateEmail(personalInfo.email)) {
-        setEmailError("Please enter a valid email address")
-        return
+        setEmailError("Please enter a valid email address");
+        return;
       }
 
       // Validate alternative email if provided
-      if (personalInfo.alternativeEmail && !validateEmail(personalInfo.alternativeEmail)) {
-        setEmailError("Please enter a valid alternative email address")
-        return
+      if (
+        personalInfo.alternativeEmail &&
+        !validateEmail(personalInfo.alternativeEmail)
+      ) {
+        setEmailError("Please enter a valid alternative email address");
+        return;
       }
 
       // Check if emails are the same
       if (
         personalInfo.email &&
         personalInfo.alternativeEmail &&
-        personalInfo.email.toLowerCase() === personalInfo.alternativeEmail.toLowerCase()
+        personalInfo.email.toLowerCase() ===
+          personalInfo.alternativeEmail.toLowerCase()
       ) {
-        setEmailError("Primary and alternative emails cannot be the same")
-        return
+        setEmailError("Primary and alternative emails cannot be the same");
+        return;
       }
 
-      setIsUpdatingProfile(true)
+      setIsUpdatingProfile(true);
 
       const response = await fetch("/api/employee/profile/update", {
         method: "POST",
@@ -768,16 +821,16 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
           designation: employee?.designation,
           email: personalInfo.email, // Include primary email in the update
         }),
-      })
+      });
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.message || "Failed to update profile")
+        const data = await response.json();
+        throw new Error(data.message || "Failed to update profile");
       }
 
       // Update the employee state with new data
       setEmployee((prev) => {
-        if (!prev) return null
+        if (!prev) return null;
         return {
           ...prev,
           firstName: personalInfo.firstName,
@@ -785,32 +838,32 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
           phone: personalInfo.phone,
           alternativeEmail: personalInfo.alternativeEmail,
           email: personalInfo.email, // Update primary email in state
-        }
-      })
+        };
+      });
 
-      toast.success("Personal information updated successfully")
+      toast.success("Personal information updated successfully");
     } catch (error: any) {
-      console.error("Error updating profile:", error)
-      setEmailError(error.message || "Failed to update personal information")
-      toast.error(error.message || "Failed to update personal information")
+      console.error("Error updating profile:", error);
+      setEmailError(error.message || "Failed to update personal information");
+      toast.error(error.message || "Failed to update personal information");
     } finally {
-      setIsUpdatingProfile(false)
+      setIsUpdatingProfile(false);
     }
-  }
+  };
 
   const handleAvatarUpdate = (url: string) => {
     setEmployee((prev) => {
-      if (!prev) return null
+      if (!prev) return null;
       return {
         ...prev,
         avatar: url,
-      }
-    })
-  }
+      };
+    });
+  };
 
   const handleSaveNotificationSettings = async () => {
     try {
-      setIsUpdatingNotifications(true)
+      setIsUpdatingNotifications(true);
 
       const response = await fetch("/api/employee/notifications/update", {
         method: "POST",
@@ -818,44 +871,44 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(notificationSettings),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to update notification settings")
+        throw new Error("Failed to update notification settings");
       }
 
       // Update the employee state with new notification settings
       setEmployee((prev) => {
-        if (!prev) return null
+        if (!prev) return null;
         return {
           ...prev,
           notificationSettings,
-        }
-      })
+        };
+      });
 
-      toast.success("Notification preferences saved successfully")
+      toast.success("Notification preferences saved successfully");
     } catch (error) {
-      console.error("Error updating notification settings:", error)
-      toast.error("Failed to save notification preferences")
+      console.error("Error updating notification settings:", error);
+      toast.error("Failed to save notification preferences");
     } finally {
-      setIsUpdatingNotifications(false)
+      setIsUpdatingNotifications(false);
     }
-  }
+  };
 
   const handleUpdatePassword = async () => {
     try {
       // Validate passwords
       if (passwordInfo.newPassword !== passwordInfo.confirmPassword) {
-        toast.error("New passwords don't match")
-        return
+        toast.error("New passwords don't match");
+        return;
       }
 
       if (!passwordInfo.currentPassword || !passwordInfo.newPassword) {
-        toast.error("Please fill in all password fields")
-        return
+        toast.error("Please fill in all password fields");
+        return;
       }
 
-      setIsUpdatingPassword(true)
+      setIsUpdatingPassword(true);
 
       const response = await fetch("/api/employee/password/update", {
         method: "POST",
@@ -866,11 +919,11 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
           currentPassword: passwordInfo.currentPassword,
           newPassword: passwordInfo.newPassword,
         }),
-      })
+      });
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.message || "Failed to update password")
+        const data = await response.json();
+        throw new Error(data.message || "Failed to update password");
       }
 
       // Clear password fields
@@ -878,46 +931,50 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
-      })
+      });
 
-      toast.success("Password updated successfully")
+      toast.success("Password updated successfully");
     } catch (error: any) {
-      console.error("Error updating password:", error)
-      toast.error(error.message || "Failed to update password")
+      console.error("Error updating password:", error);
+      toast.error(error.message || "Failed to update password");
     } finally {
-      setIsUpdatingPassword(false)
+      setIsUpdatingPassword(false);
     }
-  }
+  };
 
   const handleDeleteAccount = async () => {
-    if (confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+    if (
+      confirm(
+        "Are you sure you want to delete your account? This action cannot be undone."
+      )
+    ) {
       try {
-        setIsDeletingAccount(true)
+        setIsDeletingAccount(true);
 
         const response = await fetch("/api/employee/account/delete", {
           method: "DELETE",
-        })
+        });
 
         if (!response.ok) {
-          throw new Error("Failed to delete account")
+          throw new Error("Failed to delete account");
         }
 
-        toast.success("Account deleted successfully")
-        router.push("/auth/employee/login")
+        toast.success("Account deleted successfully");
+        router.push("/auth/employee/login");
       } catch (error) {
-        console.error("Error deleting account:", error)
-        toast.error("Failed to delete account")
+        console.error("Error deleting account:", error);
+        toast.error("Failed to delete account");
       } finally {
-        setIsDeletingAccount(false)
+        setIsDeletingAccount(false);
       }
     }
-  }
+  };
 
   const handleCreateJobPosting = async (jobData: any) => {
     try {
       if (!employee || !employee._id) {
-        toast.error("You must be logged in to create a job posting")
-        return
+        toast.error("You must be logged in to create a job posting");
+        return;
       }
 
       // Add employee ID to job data for proper isolation
@@ -925,7 +982,7 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
         ...jobData,
         employerId: employee._id,
         companyId: employee._id,
-      }
+      };
 
       const response = await fetch("/api/employee/jobs", {
         method: "POST",
@@ -933,58 +990,64 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(jobWithEmployeeId),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to create job posting")
+        throw new Error("Failed to create job posting");
       }
 
-      toast.success("Job posting created successfully!")
+      toast.success("Job posting created successfully!");
 
       // Refresh job postings
-      await fetchJobPostings()
+      await fetchJobPostings();
 
       // Switch to jobs tab
-      setActiveTab("jobs")
+      setActiveTab("jobs");
     } catch (error) {
-      console.error("Error creating job posting:", error)
-      toast.error("Failed to create job posting")
+      console.error("Error creating job posting:", error);
+      toast.error("Failed to create job posting");
     }
-  }
+  };
 
   // Handle export of selected candidates
   const handleExportSelectedCandidates = async () => {
     if (selectedCandidates.length === 0) {
-      toast.error("Please select at least one candidate to export")
-      return
+      toast.error("Please select at least one candidate to export");
+      return;
     }
 
     try {
-      setIsExporting(true)
-      toast.info(`Preparing export for ${selectedCandidates.length} candidates, please wait...`)
+      setIsExporting(true);
+      toast.info(
+        `Preparing export for ${selectedCandidates.length} candidates, please wait...`
+      );
 
       // Create a more robust fetch with timeout and retry logic
-      const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 60000) => {
-        const controller = new AbortController()
-        const id = setTimeout(() => controller.abort(), timeout)
+      const fetchWithTimeout = async (
+        url: string,
+        options: RequestInit,
+        timeout = 60000
+      ) => {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
 
         try {
           const response = await fetch(url, {
             ...options,
             signal: controller.signal,
-          })
-          clearTimeout(id)
-          return response
+          });
+          clearTimeout(id);
+          return response;
         } catch (error) {
-          clearTimeout(id)
-          throw error
+          clearTimeout(id);
+          throw error;
         }
-      }
+      };
 
       // Try up to 3 times with exponential backoff
-      let response = null
-      let attempt = 0
-      const maxAttempts = 3
+      let response = null;
+      let attempt = 0;
+      const maxAttempts = 3;
 
       while (attempt < maxAttempts) {
         try {
@@ -999,140 +1062,161 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                 candidateIds: selectedCandidates,
               }),
             },
-            60000,
-          ) // 60 second timeout
+            60000
+          ); // 60 second timeout
 
-          if (response.ok) break
+          if (response.ok) break;
 
           // If response is not ok but is a JSON response, don't retry
-          const contentType = response.headers.get("content-type")
+          const contentType = response.headers.get("content-type");
           if (contentType && contentType.includes("application/json")) {
-            const errorData = await response.json()
-            throw new Error(errorData.message || "Failed to export candidates")
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to export candidates");
           }
 
           // Otherwise, retry with backoff
-          attempt++
+          attempt++;
           if (attempt < maxAttempts) {
-            const backoffTime = Math.pow(2, attempt) * 1000 // Exponential backoff: 2s, 4s, 8s
-            toast.info(`Export attempt ${attempt} failed. Retrying in ${backoffTime / 1000} seconds...`)
-            await new Promise((resolve) => setTimeout(resolve, backoffTime))
+            const backoffTime = Math.pow(2, attempt) * 1000; // Exponential backoff: 2s, 4s, 8s
+            toast.info(
+              `Export attempt ${attempt} failed. Retrying in ${
+                backoffTime / 1000
+              } seconds...`
+            );
+            await new Promise((resolve) => setTimeout(resolve, backoffTime));
           }
         } catch (error) {
-          console.error(`Attempt ${attempt + 1} failed:`, error)
-          attempt++
+          console.error(`Attempt ${attempt + 1} failed:`, error);
+          attempt++;
 
           if (attempt < maxAttempts) {
-            const backoffTime = Math.pow(2, attempt) * 1000
-            toast.info(`Export attempt ${attempt} failed. Retrying in ${backoffTime / 1000} seconds...`)
-            await new Promise((resolve) => setTimeout(resolve, backoffTime))
+            const backoffTime = Math.pow(2, attempt) * 1000;
+            toast.info(
+              `Export attempt ${attempt} failed. Retrying in ${
+                backoffTime / 1000
+              } seconds...`
+            );
+            await new Promise((resolve) => setTimeout(resolve, backoffTime));
           } else {
-            throw error
+            throw error;
           }
         }
       }
 
       if (!response || !response.ok) {
-        throw new Error("Failed to export candidates after multiple attempts")
+        throw new Error("Failed to export candidates after multiple attempts");
       }
 
       // Check if the response is a blob or JSON
-      const contentType = response.headers.get("content-type")
+      const contentType = response.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Failed to export candidates")
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to export candidates");
       }
 
       // Get the blob from the response
-      const blob = await response.blob()
+      const blob = await response.blob();
 
       if (blob.size === 0) {
-        throw new Error("Received empty file from server")
+        throw new Error("Received empty file from server");
       }
 
       // Create a download link and trigger download
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.style.display = "none"
-      a.href = url
-      a.download = `candidates_export_${new Date().toLocaleDateString().replace(/\//g, "-")}.xlsx`
-      document.body.appendChild(a)
-      a.click()
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = `candidates_export_${new Date()
+        .toLocaleDateString()
+        .replace(/\//g, "-")}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
 
       // Clean up
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
 
-      toast.success(`Successfully exported ${selectedCandidates.length} candidates`)
+      toast.success(
+        `Successfully exported ${selectedCandidates.length} candidates`
+      );
 
       // Clear selection after successful export
-      clearSelectedCandidates()
+      clearSelectedCandidates();
     } catch (error) {
-      console.error("Error exporting candidates:", error)
-      toast.error(error instanceof Error ? error.message : "Failed to export candidates")
+      console.error("Error exporting candidates:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to export candidates"
+      );
     } finally {
-      setIsExporting(false)
+      setIsExporting(false);
     }
-  }
+  };
 
   // Handle export of a single candidate
-  const handleExportSingleCandidate = async (candidateId: string, candidateName: string) => {
+  const handleExportSingleCandidate = async (
+    candidateId: string,
+    candidateName: string
+  ) => {
     try {
-      setIsSingleExporting(candidateId)
-      toast.info("Preparing export, please wait...")
+      setIsSingleExporting(candidateId);
+      toast.info("Preparing export, please wait...");
 
-      const response = await fetch(`/api/employee/candidates/${candidateId}/export`)
+      const response = await fetch(
+        `/api/employee/candidates/${candidateId}/export`
+      );
 
       if (!response.ok) {
         // Try to get error message from response
-        let errorMessage = "Failed to export resume"
+        let errorMessage = "Failed to export resume";
         try {
-          const errorData = await response.json()
-          errorMessage = errorData.message || errorMessage
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
         } catch (e) {
-          console.error("Could not parse error response:", e)
+          console.error("Could not parse error response:", e);
         }
-        throw new Error(errorMessage)
+        throw new Error(errorMessage);
       }
 
       // Get the blob from the response
-      const blob = await response.blob()
+      const blob = await response.blob();
 
       if (blob.size === 0) {
-        throw new Error("Received empty file from server")
+        throw new Error("Received empty file from server");
       }
 
       // Create a download link and trigger download
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.style.display = "none"
-      a.href = url
-      a.download = `${candidateName.replace(/\s+/g, "_")}_resume.xlsx`
-      document.body.appendChild(a)
-      a.click()
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = `${candidateName.replace(/\s+/g, "_")}_resume.xlsx`;
+      document.body.appendChild(a);
+      a.click();
 
       // Clean up
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
 
-      toast.success("Resume exported successfully")
+      toast.success("Resume exported successfully");
     } catch (error) {
-      console.error("Error exporting resume:", error)
-      toast.error(error instanceof Error ? error.message : "Failed to export resume")
+      console.error("Error exporting resume:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to export resume"
+      );
     } finally {
-      setIsSingleExporting(null)
+      setIsSingleExporting(null);
     }
-  }
+  };
 
   // ATS: Fetch Resumes from DB
   const fetchAtsResumes = useCallback(async () => {
     try {
       if (!employee || !employee._id) {
-        console.log("No employee data available, skipping ATS resumes fetch")
-        return
+        console.log("No employee data available, skipping ATS resumes fetch");
+        return;
       }
 
-      setAtsIsLoading(true)
+      setAtsIsLoading(true);
       const response = await fetch("/api/employee/candidates", {
         cache: "no-store",
         headers: {
@@ -1140,20 +1224,25 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
           Pragma: "no-cache",
           Expires: "0",
         },
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch ATS resumes")
+        throw new Error("Failed to fetch ATS resumes");
       }
 
-      const data = await response.json()
+      const data = await response.json();
 
       // Filter resumes to only show those belonging to the current employee
       const employeeResumes = data.candidates.filter((candidate: any) => {
-        return candidate.employerId === employee._id || candidate.companyId === employee._id
-      })
+        return (
+          candidate.employerId === employee._id ||
+          candidate.companyId === employee._id
+        );
+      });
 
-      console.log(`Filtered ${data.candidates.length} resumes to ${employeeResumes.length} for this employee`)
+      console.log(
+        `Filtered ${data.candidates.length} resumes to ${employeeResumes.length} for this employee`
+      );
 
       const formattedResumes = employeeResumes.map((candidate: any) => ({
         _id: candidate._id,
@@ -1165,7 +1254,8 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
         appliedDate: new Date(candidate.createdAt).toLocaleDateString(),
         skills: candidate.skills || [],
         location: candidate.location || "",
-        yearsOfExperience: candidate.yearsOfExperience || Math.floor(Math.random() * 8) + 2, // Random experience between 2-10 years
+        yearsOfExperience:
+          candidate.yearsOfExperience || Math.floor(Math.random() * 8) + 2, // Random experience between 2-10 years
         currentPosition: candidate.role || "",
         content: candidate.profileOutline || "",
         firstName: candidate.firstName || "",
@@ -1181,46 +1271,54 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
         age: candidate.age || 25,
         industry: candidate.industry || "",
         employerId: candidate.employerId || employee._id, // Ensure employerId is set
-      }))
-      setAtsResumes(formattedResumes)
-      setAtsFilteredResumes(formattedResumes)
+      }));
+      setAtsResumes(formattedResumes);
+      setAtsFilteredResumes(formattedResumes);
 
       // Prepare filter options for dropdowns
-      prepareFilterOptions(formattedResumes)
+      prepareFilterOptions(formattedResumes);
     } catch (error) {
-      console.error("Error fetching ATS resumes:", error)
-      toast.error("Failed to load ATS resumes")
+      console.error("Error fetching ATS resumes:", error);
+      toast.error("Failed to load ATS resumes");
     } finally {
-      setAtsIsLoading(false)
+      setAtsIsLoading(false);
     }
-  }, [employee])
+  }, [employee]);
 
   // Prepare filter options for dropdowns
   const prepareFilterOptions = (resumes: Candidate[]) => {
     // Extract unique values for each filter
-    const nameOptions = [...new Set(resumes.map((r) => `${r.firstName} ${r.lastName}`.trim()))].filter(Boolean)
-    const positionOptions = [...new Set(resumes.map((r) => r.currentPosition))].filter(Boolean)
-    const statusOptions = [...new Set(resumes.map((r) => r.status))].filter(Boolean)
-    const dateOptions = [...new Set(resumes.map((r) => r.appliedDate))].filter(Boolean)
+    const nameOptions = [
+      ...new Set(resumes.map((r) => `${r.firstName} ${r.lastName}`.trim())),
+    ].filter(Boolean);
+    const positionOptions = [
+      ...new Set(resumes.map((r) => r.currentPosition)),
+    ].filter(Boolean);
+    const statusOptions = [...new Set(resumes.map((r) => r.status))].filter(
+      Boolean
+    );
+    const dateOptions = [...new Set(resumes.map((r) => r.appliedDate))].filter(
+      Boolean
+    );
 
     // Set initial filter states (all options unchecked)
-    setCandidateNameFilter([])
-    setPositionFilter([])
-    setStatusFilter([])
-    setAppliedDateFilter([])
-  }
+    setCandidateNameFilter([]);
+    setPositionFilter([]);
+    setStatusFilter([]);
+    setAppliedDateFilter([]);
+  };
 
   // ATS: Handle search
   useEffect(() => {
     if (!atsSearchTerm.trim()) {
-      applyAtsFilters()
-      return
+      applyAtsFilters();
+      return;
     }
 
     const filtered = atsResumes.filter((resume) => {
-      const fullName = `${resume.firstName} ${resume.lastName}`.toLowerCase()
-      const content = resume.content.toLowerCase()
-      const searchLower = atsSearchTerm.toLowerCase()
+      const fullName = `${resume.firstName} ${resume.lastName}`.toLowerCase();
+      const content = resume.content.toLowerCase();
+      const searchLower = atsSearchTerm.toLowerCase();
 
       return (
         fullName.includes(searchLower) ||
@@ -1228,27 +1326,27 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
         resume.email.toLowerCase().includes(searchLower) ||
         resume.location.toLowerCase().includes(searchLower) ||
         resume.currentPosition.toLowerCase().includes(searchLower)
-      )
-    })
+      );
+    });
 
-    setAtsFilteredResumes(filtered)
-  }, [atsSearchTerm, atsResumes])
+    setAtsFilteredResumes(filtered);
+  }, [atsSearchTerm, atsResumes]);
 
   // ATS: Apply filters
   const applyAtsFilters = () => {
-    setAtsIsLoading(true)
+    setAtsIsLoading(true);
 
     setTimeout(() => {
-      let filtered = [...atsResumes]
+      let filtered = [...atsResumes];
 
       // Apply mandatory keywords filter
       if (atsFilters.mandatoryKeywords.length > 0) {
         filtered = filtered.filter((resume) => {
           return atsFilters.mandatoryKeywords.every((keyword) => {
-            if (!keyword) return true
-            return resume.content.toLowerCase().includes(keyword.toLowerCase())
-          })
-        })
+            if (!keyword) return true;
+            return resume.content.toLowerCase().includes(keyword.toLowerCase());
+          });
+        });
       }
 
       // Apply preferred keywords filter (boost score but don't filter out)
@@ -1257,29 +1355,33 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
         // For now, we'll just sort by the number of preferred keywords matched
         filtered.sort((a, b) => {
           const aMatches = atsFilters.preferredKeywords.filter((keyword) => {
-            if (!keyword) return false
-            return a.content.toLowerCase().includes(keyword.toLowerCase())
-          }).length
+            if (!keyword) return false;
+            return a.content.toLowerCase().includes(keyword.toLowerCase());
+          }).length;
 
           const bMatches = atsFilters.preferredKeywords.filter((keyword) => {
-            if (!keyword) return false
-            return b.content.toLowerCase().includes(keyword.toLowerCase())
-          }).length
+            if (!keyword) return false;
+            return b.content.toLowerCase().includes(keyword.toLowerCase());
+          }).length;
 
-          return bMatches - aMatches
-        })
+          return bMatches - aMatches;
+        });
       }
 
       // Apply location filter
       if (atsFilters.location) {
         filtered = filtered.filter((resume) =>
-          resume.location.toLowerCase().includes(atsFilters.location.toLowerCase()),
-        )
+          resume.location
+            .toLowerCase()
+            .includes(atsFilters.location.toLowerCase())
+        );
       }
 
       // Apply state filter
       if (atsFilters.state) {
-        filtered = filtered.filter((resume) => resume.state.toLowerCase().includes(atsFilters.state.toLowerCase()))
+        filtered = filtered.filter((resume) =>
+          resume.state.toLowerCase().includes(atsFilters.state.toLowerCase())
+        );
       }
 
       // Apply education level filter
@@ -1287,173 +1389,223 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
         filtered = filtered.filter((resume) =>
           atsFilters.educationLevel.some((level) =>
             resume.education.some((edu) => {
-              if (typeof edu === "object" && edu && typeof edu.degree === "string") {
-                return edu.degree.toLowerCase().includes(level.toLowerCase())
+              if (
+                typeof edu === "object" &&
+                edu &&
+                typeof edu.degree === "string"
+              ) {
+                return edu.degree.toLowerCase().includes(level.toLowerCase());
               }
-              return false
-            }),
-          ),
-        )
+              return false;
+            })
+          )
+        );
       }
 
       // Apply gender filter
       if (atsFilters.gender) {
-        filtered = filtered.filter((resume) => resume.gender.toLowerCase() === atsFilters.gender.toLowerCase())
+        filtered = filtered.filter(
+          (resume) =>
+            resume.gender.toLowerCase() === atsFilters.gender.toLowerCase()
+        );
       }
 
       // Apply experience range filter
       filtered = filtered.filter(
         (resume) =>
           resume.yearsOfExperience >= atsFilters.experienceRange[0] &&
-          resume.yearsOfExperience <= atsFilters.experienceRange[1],
-      )
+          resume.yearsOfExperience <= atsFilters.experienceRange[1]
+      );
 
       // Apply salary range filter
       filtered = filtered.filter(
         (resume) =>
-          resume.currentSalary >= atsFilters.salaryRange[0] && resume.currentSalary <= atsFilters.salaryRange[1],
-      )
+          resume.currentSalary >= atsFilters.salaryRange[0] &&
+          resume.currentSalary <= atsFilters.salaryRange[1]
+      );
 
       // Apply industry filter
       if (atsFilters.industry) {
         filtered = filtered.filter((resume) => {
-          if (!resume.industry) return false
-          return resume.industry.toLowerCase().includes(atsFilters.industry.toLowerCase())
-        })
+          if (!resume.industry) return false;
+          return resume.industry
+            .toLowerCase()
+            .includes(atsFilters.industry.toLowerCase());
+        });
       }
 
       // Apply age range filter
       filtered = filtered.filter(
-        (resume) => resume.age >= atsFilters.ageRange[0] && resume.age <= atsFilters.ageRange[1],
-      )
+        (resume) =>
+          resume.age >= atsFilters.ageRange[0] &&
+          resume.age <= atsFilters.ageRange[1]
+      );
 
       // Apply NOT keywords filter
       if (atsFilters.notKeywords.length > 0) {
         filtered = filtered.filter((resume) => {
           return !atsFilters.notKeywords.some((keyword) => {
-            if (!keyword) return false
-            return resume.content.toLowerCase().includes(keyword.toLowerCase())
-          })
-        })
+            if (!keyword) return false;
+            return resume.content.toLowerCase().includes(keyword.toLowerCase());
+          });
+        });
       }
 
       // Apply ATS score filter and calculate match scores for all resumes
       filtered = filtered.map((resume) => {
         // Calculate match score for each resume
-        let matchCount = 0
-        const content = resume.content.toLowerCase()
+        let matchCount = 0;
+        const content = resume.content.toLowerCase();
 
         for (const keyword of atsFilters.mandatoryKeywords) {
           if (keyword && content.includes(keyword.toLowerCase())) {
-            matchCount++
+            matchCount++;
           }
         }
 
         for (const keyword of atsFilters.preferredKeywords) {
           if (keyword && content.includes(keyword.toLowerCase())) {
-            matchCount++
+            matchCount++;
           }
         }
 
-        const totalKeywords = atsFilters.mandatoryKeywords.length + atsFilters.preferredKeywords.length
-        const score = totalKeywords > 0 ? Math.round((matchCount / totalKeywords) * 100) : 50
+        const totalKeywords =
+          atsFilters.mandatoryKeywords.length +
+          atsFilters.preferredKeywords.length;
+        const score =
+          totalKeywords > 0
+            ? Math.round((matchCount / totalKeywords) * 100)
+            : 50;
 
         // Update the resume's match score (default to 50% if no keywords specified)
         return {
           ...resume,
           matchScore: score,
-        }
-      })
+        };
+      });
 
       // Then filter by minimum score if needed
       if (atsFilters.atsScore > 0) {
-        filtered = filtered.filter((resume) => resume.matchScore >= atsFilters.atsScore)
+        filtered = filtered.filter(
+          (resume) => resume.matchScore >= atsFilters.atsScore
+        );
       }
 
       // Apply assets filter
       if (atsFilters.assets) {
-        const { bike, car, wifi, laptop } = atsFilters.assets
+        const { bike, car, wifi, laptop } = atsFilters.assets;
         if (bike || car || wifi || laptop) {
           filtered = filtered.filter((resume) => {
-            const assets = resume.skills.map((s) => s.toLowerCase())
-            if (bike && !assets.some((a) => a.includes("bike") || a.includes("motorcycle"))) return false
-            if (car && !assets.some((a) => a.includes("car") || a.includes("driving"))) return false
-            if (wifi && !assets.some((a) => a.includes("wifi") || a.includes("internet"))) return false
-            if (laptop && !assets.some((a) => a.includes("laptop") || a.includes("computer"))) return false
-            return true
-          })
+            const assets = resume.skills.map((s) => s.toLowerCase());
+            if (
+              bike &&
+              !assets.some(
+                (a) => a.includes("bike") || a.includes("motorcycle")
+              )
+            )
+              return false;
+            if (
+              car &&
+              !assets.some((a) => a.includes("car") || a.includes("driving"))
+            )
+              return false;
+            if (
+              wifi &&
+              !assets.some((a) => a.includes("wifi") || a.includes("internet"))
+            )
+              return false;
+            if (
+              laptop &&
+              !assets.some(
+                (a) => a.includes("laptop") || a.includes("computer")
+              )
+            )
+              return false;
+            return true;
+          });
         }
       }
 
       // Apply shift preference filter
       if (atsFilters.shiftPreference) {
         filtered = filtered.filter((resume) => {
-          const content = resume.content.toLowerCase()
-          const preference = atsFilters.shiftPreference.toLowerCase()
+          const content = resume.content.toLowerCase();
+          const preference = atsFilters.shiftPreference.toLowerCase();
           return (
             content.includes(preference) ||
-            (resume.skills && resume.skills.some((s) => s.toLowerCase().includes(preference)))
-          )
-        })
+            (resume.skills &&
+              resume.skills.some((s) => s.toLowerCase().includes(preference)))
+          );
+        });
       }
 
       // Apply column filters
       if (candidateNameFilter.length > 0) {
         filtered = filtered.filter((resume) => {
-          const fullName = `${resume.firstName} ${resume.lastName}`.trim()
-          return candidateNameFilter.includes(fullName)
-        })
+          const fullName = `${resume.firstName} ${resume.lastName}`.trim();
+          return candidateNameFilter.includes(fullName);
+        });
       }
 
       if (positionFilter.length > 0) {
-        filtered = filtered.filter((resume) => positionFilter.includes(resume.currentPosition))
+        filtered = filtered.filter((resume) =>
+          positionFilter.includes(resume.currentPosition)
+        );
       }
 
       if (statusFilter.length > 0) {
-        filtered = filtered.filter((resume) => statusFilter.includes(resume.status))
+        filtered = filtered.filter((resume) =>
+          statusFilter.includes(resume.status)
+        );
       }
 
       if (appliedDateFilter.length > 0) {
-        filtered = filtered.filter((resume) => appliedDateFilter.includes(resume.appliedDate))
+        filtered = filtered.filter((resume) =>
+          appliedDateFilter.includes(resume.appliedDate)
+        );
       }
 
       // Apply sorting
       if (candidateNameSort) {
         filtered.sort((a, b) => {
-          const nameA = `${a.firstName} ${a.lastName}`.trim().toLowerCase()
-          const nameB = `${b.firstName} ${b.lastName}`.trim().toLowerCase()
-          return candidateNameSort === "asc" ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA)
-        })
+          const nameA = `${a.firstName} ${a.lastName}`.trim().toLowerCase();
+          const nameB = `${b.firstName} ${b.lastName}`.trim().toLowerCase();
+          return candidateNameSort === "asc"
+            ? nameA.localeCompare(nameB)
+            : nameB.localeCompare(nameA);
+        });
       }
 
       if (positionSort) {
         filtered.sort((a, b) => {
           return positionSort === "asc"
             ? a.currentPosition.localeCompare(b.currentPosition)
-            : b.currentPosition.localeCompare(a.currentPosition)
-        })
+            : b.currentPosition.localeCompare(a.currentPosition);
+        });
       }
 
       if (statusSort) {
         filtered.sort((a, b) => {
-          return statusSort === "asc" ? a.status.localeCompare(b.status) : b.status.localeCompare(a.status)
-        })
+          return statusSort === "asc"
+            ? a.status.localeCompare(b.status)
+            : b.status.localeCompare(a.status);
+        });
       }
 
       if (appliedDateSort) {
         filtered.sort((a, b) => {
-          const dateA = new Date(a.appliedDate).getTime()
-          const dateB = new Date(b.appliedDate).getTime()
-          return appliedDateSort === "asc" ? dateA - dateB : dateB - dateA
-        })
+          const dateA = new Date(a.appliedDate).getTime();
+          const dateB = new Date(b.appliedDate).getTime();
+          return appliedDateSort === "asc" ? dateA - dateB : dateB - dateA;
+        });
       }
 
-      setAtsFilteredResumes(filtered)
-      setAtsIsLoading(false)
+      setAtsFilteredResumes(filtered);
+      setAtsIsLoading(false);
 
-      toast.success(`Found ${filtered.length} matching resumes`)
-    }, 500) // Simulate API delay
-  }
+      toast.success(`Found ${filtered.length} matching resumes`);
+    }, 500); // Simulate API delay
+  };
 
   const resetAtsFilters = () => {
     // Create a completely fresh default state object
@@ -1477,68 +1629,74 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
         laptop: false,
       },
       shiftPreference: "",
-    }
+    };
 
     // Set the filters back to default
-    setAtsFilters(defaultFilters)
+    setAtsFilters(defaultFilters);
 
     // Reset column filters and sorts
-    setCandidateNameFilter([])
-    setPositionFilter([])
-    setStatusFilter([])
-    setAppliedDateFilter([])
-    setCandidateNameSort(null)
-    setPositionSort(null)
-    setStatusSort(null)
-    setAppliedDateSort(null)
+    setCandidateNameFilter([]);
+    setPositionFilter([]);
+    setStatusFilter([]);
+    setAppliedDateFilter([]);
+    setCandidateNameSort(null);
+    setPositionSort(null);
+    setStatusSort(null);
+    setAppliedDateSort(null);
 
     // Reset the filtered resumes to show all resumes
-    setAtsFilteredResumes(atsResumes)
+    setAtsFilteredResumes(atsResumes);
 
     // Clear the location input field in the DOM
-    const locationInput = document.querySelector('input[placeholder="City or region..."]') as HTMLInputElement
+    const locationInput = document.querySelector(
+      'input[placeholder="City or region..."]'
+    ) as HTMLInputElement;
     if (locationInput) {
-      locationInput.value = ""
+      locationInput.value = "";
     }
 
-    toast.info("Filters have been reset")
-  }
+    toast.info("Filters have been reset");
+  };
 
   const handleAtsExport = async () => {
     try {
       if (!employee || !employee._id) {
-        toast.error("You must be logged in to export candidates")
-        return
+        toast.error("You must be logged in to export candidates");
+        return;
       }
 
-      setAtsIsExporting(true)
-      toast.info("Preparing export, please wait...")
+      setAtsIsExporting(true);
+      toast.info("Preparing export, please wait...");
 
       // Get the IDs of all filtered resumes
-      const candidateIds = atsFilteredResumes.map((resume) => resume._id)
+      const candidateIds = atsFilteredResumes.map((resume) => resume._id);
 
       // Use the same robust fetch with timeout and retry logic
-      const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 60000) => {
-        const controller = new AbortController()
-        const id = setTimeout(() => controller.abort(), timeout)
+      const fetchWithTimeout = async (
+        url: string,
+        options: RequestInit,
+        timeout = 60000
+      ) => {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
 
         try {
           const response = await fetch(url, {
             ...options,
             signal: controller.signal,
-          })
-          clearTimeout(id)
-          return response
+          });
+          clearTimeout(id);
+          return response;
         } catch (error) {
-          clearTimeout(id)
-          throw error
+          clearTimeout(id);
+          throw error;
         }
-      }
+      };
 
       // Try up to 3 times with exponential backoff
-      let response = null
-      let attempt = 0
-      const maxAttempts = 3
+      let response = null;
+      let attempt = 0;
+      const maxAttempts = 3;
 
       while (attempt < maxAttempts) {
         try {
@@ -1554,156 +1712,170 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                 employeeId: employee._id, // Add employee ID for data isolation
               }),
             },
-            60000,
-          ) // 60 second timeout
+            60000
+          ); // 60 second timeout
 
-          if (response.ok) break
+          if (response.ok) break;
 
           // If response is not ok but is a JSON response, don't retry
-          const contentType = response.headers.get("content-type")
+          const contentType = response.headers.get("content-type");
           if (contentType && contentType.includes("application/json")) {
-            const errorData = await response.json()
-            throw new Error(errorData.message || "Failed to export candidates")
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to export candidates");
           }
 
           // Otherwise, retry with backoff
-          attempt++
+          attempt++;
           if (attempt < maxAttempts) {
-            const backoffTime = Math.pow(2, attempt) * 1000 // Exponential backoff: 2s, 4s, 8s
-            toast.info(`Export attempt ${attempt} failed. Retrying in ${backoffTime / 1000} seconds...`)
-            await new Promise((resolve) => setTimeout(resolve, backoffTime))
+            const backoffTime = Math.pow(2, attempt) * 1000; // Exponential backoff: 2s, 4s, 8s
+            toast.info(
+              `Export attempt ${attempt} failed. Retrying in ${
+                backoffTime / 1000
+              } seconds...`
+            );
+            await new Promise((resolve) => setTimeout(resolve, backoffTime));
           }
         } catch (error) {
-          console.error(`Attempt ${attempt + 1} failed:`, error)
-          attempt++
+          console.error(`Attempt ${attempt + 1} failed:`, error);
+          attempt++;
 
           if (attempt < maxAttempts) {
-            const backoffTime = Math.pow(2, attempt) * 1000
-            toast.info(`Export attempt ${attempt} failed. Retrying in ${backoffTime / 1000} seconds...`)
-            await new Promise((resolve) => setTimeout(resolve, backoffTime))
+            const backoffTime = Math.pow(2, attempt) * 1000;
+            toast.info(
+              `Export attempt ${attempt} failed. Retrying in ${
+                backoffTime / 1000
+              } seconds...`
+            );
+            await new Promise((resolve) => setTimeout(resolve, backoffTime));
           } else {
-            throw error
+            throw error;
           }
         }
       }
 
       if (!response || !response.ok) {
-        throw new Error("Failed to export candidates after multiple attempts")
+        throw new Error("Failed to export candidates after multiple attempts");
       }
 
       // Check if the response is a blob or JSON
-      const contentType = response.headers.get("content-type")
+      const contentType = response.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Failed to export candidates")
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to export candidates");
       }
 
       // Get the blob from the response
-      const blob = await response.blob()
+      const blob = await response.blob();
 
       if (blob.size === 0) {
-        throw new Error("Received empty file from server")
+        throw new Error("Received empty file from server");
       }
 
       // Create a download link and trigger download
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.style.display = "none"
-      a.href = url
-      a.download = `candidates_export_${new Date().toLocaleDateString().replace(/\//g, "-")}.xlsx`
-      document.body.appendChild(a)
-      a.click()
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = `candidates_export_${new Date()
+        .toLocaleDateString()
+        .replace(/\//g, "-")}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
 
       // Clean up
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
 
-      toast.success(`Successfully exported ${atsFilteredResumes.length} candidates`)
+      toast.success(
+        `Successfully exported ${atsFilteredResumes.length} candidates`
+      );
     } catch (error) {
-      console.error("Error exporting candidates:", error)
-      toast.error(error instanceof Error ? error.message : "Failed to export candidates")
+      console.error("Error exporting candidates:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to export candidates"
+      );
     } finally {
-      setAtsIsExporting(false)
+      setAtsIsExporting(false);
     }
-  }
+  };
 
   // Handle column filter changes
   const handleCandidateNameFilter = (selectedValues: string[]) => {
-    setCandidateNameFilter(selectedValues)
-    applyAtsFilters()
-  }
+    setCandidateNameFilter(selectedValues);
+    applyAtsFilters();
+  };
 
   const handlePositionFilter = (selectedValues: string[]) => {
-    setPositionFilter(selectedValues)
-    applyAtsFilters()
-  }
+    setPositionFilter(selectedValues);
+    applyAtsFilters();
+  };
 
   const handleStatusFilter = (selectedValues: string[]) => {
-    setStatusFilter(selectedValues)
-    applyAtsFilters()
-  }
+    setStatusFilter(selectedValues);
+    applyAtsFilters();
+  };
 
   const handleAppliedDateFilter = (selectedValues: string[]) => {
-    setAppliedDateFilter(selectedValues)
-    applyAtsFilters()
-  }
+    setAppliedDateFilter(selectedValues);
+    applyAtsFilters();
+  };
 
   // Handle column sorting
   const handleCandidateNameSort = (direction: "asc" | "desc") => {
-    setCandidateNameSort(direction)
-    setPositionSort(null)
-    setStatusSort(null)
-    setAppliedDateSort(null)
-    applyAtsFilters()
-  }
+    setCandidateNameSort(direction);
+    setPositionSort(null);
+    setStatusSort(null);
+    setAppliedDateSort(null);
+    applyAtsFilters();
+  };
 
   const handlePositionSort = (direction: "asc" | "desc") => {
-    setPositionSort(direction)
-    setCandidateNameSort(null)
-    setStatusSort(null)
-    setAppliedDateSort(null)
-    applyAtsFilters()
-  }
+    setPositionSort(direction);
+    setCandidateNameSort(null);
+    setStatusSort(null);
+    setAppliedDateSort(null);
+    applyAtsFilters();
+  };
 
   const handleStatusSort = (direction: "asc" | "desc") => {
-    setStatusSort(direction)
-    setCandidateNameSort(null)
-    setPositionSort(null)
-    setAppliedDateSort(null)
-    applyAtsFilters()
-  }
+    setStatusSort(direction);
+    setCandidateNameSort(null);
+    setPositionSort(null);
+    setAppliedDateSort(null);
+    applyAtsFilters();
+  };
 
   const handleAppliedDateSort = (direction: "asc" | "desc") => {
-    setAppliedDateSort(direction)
-    setCandidateNameSort(null)
-    setPositionSort(null)
-    setStatusSort(null)
-    applyAtsFilters()
-  }
+    setAppliedDateSort(direction);
+    setCandidateNameSort(null);
+    setPositionSort(null);
+    setStatusSort(null);
+    applyAtsFilters();
+  };
 
   // Fetch ATS resumes on mount
   useEffect(() => {
     if (employee && employee._id) {
-      fetchAtsResumes()
+      fetchAtsResumes();
     }
-  }, [employee, fetchAtsResumes])
+  }, [employee, fetchAtsResumes]);
 
   const handleTabChange = (value: string) => {
-    setActiveTab(value)
-    router.push(`/employee/dashboard?tab=${value}`, { scroll: false })
-  }
+    setActiveTab(value);
+    router.push(`/employee/dashboard?tab=${value}`, { scroll: false });
+  };
 
   // Handle navigation to assessments dashboard
   const handleAssessmentsClick = () => {
-    router.push("/employee/assessment/dashboard")
-  }
+    router.push("/employee/assessment/dashboard");
+  };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
       </div>
-    )
+    );
   }
 
   if (!employee) {
@@ -1712,7 +1884,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Session Expired</CardTitle>
-            <CardDescription>Your session has expired or you are not logged in.</CardDescription>
+            <CardDescription>
+              Your session has expired or you are not logged in.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Button
@@ -1724,7 +1898,7 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -1752,7 +1926,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                     {searchResults.candidates.length === 0 &&
                     searchResults.jobs.length === 0 &&
                     searchResults.interviews.length === 0 ? (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 p-2">No results found</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 p-2">
+                        No results found
+                      </p>
                     ) : (
                       <>
                         {searchResults.candidates.length > 0 && (
@@ -1760,19 +1936,31 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                             <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 px-2">
                               Candidates
                             </h3>
-                            {searchResults.candidates.slice(0, 3).map((candidate) => (
-                              <div
-                                key={candidate._id}
-                                className="px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer"
-                                onClick={() => handleSearchResultClick("candidate", candidate._id)}
-                              >
-                                <p className="text-sm font-medium">{candidate.name}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{candidate.email}</p>
-                              </div>
-                            ))}
+                            {searchResults.candidates
+                              .slice(0, 3)
+                              .map((candidate) => (
+                                <div
+                                  key={candidate._id}
+                                  className="px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer"
+                                  onClick={() =>
+                                    handleSearchResultClick(
+                                      "candidate",
+                                      candidate._id
+                                    )
+                                  }
+                                >
+                                  <p className="text-sm font-medium">
+                                    {candidate.name}
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {candidate.email}
+                                  </p>
+                                </div>
+                              ))}
                             {searchResults.candidates.length > 3 && (
                               <p className="text-xs text-blue-500 px-2 pt-1">
-                                +{searchResults.candidates.length - 3} more candidates
+                                +{searchResults.candidates.length - 3} more
+                                candidates
                               </p>
                             )}
                           </div>
@@ -1780,14 +1968,20 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
 
                         {searchResults.jobs.length > 0 && (
                           <div className="mb-2">
-                            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 px-2">Jobs</h3>
+                            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 px-2">
+                              Jobs
+                            </h3>
                             {searchResults.jobs.slice(0, 3).map((job) => (
                               <div
                                 key={job._id}
                                 className="px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer"
-                                onClick={() => handleSearchResultClick("job", job._id)}
+                                onClick={() =>
+                                  handleSearchResultClick("job", job._id)
+                                }
                               >
-                                <p className="text-sm font-medium">{job.jobTitle}</p>
+                                <p className="text-sm font-medium">
+                                  {job.jobTitle}
+                                </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
                                   {job.department} • {job.jobLocation}
                                 </p>
@@ -1806,21 +2000,31 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                             <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 px-2">
                               Interviews
                             </h3>
-                            {searchResults.interviews.slice(0, 3).map((interview) => (
-                              <div
-                                key={interview._id}
-                                className="px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer"
-                                onClick={() => handleSearchResultClick("interview", interview._id)}
-                              >
-                                <p className="text-sm font-medium">{interview.candidate.name}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  {interview.position} • {interview.date}
-                                </p>
-                              </div>
-                            ))}
+                            {searchResults.interviews
+                              .slice(0, 3)
+                              .map((interview) => (
+                                <div
+                                  key={interview._id}
+                                  className="px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer"
+                                  onClick={() =>
+                                    handleSearchResultClick(
+                                      "interview",
+                                      interview._id
+                                    )
+                                  }
+                                >
+                                  <p className="text-sm font-medium">
+                                    {interview.candidate.name}
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {interview.position} • {interview.date}
+                                  </p>
+                                </div>
+                              ))}
                             {searchResults.interviews.length > 3 && (
                               <p className="text-xs text-blue-500 px-2 pt-1">
-                                +{searchResults.interviews.length - 3} more interviews
+                                +{searchResults.interviews.length - 3} more
+                                interviews
                               </p>
                             )}
                           </div>
@@ -1856,7 +2060,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
           <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
             <CardContent className="p-6 flex flex-col items-center justify-center">
               <Users className="h-8 w-8 mb-2" />
-              <p className="text-2xl font-bold">{dashboardStats.activeCandidates}</p>
+              <p className="text-2xl font-bold">
+                {dashboardStats.activeCandidates}
+              </p>
               <p className="text-sm opacity-80">Active Candidates</p>
             </CardContent>
           </Card>
@@ -1864,7 +2070,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
           <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
             <CardContent className="p-6 flex flex-col items-center justify-center">
               <Briefcase className="h-8 w-8 mb-2" />
-              <p className="text-2xl font-bold">{dashboardStats.openPositions}</p>
+              <p className="text-2xl font-bold">
+                {dashboardStats.openPositions}
+              </p>
               <p className="text-sm opacity-80">Open Positions</p>
             </CardContent>
           </Card>
@@ -1872,7 +2080,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
           <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white">
             <CardContent className="p-6 flex flex-col items-center justify-center">
               <Calendar className="h-8 w-8 mb-2" />
-              <p className="text-2xl font-bold">{dashboardStats.interviewsToday}</p>
+              <p className="text-2xl font-bold">
+                {dashboardStats.interviewsToday}
+              </p>
               <p className="text-sm opacity-80">Interviews Today</p>
             </CardContent>
           </Card>
@@ -1880,7 +2090,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
           <Card className="bg-gradient-to-br from-amber-500 to-amber-600 text-white">
             <CardContent className="p-6 flex flex-col items-center justify-center">
               <BarChart className="h-8 w-8 mb-2" />
-              <p className="text-2xl font-bold">{dashboardStats.hiringSuccessRate}%</p>
+              <p className="text-2xl font-bold">
+                {dashboardStats.hiringSuccessRate}%
+              </p>
               <p className="text-sm opacity-80">Hiring Success Rate</p>
             </CardContent>
           </Card>
@@ -1894,30 +2106,51 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
             disabled={isRefreshing}
             className="flex items-center gap-2 bg-green-700 text-white"
           >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+            />
             {isRefreshing ? "Refreshing..." : "Refresh Data"}
           </Button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
+        <Tabs
+          value={activeTab}
+          onValueChange={handleTabChange}
+          className="space-y-4"
+        >
           <TabsList className="grid grid-cols-7 w-full max-w-3xl text-white mx-auto bg-gradient-to-br from-black to-black">
-            <TabsTrigger value="overview" className="flex items-center justify-center">
+            <TabsTrigger
+              value="overview"
+              className="flex items-center justify-center"
+            >
               <User className="h-4 w-4 mr-2" />
               Overview
             </TabsTrigger>
-            <TabsTrigger value="candidates" className="flex items-center justify-center">
+            <TabsTrigger
+              value="candidates"
+              className="flex items-center justify-center"
+            >
               <Users className="h-4 w-4 mr-2" />
               Candidates
             </TabsTrigger>
-            <TabsTrigger value="jobs" className="flex items-center justify-center">
+            <TabsTrigger
+              value="jobs"
+              className="flex items-center justify-center"
+            >
               <Briefcase className="h-4 w-4 mr-2" />
               Jobs
             </TabsTrigger>
-            <TabsTrigger value="interviews" className="flex items-center justify-center">
+            <TabsTrigger
+              value="interviews"
+              className="flex items-center justify-center"
+            >
               <Calendar className="h-4 w-4 mr-2" />
               Interviews
             </TabsTrigger>
-            <TabsTrigger value="ats" className="flex items-center justify-center">
+            <TabsTrigger
+              value="ats"
+              className="flex items-center justify-center"
+            >
               <Search className="h-4 w-4 mr-2" />
               ATS
             </TabsTrigger>
@@ -1929,7 +2162,10 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
               <ClipboardCheck className="h-4 w-4 mr-2" />
               Assessments
             </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center justify-center">
+            <TabsTrigger
+              value="settings"
+              className="flex items-center justify-center"
+            >
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </TabsTrigger>
@@ -1952,7 +2188,11 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                       {employee.firstName} {employee.lastName}
                     </h3>
                     <p className="text-sm text-gray-500">{employee.email}</p>
-                    {employee.alternativeEmail && <p className="text-sm text-gray-500">{employee.alternativeEmail}</p>}
+                    {employee.alternativeEmail && (
+                      <p className="text-sm text-gray-500">
+                        {employee.alternativeEmail}
+                      </p>
+                    )}
                   </div>
                   {employee.companyName && (
                     <div className="space-y-4">
@@ -1971,7 +2211,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                   )}
                   {!employee.companyName && (
                     <div className="text-center py-6">
-                      <p className="text-gray-500 dark:text-gray-400">Company profile not set up</p>
+                      <p className="text-gray-500 dark:text-gray-400">
+                        Company profile not set up
+                      </p>
                     </div>
                   )}
                   <div className="mt-4 flex justify-center">
@@ -1990,7 +2232,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
               <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle>Recent Candidates</CardTitle>
-                  <CardDescription>Latest candidates who applied to your jobs</CardDescription>
+                  <CardDescription>
+                    Latest candidates who applied to your jobs
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -2002,19 +2246,30 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                         >
                           <div className="flex items-center">
                             <Avatar className="h-10 w-10 mr-3">
-                              <AvatarImage src={candidate.avatar || "/placeholder.svg"} alt={candidate.name} />
-                              <AvatarFallback>{candidate.name.charAt(0)}</AvatarFallback>
+                              <AvatarImage
+                                src={candidate.avatar || "/placeholder.svg"}
+                                alt={candidate.name}
+                              />
+                              <AvatarFallback>
+                                {candidate.name.charAt(0)}
+                              </AvatarFallback>
                             </Avatar>
                             <div>
                               <p className="font-medium">{candidate.name}</p>
-                              <p className="text-sm text-gray-500">{candidate.role}</p>
+                              <p className="text-sm text-gray-500">
+                                {candidate.role}
+                              </p>
                             </div>
                           </div>
                           <div className="flex space-x-2">
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => router.push(`/employee/candidates/${candidate._id}/contact`)}
+                              onClick={() =>
+                                router.push(
+                                  `/employee/candidates/${candidate._id}/contact`
+                                )
+                              }
                               className="flex items-center"
                             >
                               <Send className="h-4 w-4 mr-1" />
@@ -2024,10 +2279,10 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                                 candidate.status === "Shortlisted"
                                   ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
                                   : candidate.status === "Interview"
-                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-                                    : candidate.status === "Rejected"
-                                      ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                                      : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                                  : candidate.status === "Rejected"
+                                  ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                                  : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
                               }
                             >
                               {candidate.status}
@@ -2038,8 +2293,14 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                     ) : (
                       <div className="text-center py-6">
                         <Users className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                        <p className="text-gray-500 dark:text-gray-400">No candidates yet</p>
-                        <Button variant="outline" className="mt-4" onClick={() => setActiveTab("candidates")}>
+                        <p className="text-gray-500 dark:text-gray-400">
+                          No candidates yet
+                        </p>
+                        <Button
+                          variant="outline"
+                          className="mt-4"
+                          onClick={() => setActiveTab("candidates")}
+                        >
                           Add Candidates
                         </Button>
                       </div>
@@ -2062,23 +2323,33 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
               <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle>Open Positions</CardTitle>
-                  <CardDescription>Currently active job postings</CardDescription>
+                  <CardDescription>
+                    Currently active job postings
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {jobPostings.length > 0 ? (
                     <div className="space-y-4">
                       {jobPostings.slice(0, 3).map((job) => (
-                        <div key={job._id} className="border rounded-lg p-4 dark:border-gray-700">
+                        <div
+                          key={job._id}
+                          className="border rounded-lg p-4 dark:border-gray-700"
+                        >
                           <div className="flex justify-between items-start">
                             <div>
                               <h3 className="font-medium">{job.jobTitle}</h3>
                               <p className="text-sm text-gray-500 dark:text-gray-400">
-                                {job.department} • {job.jobType} • {job.jobLocation}
+                                {job.department} • {job.jobType} •{" "}
+                                {job.jobLocation}
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="text-sm font-medium">{job.applicants} Applicants</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">{job.daysLeft} days left</p>
+                              <p className="text-sm font-medium">
+                                {job.applicants} Applicants
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {job.daysLeft} days left
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -2101,19 +2372,28 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
               <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
                 <CardHeader>
                   <CardTitle>Upcoming Interviews</CardTitle>
-                  <CardDescription>Scheduled interviews for this week</CardDescription>
+                  <CardDescription>
+                    Scheduled interviews for this week
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     {interviews.length > 0 ? (
                       interviews.slice(0, 2).map((interview) => (
-                        <div key={interview._id} className="flex items-start border-b pb-4 last:border-0 last:pb-0">
+                        <div
+                          key={interview._id}
+                          className="flex items-start border-b pb-4 last:border-0 last:pb-0"
+                        >
                           <div className="bg-purple-100 dark:bg-purple-800 p-2 rounded-full mr-3">
                             <Clock className="h-5 w-5 text-purple-600 dark:text-purple-300" />
                           </div>
                           <div>
-                            <p className="font-medium">{interview.candidate.name}</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{interview.position}</p>
+                            <p className="font-medium">
+                              {interview.candidate.name}
+                            </p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {interview.position}
+                            </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                               {interview.date} at {interview.time}
                             </p>
@@ -2123,7 +2403,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                     ) : (
                       <div className="text-center py-6">
                         <Calendar className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                        <p className="text-gray-500 dark:text-gray-400">No upcoming interviews</p>
+                        <p className="text-gray-500 dark:text-gray-400">
+                          No upcoming interviews
+                        </p>
                       </div>
                     )}
 
@@ -2147,7 +2429,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                 <div className="flex justify-between items-center">
                   <div>
                     <CardTitle>All Candidates</CardTitle>
-                    <CardDescription>Manage your candidate pipeline</CardDescription>
+                    <CardDescription>
+                      Manage your candidate pipeline
+                    </CardDescription>
                   </div>
                   <div className="flex space-x-2">
                     <Button
@@ -2160,7 +2444,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                       <Download className="h-4 w-4 mr-1" />
                       {isExporting ? "Exporting..." : "Export Selected"}
                     </Button>
-                    <Button onClick={() => router.push("/employee/candidates/add")}>
+                    <Button
+                      onClick={() => router.push("/employee/candidates/add")}
+                    >
                       <PlusCircle className="h-4 w-4 mr-2" />
                       Add Candidate
                     </Button>
@@ -2169,7 +2455,10 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
               </CardHeader>
               <CardContent>
                 <div className="mb-4">
-                  <CandidatesFilterBar candidates={candidates} onFilterChange={setFilteredCandidates} />
+                  <CandidatesFilterBar
+                    candidates={candidates}
+                    onFilterChange={setFilteredCandidates}
+                  />
                 </div>
 
                 {filteredCandidates.length > 0 ? (
@@ -2179,50 +2468,72 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                         <Checkbox
                           id="select-all"
                           checked={
-                            selectedCandidates.length === filteredCandidates.length && filteredCandidates.length > 0
+                            selectedCandidates.length ===
+                              filteredCandidates.length &&
+                            filteredCandidates.length > 0
                           }
                           onCheckedChange={(checked) => {
                             if (checked) {
-                              selectAllCandidates(filteredCandidates.map((c) => c._id))
+                              selectAllCandidates(
+                                filteredCandidates.map((c) => c._id)
+                              );
                             } else {
-                              clearSelectedCandidates()
+                              clearSelectedCandidates();
                             }
                           }}
                           className="mr-2"
                         />
-                        <Label htmlFor="select-all" className="cursor-pointer text-black font-bold">
+                        <Label
+                          htmlFor="select-all"
+                          className="cursor-pointer text-black font-bold"
+                        >
                           Select All
                         </Label>
                       </div>
-                      <div className="col-span-2 text-black font-bold">Candidate</div>
+                      <div className="col-span-2 text-black font-bold">
+                        Candidate
+                      </div>
                       <div className="text-black font-bold">Position</div>
                       <div className="text-black font-bold">Status</div>
                       <div className="text-black font-bold">Applied Date</div>
-                      <div className="text-right col-span-2 text-black font-bold">Actions</div>
+                      <div className="text-right col-span-2 text-black font-bold">
+                        Actions
+                      </div>
                     </div>
 
                     {filteredCandidates.map((candidate, index) => (
                       <div
                         key={candidate._id}
                         className={`grid grid-cols-8 border-t dark:border-gray-700 p-3 items-center ${
-                          index % 2 === 0 ? "bg-gray-200 dark:bg-gray-200" : "bg-white dark:bg-gray-800"
+                          index % 2 === 0
+                            ? "bg-gray-200 dark:bg-gray-200"
+                            : "bg-white dark:bg-gray-800"
                         }`}
                       >
                         <div className="col-span-1">
                           <Checkbox
                             id={`select-${candidate._id}`}
                             checked={isSelected(candidate._id)}
-                            onCheckedChange={() => toggleCandidateSelection(candidate._id)}
+                            onCheckedChange={() =>
+                              toggleCandidateSelection(candidate._id)
+                            }
                           />
                         </div>
                         <div className="col-span-2 flex items-center">
                           <Avatar className="h-8 w-8 mr-2">
-                            <AvatarImage src={candidate.avatar || "/placeholder.svg"} alt={candidate.name} />
-                            <AvatarFallback>{candidate.name.charAt(0)}</AvatarFallback>
+                            <AvatarImage
+                              src={candidate.avatar || "/placeholder.svg"}
+                              alt={candidate.name}
+                            />
+                            <AvatarFallback>
+                              {candidate.name.charAt(0)}
+                            </AvatarFallback>
                           </Avatar>
                           <div>
                             <p className="font-medium">{candidate.name}</p>
-                            <p className="text-xs text-black dark:text-black">{candidate.email}</p>
+                            <p className="text-xs text-black dark:text-black">
+                              {candidate.email}
+                            </p>
                           </div>
                         </div>
                         <div>{candidate.role}</div>
@@ -2232,22 +2543,28 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                               candidate.status === "Shortlisted"
                                 ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
                                 : candidate.status === "Interview"
-                                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-                                  : candidate.status === "Rejected"
-                                    ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                                    : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                                : candidate.status === "Rejected"
+                                ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                                : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
                             }
                           >
                             {candidate.status}
                           </Badge>
                         </div>
-                        <div className="text-sm text-black dark:text-black">{candidate.appliedDate}</div>
+                        <div className="text-sm text-black dark:text-black">
+                          {candidate.appliedDate}
+                        </div>
                         <div className="flex justify-end space-x-2 col-span-2">
                           <Button
                             variant="outline"
                             size="sm"
                             className="bg-black text-white"
-                            onClick={() => router.push(`/employee/candidates/${candidate._id}`)}
+                            onClick={() =>
+                              router.push(
+                                `/employee/candidates/${candidate._id}`
+                              )
+                            }
                           >
                             View
                           </Button>
@@ -2255,7 +2572,11 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                             variant="outline"
                             size="sm"
                             className="text-white dark:text-white bg-black"
-                            onClick={() => router.push(`/employee/candidates/${candidate._id}/contact`)}
+                            onClick={() =>
+                              router.push(
+                                `/employee/candidates/${candidate._id}/contact`
+                              )
+                            }
                           >
                             <Send className="h-4 w-4 mr-1" />
                             Contact
@@ -2264,11 +2585,18 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                             variant="outline"
                             size="sm"
                             className="bg-green-600 text-white"
-                            onClick={() => handleExportSingleCandidate(candidate._id, candidate.name)}
+                            onClick={() =>
+                              handleExportSingleCandidate(
+                                candidate._id,
+                                candidate.name
+                              )
+                            }
                             disabled={isSingleExporting === candidate._id}
                           >
                             <Download className="h-4 w-4 mr-1" />
-                            {isSingleExporting === candidate._id ? "Exporting..." : "Export"}
+                            {isSingleExporting === candidate._id
+                              ? "Exporting..."
+                              : "Export"}
                           </Button>
                         </div>
                       </div>
@@ -2277,11 +2605,16 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                 ) : (
                   <div className="text-center py-12 border rounded-lg dark:border-gray-700">
                     <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">No candidates found</h3>
+                    <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">
+                      No candidates found
+                    </h3>
                     <p className="text-gray-500 dark:text-gray-400 mt-1">
                       Try adjusting your filters or add new candidates
                     </p>
-                    <Button className="mt-4" onClick={() => router.push("/employee/candidates/add")}>
+                    <Button
+                      className="mt-4"
+                      onClick={() => router.push("/employee/candidates/add")}
+                    >
                       <PlusCircle className="h-4 w-4 mr-2" />
                       Add Candidate
                     </Button>
@@ -2297,7 +2630,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                 <div className="flex justify-between items-center">
                   <div>
                     <CardTitle>Job Postings</CardTitle>
-                    <CardDescription>Manage your active and closed job postings</CardDescription>
+                    <CardDescription>
+                      Manage your active and closed job postings
+                    </CardDescription>
                   </div>
                   <Button onClick={() => router.push("/employee/jobs/add")}>
                     <PlusCircle className="h-4 w-4 mr-2" />
@@ -2311,13 +2646,16 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                     {jobPostings.map((job, index) => (
                       <div
                         key={job._id}
-                        className={`border rounded-lg p-4 dark:border-gray-700 ${index % 2 === 0 ? "bg-gray-200" : "bg-white"}`}
+                        className={`border rounded-lg p-4 dark:border-gray-700 ${
+                          index % 2 === 0 ? "bg-gray-200" : "bg-white"
+                        }`}
                       >
                         <div className="flex justify-between items-start">
                           <div>
                             <h3 className="font-medium">{job.jobTitle}</h3>
                             <p className="text-sm text-gray-500 dark:text-gray-400">
-                              {job.department} • {job.jobType} • {job.jobLocation}
+                              {job.department} • {job.jobType} •{" "}
+                              {job.jobLocation}
                             </p>
                             <div className="flex mt-2 space-x-4">
                               <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -2336,7 +2674,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                               variant="outline"
                               size="sm"
                               className="bg-black text-white"
-                              onClick={() => router.push(`/employee/jobs/${job._id}`)}
+                              onClick={() =>
+                                router.push(`/employee/jobs/${job._id}`)
+                              }
                             >
                               View
                             </Button>
@@ -2344,7 +2684,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                               variant="outline"
                               size="sm"
                               className="bg-black text-white"
-                              onClick={() => router.push(`/employee/jobs/${job._id}/edit`)}
+                              onClick={() =>
+                                router.push(`/employee/jobs/${job._id}/edit`)
+                              }
                             >
                               Edit
                             </Button>
@@ -2364,7 +2706,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
             <Card>
               <CardHeader>
                 <CardTitle>Interview Schedule</CardTitle>
-                <CardDescription>Manage your upcoming interviews</CardDescription>
+                <CardDescription>
+                  Manage your upcoming interviews
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
@@ -2374,7 +2718,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                       variant="outline"
                       className="bg-black text-white"
                       size="sm"
-                      onClick={() => router.push("/employee/interviews/schedule")}
+                      onClick={() =>
+                        router.push("/employee/interviews/schedule")
+                      }
                     >
                       <Calendar className="h-4 w-4 mr-2" />
                       Schedule Interview
@@ -2384,8 +2730,16 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                   <div className="space-y-4">
                     {interviews
                       .filter((interview) => {
-                        const today = new Date().toLocaleDateString()
-                        return interview.date === today
+                        const interviewDate = new Date(interview.date);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const interviewDateOnly = new Date(interviewDate);
+                        interviewDateOnly.setHours(0, 0, 0, 0);
+                        return (
+                          interviewDateOnly.getTime() === today.getTime() &&
+                          interview.status !== "cancelled" &&
+                          interview.status !== "expired"
+                        );
                       })
                       .map((interview) => (
                         <div
@@ -2397,8 +2751,12 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                               <Clock className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                             </div>
                             <div>
-                              <h4 className="font-medium">{interview.candidate.name}</h4>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">{interview.position}</p>
+                              <h4 className="font-medium">
+                                {interview.candidate.name}
+                              </h4>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                                {interview.position}
+                              </p>
                               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                 {interview.date} at {interview.time}
                               </p>
@@ -2408,11 +2766,22 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => router.push(`/employee/interviews/${interview._id}/reschedule`)}
+                              onClick={() =>
+                                router.push(
+                                  `/employee/interviews/${interview._id}/reschedule`
+                                )
+                              }
                             >
                               Reschedule
                             </Button>
-                            <Button size="sm" onClick={() => router.push(`/employee/interviews/${interview._id}/join`)}>
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                router.push(
+                                  `/employee/interviews/${interview._id}/join`
+                                )
+                              }
+                            >
                               Join Meeting
                             </Button>
                           </div>
@@ -2420,12 +2789,22 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                       ))}
 
                     {interviews.filter((interview) => {
-                      const today = new Date().toLocaleDateString()
-                      return interview.date === today
+                      const interviewDate = new Date(interview.date);
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const interviewDateOnly = new Date(interviewDate);
+                      interviewDateOnly.setHours(0, 0, 0, 0);
+                      return (
+                        interviewDateOnly.getTime() === today.getTime() &&
+                        interview.status !== "cancelled" &&
+                        interview.status !== "expired"
+                      );
                     }).length === 0 && (
                       <div className="text-center py-8 border rounded-lg dark:border-gray-700">
                         <Calendar className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                        <p className="text-gray-500 dark:text-gray-400">No interviews scheduled for today</p>
+                        <p className="text-gray-500 dark:text-gray-400">
+                          No interviews scheduled for today
+                        </p>
                       </div>
                     )}
                   </div>
@@ -2433,15 +2812,36 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                   <div className="mt-8">
                     <h3 className="font-medium mb-4">Upcoming</h3>
                     {interviews.filter((interview) => {
-                      const today = new Date().toLocaleDateString()
-                      return interview.date !== today
+                      const interviewDate = new Date(interview.date);
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const interviewDateOnly = new Date(interviewDate);
+                      interviewDateOnly.setHours(0, 0, 0, 0);
+                      return (
+                        interviewDateOnly.getTime() > today.getTime() &&
+                        interview.status !== "cancelled" &&
+                        interview.status !== "expired"
+                      );
                     }).length > 0 ? (
                       <div className="space-y-4">
                         {interviews
                           .filter((interview) => {
-                            const today = new Date().toLocaleDateString()
-                            return interview.date !== today
+                            const interviewDate = new Date(interview.date);
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const interviewDateOnly = new Date(interviewDate);
+                            interviewDateOnly.setHours(0, 0, 0, 0);
+                            return (
+                              interviewDateOnly.getTime() > today.getTime() &&
+                              interview.status !== "cancelled" &&
+                              interview.status !== "expired"
+                            );
                           })
+                          .sort(
+                            (a, b) =>
+                              new Date(a.date).getTime() -
+                              new Date(b.date).getTime()
+                          )
                           .map((interview) => (
                             <div
                               key={interview._id}
@@ -2452,8 +2852,12 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                                   <Calendar className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                                 </div>
                                 <div>
-                                  <h4 className="font-medium">{interview.candidate.name}</h4>
-                                  <p className="text-sm text-gray-500 dark:text-gray-400">{interview.position}</p>
+                                  <h4 className="font-medium">
+                                    {interview.candidate.name}
+                                  </h4>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    {interview.position}
+                                  </p>
                                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                     {interview.date} at {interview.time}
                                   </p>
@@ -2464,7 +2868,11 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                                   variant="outline"
                                   size="sm"
                                   className="bg-green-600 text-white"
-                                  onClick={() => router.push(`/employee/interviews/${interview._id}`)}
+                                  onClick={() =>
+                                    router.push(
+                                      `/employee/interviews/${interview._id}`
+                                    )
+                                  }
                                 >
                                   Details
                                 </Button>
@@ -2475,7 +2883,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                     ) : (
                       <div className="text-center py-8 border rounded-lg dark:border-gray-700">
                         <Calendar className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                        <p className="text-gray-500 dark:text-gray-400">No upcoming interviews scheduled</p>
+                        <p className="text-gray-500 dark:text-gray-400">
+                          No upcoming interviews scheduled
+                        </p>
                       </div>
                     )}
                   </div>
@@ -2505,12 +2915,16 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                       variant="outline"
                       size="icon"
                       onClick={() => {
-                        setAtsIsLoading(true)
-                        fetchAtsResumes().finally(() => setAtsIsLoading(false))
+                        setAtsIsLoading(true);
+                        fetchAtsResumes().finally(() => setAtsIsLoading(false));
                       }}
                       disabled={atsIsLoading}
                     >
-                      <RefreshCw className={`h-4 w-4 ${atsIsLoading ? "animate-spin" : ""}`} />
+                      <RefreshCw
+                        className={`h-4 w-4 ${
+                          atsIsLoading ? "animate-spin" : ""
+                        }`}
+                      />
                     </Button>
                   </div>
                 </div>
@@ -2519,7 +2933,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
               <CardContent>
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-sm text-gray-500">
-                    {atsFilteredResumes.length} {atsFilteredResumes.length === 1 ? "resume" : "resumes"} found
+                    {atsFilteredResumes.length}{" "}
+                    {atsFilteredResumes.length === 1 ? "resume" : "resumes"}{" "}
+                    found
                   </p>
 
                   <div className="flex items-center space-x-4">
@@ -2527,7 +2943,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                       variant="outline"
                       size="sm"
                       onClick={handleAtsExport}
-                      disabled={atsIsExporting || atsFilteredResumes.length === 0}
+                      disabled={
+                        atsIsExporting || atsFilteredResumes.length === 0
+                      }
                       className="flex items-center bg-green-600 text-white"
                     >
                       <Download className="h-4 w-4 mr-1" />
@@ -2538,9 +2956,13 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                       <Checkbox
                         id="highlight-keywords"
                         checked={atsHighlightKeywords}
-                        onCheckedChange={(checked) => setAtsHighlightKeywords(!!checked)}
+                        onCheckedChange={(checked) =>
+                          setAtsHighlightKeywords(!!checked)
+                        }
                       />
-                      <Label htmlFor="highlight-keywords">Highlight Keywords</Label>
+                      <Label htmlFor="highlight-keywords">
+                        Highlight Keywords
+                      </Label>
                     </div>
                   </div>
                 </div>
@@ -2566,11 +2988,17 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                           .map((r) => ({
                             value: `${r.firstName} ${r.lastName}`.trim(),
                             label: `${r.firstName} ${r.lastName}`.trim(),
-                            checked: candidateNameFilter.includes(`${r.firstName} ${r.lastName}`.trim()),
+                            checked: candidateNameFilter.includes(
+                              `${r.firstName} ${r.lastName}`.trim()
+                            ),
                           }))
                           .filter(
                             (option, index, self) =>
-                              index === self.findIndex((t) => t.value === option.value && t.value !== ""),
+                              index ===
+                              self.findIndex(
+                                (t) =>
+                                  t.value === option.value && t.value !== ""
+                              )
                           )}
                         onFilter={handleCandidateNameFilter}
                         onSort={handleCandidateNameSort}
@@ -2579,11 +3007,15 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
 
                       <FilterDropdown
                         title="Position"
-                        options={[...new Set(atsResumes.map((r) => r.currentPosition))].filter(Boolean).map((pos) => ({
-                          value: pos,
-                          label: pos,
-                          checked: positionFilter.includes(pos),
-                        }))}
+                        options={[
+                          ...new Set(atsResumes.map((r) => r.currentPosition)),
+                        ]
+                          .filter(Boolean)
+                          .map((pos) => ({
+                            value: pos,
+                            label: pos,
+                            checked: positionFilter.includes(pos),
+                          }))}
                         onFilter={handlePositionFilter}
                         onSort={handlePositionSort}
                         canSort={true}
@@ -2591,11 +3023,13 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
 
                       <FilterDropdown
                         title="Status"
-                        options={[...new Set(atsResumes.map((r) => r.status))].filter(Boolean).map((status) => ({
-                          value: status,
-                          label: status,
-                          checked: statusFilter.includes(status),
-                        }))}
+                        options={[...new Set(atsResumes.map((r) => r.status))]
+                          .filter(Boolean)
+                          .map((status) => ({
+                            value: status,
+                            label: status,
+                            checked: statusFilter.includes(status),
+                          }))}
                         onFilter={handleStatusFilter}
                         onSort={handleStatusSort}
                         canSort={true}
@@ -2603,11 +3037,15 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
 
                       <FilterDropdown
                         title="Applied Date"
-                        options={[...new Set(atsResumes.map((r) => r.appliedDate))].filter(Boolean).map((date) => ({
-                          value: date,
-                          label: date,
-                          checked: appliedDateFilter.includes(date),
-                        }))}
+                        options={[
+                          ...new Set(atsResumes.map((r) => r.appliedDate)),
+                        ]
+                          .filter(Boolean)
+                          .map((date) => ({
+                            value: date,
+                            label: date,
+                            checked: appliedDateFilter.includes(date),
+                          }))}
                         onFilter={handleAppliedDateFilter}
                         onSort={handleAppliedDateSort}
                         canSort={true}
@@ -2620,7 +3058,7 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                         candidates={atsFilteredResumes}
                         isLoading={atsIsLoading}
                         onSelectCandidate={(candidate) => {
-                          setAtsSelectedResume(candidate)
+                          setAtsSelectedResume(candidate);
                         }}
                         selectedCandidateId={atsSelectedResume?._id || null}
                         showViewButton={true}
@@ -2636,8 +3074,12 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
           <TabsContent value="settings">
             <Card>
               <CardHeader>
-                <CardTitle className="text-center font-lg">Account Settings</CardTitle>
-                <CardDescription className="text-center">Manage your account preferences</CardDescription>
+                <CardTitle className="text-center font-lg">
+                  Account Settings
+                </CardTitle>
+                <CardDescription className="text-center">
+                  Manage your account preferences
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
@@ -2655,7 +3097,12 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                       <Input
                         id="firstName"
                         value={personalInfo.firstName}
-                        onChange={(e) => setPersonalInfo({ ...personalInfo, firstName: e.target.value })}
+                        onChange={(e) =>
+                          setPersonalInfo({
+                            ...personalInfo,
+                            firstName: e.target.value,
+                          })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -2663,7 +3110,12 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                       <Input
                         id="lastName"
                         value={personalInfo.lastName}
-                        onChange={(e) => setPersonalInfo({ ...personalInfo, lastName: e.target.value })}
+                        onChange={(e) =>
+                          setPersonalInfo({
+                            ...personalInfo,
+                            lastName: e.target.value,
+                          })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -2671,15 +3123,27 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                       <Input
                         id="email"
                         value={personalInfo.email}
-                        onChange={(e) => setPersonalInfo({ ...personalInfo, email: e.target.value })}
+                        onChange={(e) =>
+                          setPersonalInfo({
+                            ...personalInfo,
+                            email: e.target.value,
+                          })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="alternativeEmail">Alternative Email (Optional)</Label>
+                      <Label htmlFor="alternativeEmail">
+                        Alternative Email (Optional)
+                      </Label>
                       <Input
                         id="alternativeEmail"
                         value={personalInfo.alternativeEmail}
-                        onChange={(e) => setPersonalInfo({ ...personalInfo, alternativeEmail: e.target.value })}
+                        onChange={(e) =>
+                          setPersonalInfo({
+                            ...personalInfo,
+                            alternativeEmail: e.target.value,
+                          })
+                        }
                         placeholder="Enter an alternative email address"
                       />
                     </div>
@@ -2688,12 +3152,22 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                       <Input
                         id="phone"
                         value={personalInfo.phone}
-                        onChange={(e) => setPersonalInfo({ ...personalInfo, phone: e.target.value })}
+                        onChange={(e) =>
+                          setPersonalInfo({
+                            ...personalInfo,
+                            phone: e.target.value,
+                          })
+                        }
                       />
                     </div>
                   </div>
-                  {emailError && <p className="text-red-500 text-sm mt-1">{emailError}</p>}
-                  <Button onClick={handleSavePersonalInfo} disabled={isUpdatingProfile}>
+                  {emailError && (
+                    <p className="text-red-500 text-sm mt-1">{emailError}</p>
+                  )}
+                  <Button
+                    onClick={handleSavePersonalInfo}
+                    disabled={isUpdatingProfile}
+                  >
                     {isUpdatingProfile ? (
                       <>
                         <div className="animate-spin mr-2 h-4 w-4 border-2 border-t-transparent border-white rounded-full"></div>
@@ -2716,7 +3190,12 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                         id="currentPassword"
                         type="password"
                         value={passwordInfo.currentPassword}
-                        onChange={(e) => setPasswordInfo({ ...passwordInfo, currentPassword: e.target.value })}
+                        onChange={(e) =>
+                          setPasswordInfo({
+                            ...passwordInfo,
+                            currentPassword: e.target.value,
+                          })
+                        }
                       />
                       <Link
                         href="/auth/employee/forgot-password"
@@ -2732,20 +3211,35 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                         id="newPassword"
                         type="password"
                         value={passwordInfo.newPassword}
-                        onChange={(e) => setPasswordInfo({ ...passwordInfo, newPassword: e.target.value })}
+                        onChange={(e) =>
+                          setPasswordInfo({
+                            ...passwordInfo,
+                            newPassword: e.target.value,
+                          })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                      <Label htmlFor="confirmPassword">
+                        Confirm New Password
+                      </Label>
                       <Input
                         id="confirmPassword"
                         type="password"
                         value={passwordInfo.confirmPassword}
-                        onChange={(e) => setPasswordInfo({ ...passwordInfo, confirmPassword: e.target.value })}
+                        onChange={(e) =>
+                          setPasswordInfo({
+                            ...passwordInfo,
+                            confirmPassword: e.target.value,
+                          })
+                        }
                       />
                     </div>
                   </div>
-                  <Button onClick={handleUpdatePassword} disabled={isUpdatingPassword}>
+                  <Button
+                    onClick={handleUpdatePassword}
+                    disabled={isUpdatingPassword}
+                  >
                     {isUpdatingPassword ? (
                       <>
                         <div className="animate-spin mr-2 h-4 w-4 border-2 border-t-transparent border-white rounded-full"></div>
@@ -2828,7 +3322,10 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                       </div>
                     </div>
                   </div>
-                  <Button onClick={handleSaveNotificationSettings} disabled={isUpdatingNotifications}>
+                  <Button
+                    onClick={handleSaveNotificationSettings}
+                    disabled={isUpdatingNotifications}
+                  >
                     {isUpdatingNotifications ? (
                       <>
                         <div className="animate-spin mr-2 h-4 w-4 border-2 border-t-transparent border-white rounded-full"></div>
@@ -2843,11 +3340,18 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                 <Separator className="my-4" />
 
                 <div className="space-y-4 pt-4">
-                  <h3 className="text-lg font-medium text-red-600 dark:text-red-400">Danger Zone</h3>
+                  <h3 className="text-lg font-medium text-red-600 dark:text-red-400">
+                    Danger Zone
+                  </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Once you delete your account, there is no going back. Please be certain.
+                    Once you delete your account, there is no going back. Please
+                    be certain.
                   </p>
-                  <Button variant="destructive" onClick={handleDeleteAccount} disabled={isDeletingAccount}>
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteAccount}
+                    disabled={isDeletingAccount}
+                  >
                     {isDeletingAccount ? (
                       <>
                         <div className="animate-spin mr-2 h-4 w-4 border-2 border-t-transparent border-white rounded-full"></div>
@@ -2864,7 +3368,7 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
         </Tabs>
       </main>
     </div>
-  )
+  );
 }
 
 // Wrap the main component with the CandidateSelectionProvider
@@ -2873,8 +3377,8 @@ function EmployeeDashboardWrapper({ userData }: EmployeeDashboardProps) {
     <CandidateSelectionProvider>
       <EmployeeDashboard userData={userData} />
     </CandidateSelectionProvider>
-  )
+  );
 }
 
 // Export the wrapped component
-export default withAuth(EmployeeDashboardWrapper)
+export default withAuth(EmployeeDashboardWrapper);

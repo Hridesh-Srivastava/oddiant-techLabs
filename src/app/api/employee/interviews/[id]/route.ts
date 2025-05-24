@@ -15,48 +15,121 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     const interviewId = await params.id
 
+    // Validate ObjectId format
+    if (!ObjectId.isValid(interviewId)) {
+      return NextResponse.json({ success: false, message: "Invalid interview ID" }, { status: 400 })
+    }
+
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Find interview by ID
-    const interview = await db.collection("interviews").findOne({ _id: new ObjectId(interviewId) })
+    // Find employee to get company information
+    const employee = await db.collection("employees").findOne({ _id: new ObjectId(userId) })
+
+    if (!employee) {
+      return NextResponse.json({ message: "Employee not found" }, { status: 404 })
+    }
+
+    console.log("Fetching interview details for ID:", interviewId, "Employee:", userId)
+
+    // Find interview with proper data isolation
+    const interview = await db.collection("interviews").findOne({
+      $and: [
+        { _id: new ObjectId(interviewId) },
+        {
+          $or: [
+            { scheduledBy: new ObjectId(userId) },
+            { employeeId: new ObjectId(userId) },
+            { createdBy: new ObjectId(userId) },
+            { companyId: employee._id.toString() },
+            { companyName: employee.companyName },
+          ],
+        },
+      ],
+    })
 
     if (!interview) {
+      console.log("Interview not found for ID:", interviewId)
       return NextResponse.json({ success: false, message: "Interview not found" }, { status: 404 })
     }
 
-    // Get candidate details
-    const candidate = await db.collection("candidates").findOne({ _id: new ObjectId(interview.candidateId) })
+    console.log("Found interview:", interview._id)
 
-    if (!candidate) {
-      return NextResponse.json({ success: false, message: "Candidate not found" }, { status: 404 })
+    // Get candidate details
+    let candidate = null
+    try {
+      if (interview.candidateId) {
+        candidate = await db.collection("candidates").findOne({ _id: new ObjectId(interview.candidateId) })
+
+        if (!candidate) {
+          candidate = await db.collection("students").findOne({ _id: new ObjectId(interview.candidateId) })
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching candidate:", error)
     }
 
     // Get job details if jobId exists
     let job = null
-    if (interview.jobId) {
-      job = await db.collection("jobs").findOne({ _id: new ObjectId(interview.jobId) })
+    try {
+      if (interview.jobId) {
+        job = await db.collection("jobs").findOne({ _id: new ObjectId(interview.jobId) })
+      }
+    } catch (error) {
+      console.error("Error fetching job:", error)
     }
+
+    // Format candidate information
+    const candidateInfo = candidate
+      ? {
+          _id: candidate._id,
+          name:
+            candidate.name || `${candidate.firstName || ""} ${candidate.lastName || ""}`.trim() || "Unknown Candidate",
+          email: candidate.email || "",
+          phone: candidate.phone || "",
+          role: candidate.role || interview.position || "",
+          status: candidate.status || "Applied",
+          avatar: candidate.avatar || null,
+        }
+      : {
+          _id: interview.candidateId,
+          name: "Unknown Candidate",
+          email: "",
+          phone: "",
+          role: interview.position || "",
+          status: "Applied",
+          avatar: null,
+        }
 
     // Format the response
     const formattedInterview = {
-      ...interview,
-      candidate: {
-        _id: candidate._id,
-        name: candidate.name,
-        email: candidate.email,
-        phone: candidate.phone || "",
-        role: candidate.role || "",
-        status: candidate.status || "Applied",
-        avatar: candidate.avatar || null,
-      },
+      _id: interview._id,
+      candidateId: interview.candidateId,
+      candidate: candidateInfo,
       job: job
         ? {
             _id: job._id,
             jobTitle: job.jobTitle,
           }
         : null,
+      position: interview.position,
+      date: interview.date,
+      time: interview.time,
+      duration: interview.duration || 60,
+      interviewers: interview.interviewers || [],
+      meetingLink: interview.meetingLink || "",
+      notes: interview.notes || "",
+      status: interview.status || "scheduled",
+      location: interview.location || "Remote",
+      feedback: interview.feedback || [],
+      scheduledBy: interview.scheduledBy,
+      employeeId: interview.employeeId,
+      companyId: interview.companyId,
+      createdAt: interview.createdAt,
+      updatedAt: interview.updatedAt,
     }
+
+    console.log("Returning formatted interview data")
 
     return NextResponse.json({ success: true, interview: formattedInterview }, { status: 200 })
   } catch (error) {
@@ -77,22 +150,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const interviewId = params.id
     const body = await request.json()
 
+    // Validate ObjectId format
+    if (!ObjectId.isValid(interviewId)) {
+      return NextResponse.json({ success: false, message: "Invalid interview ID" }, { status: 400 })
+    }
+
     // Connect to database
     const { db } = await connectToDatabase()
-
-    // Find the interview to get candidate info
-    const interview = await db.collection("interviews").findOne({ _id: new ObjectId(interviewId) })
-
-    if (!interview) {
-      return NextResponse.json({ success: false, message: "Interview not found" }, { status: 404 })
-    }
-
-    // Find candidate
-    const candidate = await db.collection("candidates").findOne({ _id: new ObjectId(interview.candidateId) })
-
-    if (!candidate) {
-      return NextResponse.json({ success: false, message: "Candidate not found" }, { status: 404 })
-    }
 
     // Find employee
     const employee = await db.collection("employees").findOne({ _id: new ObjectId(userId) })
@@ -101,30 +165,64 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ success: false, message: "Employee not found" }, { status: 404 })
     }
 
-    // Update interview
-    const result = await db.collection("interviews").updateOne(
-      { _id: new ObjectId(interviewId) },
-      {
-        $set: {
-          ...body,
-          date: body.date ? new Date(body.date) : interview.date,
-          updatedAt: new Date(),
+    // Find the interview with proper data isolation
+    const interview = await db.collection("interviews").findOne({
+      $and: [
+        { _id: new ObjectId(interviewId) },
+        {
+          $or: [
+            { scheduledBy: new ObjectId(userId) },
+            { employeeId: new ObjectId(userId) },
+            { createdBy: new ObjectId(userId) },
+            { companyId: employee._id.toString() },
+            { companyName: employee.companyName },
+          ],
         },
-      },
-    )
+      ],
+    })
+
+    if (!interview) {
+      return NextResponse.json({ success: false, message: "Interview not found" }, { status: 404 })
+    }
+
+    // Find candidate
+    let candidate = null
+    try {
+      if (interview.candidateId) {
+        candidate = await db.collection("candidates").findOne({ _id: new ObjectId(interview.candidateId) })
+
+        if (!candidate) {
+          candidate = await db.collection("students").findOne({ _id: new ObjectId(interview.candidateId) })
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching candidate:", error)
+    }
+
+    // Update interview
+    const updateData = {
+      ...body,
+      date: body.date ? new Date(body.date) : interview.date,
+      updatedAt: new Date(),
+    }
+
+    const result = await db.collection("interviews").updateOne({ _id: new ObjectId(interviewId) }, { $set: updateData })
 
     if (result.matchedCount === 0) {
       return NextResponse.json({ success: false, message: "Interview not found" }, { status: 404 })
     }
 
-    // Send email notification to candidate about rescheduled interview
-    if (body.status === "rescheduled") {
+    // Send email notification if rescheduled
+    if (body.status === "rescheduled" && candidate) {
       try {
+        const candidateName =
+          candidate.name || `${candidate.firstName || ""} ${candidate.lastName || ""}`.trim() || "Candidate"
+
         await sendEmail({
           to: candidate.email,
           subject: `Interview Rescheduled: ${interview.position} at ${employee.companyName}`,
           text: `
-            Dear ${candidate.name},
+            Dear ${candidateName},
 
             Your interview for the ${interview.position} position at ${employee.companyName} has been rescheduled.
 
@@ -143,7 +241,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
               <h2 style="color: #333;">Interview Rescheduled</h2>
-              <p>Dear ${candidate.name},</p>
+              <p>Dear ${candidateName},</p>
               <p>Your interview for the <strong>${interview.position}</strong> position at <strong>${employee.companyName}</strong> has been rescheduled.</p>
               <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0;">
                 <p><strong>New Date:</strong> ${new Date(body.date).toLocaleDateString()}</p>
@@ -158,7 +256,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         })
       } catch (emailError) {
         console.error("Error sending interview rescheduling email:", emailError)
-        // Continue with the process even if email fails
       }
     }
 
@@ -180,11 +277,36 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     const interviewId = params.id
 
+    // Validate ObjectId format
+    if (!ObjectId.isValid(interviewId)) {
+      return NextResponse.json({ success: false, message: "Invalid interview ID" }, { status: 400 })
+    }
+
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Delete interview
-    const result = await db.collection("interviews").deleteOne({ _id: new ObjectId(interviewId) })
+    // Find employee
+    const employee = await db.collection("employees").findOne({ _id: new ObjectId(userId) })
+
+    if (!employee) {
+      return NextResponse.json({ success: false, message: "Employee not found" }, { status: 404 })
+    }
+
+    // Delete interview with proper data isolation
+    const result = await db.collection("interviews").deleteOne({
+      $and: [
+        { _id: new ObjectId(interviewId) },
+        {
+          $or: [
+            { scheduledBy: new ObjectId(userId) },
+            { employeeId: new ObjectId(userId) },
+            { createdBy: new ObjectId(userId) },
+            { companyId: employee._id.toString() },
+            { companyName: employee.companyName },
+          ],
+        },
+      ],
+    })
 
     if (result.deletedCount === 0) {
       return NextResponse.json({ success: false, message: "Interview not found" }, { status: 404 })
