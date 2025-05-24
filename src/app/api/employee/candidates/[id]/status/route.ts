@@ -29,7 +29,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ message: "Employee not found" }, { status: 404 })
     }
 
-    // Update candidate status in candidates collection
+    // Try to update candidate status in candidates collection first
     const candidateResult = await db.collection("candidates").updateOne(
       { _id: new ObjectId(candidateId) },
       {
@@ -42,8 +42,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     )
 
     // If candidate not found in candidates collection, try students collection
+    let studentResult = { matchedCount: 0 }
     if (candidateResult.matchedCount === 0) {
-      const studentResult = await db.collection("students").updateOne(
+      studentResult = await db.collection("students").updateOne(
         { _id: new ObjectId(candidateId) },
         {
           $set: {
@@ -53,10 +54,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           },
         },
       )
+    }
 
-      if (studentResult.matchedCount === 0) {
-        return NextResponse.json({ message: "Candidate not found" }, { status: 404 })
-      }
+    // If not found in either collection, return error
+    if (candidateResult.matchedCount === 0 && studentResult.matchedCount === 0) {
+      return NextResponse.json({ message: "Candidate not found in either collection" }, { status: 404 })
     }
 
     // If jobId is provided, also update the job application
@@ -113,7 +115,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     }
 
-    return NextResponse.json({ success: true, message: "Candidate status updated successfully" }, { status: 200 })
+    const sourceCollection = candidateResult.matchedCount > 0 ? "candidates" : "students"
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: `Candidate status updated successfully in ${sourceCollection} collection`,
+        source: sourceCollection,
+      },
+      { status: 200 },
+    )
   } catch (error) {
     console.error("Error updating candidate status:", error)
     return NextResponse.json({ success: false, message: "Failed to update candidate status" }, { status: 500 })

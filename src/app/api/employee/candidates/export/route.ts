@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const objectIds = candidateIds
       .map((id) => {
         try {
-          return { _id: new ObjectId(id) }
+          return new ObjectId(id)
         } catch (error) {
           console.warn(`Invalid ObjectId format: ${id}`)
           return null
@@ -40,138 +40,202 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "No valid candidate IDs provided" }, { status: 400 })
     }
 
-    // Find candidates
-    const candidates = await db.collection("candidates").find({ $or: objectIds }).toArray()
+    // Find candidates from both collections
+    const candidatesFromCandidates = await db
+      .collection("candidates")
+      .find({ _id: { $in: objectIds } })
+      .toArray()
 
-    if (candidates.length === 0) {
-      return NextResponse.json({ success: false, message: "No candidates found" }, { status: 404 })
+    const candidatesFromStudents = await db
+      .collection("students")
+      .find({ _id: { $in: objectIds } })
+      .toArray()
+
+    // Combine candidates from both collections
+    const allCandidates = [
+      ...candidatesFromCandidates.map((c: any) => ({ ...c, source: "candidates" })),
+      ...candidatesFromStudents.map((s: any) => ({ ...s, source: "students" })),
+    ]
+
+    if (allCandidates.length === 0) {
+      return NextResponse.json({ success: false, message: "No candidates found in either collection" }, { status: 404 })
     }
 
     // Prepare data for Excel export with all the detailed fields
-    const candidatesData = candidates.map((candidate) => {
-      // Extract salary and notice period data directly from work experience if available
-      let currentSalary = "";
-      let expectedSalary = "";
-      let noticePeriod = "";
-      
-      // Try to get salary and notice period from multiple possible locations in the data
-      if (candidate.currentSalary) {
-        currentSalary = candidate.currentSalary;
-      } else if (candidate.workExperience && candidate.workExperience.length > 0 && candidate.workExperience[0].currentSalary) {
-        currentSalary = candidate.workExperience[0].currentSalary;
+    const candidatesData = allCandidates.map((candidate: any) => {
+      // Normalize candidate data based on source
+      const normalizedCandidate =
+        candidate.source === "students"
+          ? {
+              ...candidate,
+              name: candidate.name || `${candidate.firstName || ""} ${candidate.lastName || ""}`.trim(),
+              // Map student fields to candidate fields for consistency
+              currentPosition: candidate.currentPosition || (candidate.experience && candidate.experience[0]?.title),
+              role: candidate.role || (candidate.experience && candidate.experience[0]?.title),
+              workExperience: candidate.workExperience || candidate.experience,
+              yearsOfExperience: candidate.yearsOfExperience || candidate.totalExperience,
+              currentCity: candidate.currentCity || candidate.location,
+              currentState: candidate.currentState || candidate.state,
+              // Handle different field names for preferred cities
+              preferredCities: candidate.preferredCities || candidate.preferenceCities || [],
+              // Handle different field names for date of birth
+              dateOfBirth: candidate.dateOfBirth || candidate.dob,
+            }
+          : candidate
+
+      // Extract salary and notice period data from multiple possible locations
+      let currentSalary = normalizedCandidate.currentSalary || ""
+      let expectedSalary = normalizedCandidate.expectedSalary || ""
+      let noticePeriod = normalizedCandidate.noticePeriod || ""
+
+      // Try to get from work experience if not available at top level
+      if (!currentSalary && normalizedCandidate.workExperience && normalizedCandidate.workExperience.length > 0) {
+        currentSalary = normalizedCandidate.workExperience[0].currentSalary || ""
       }
-      
-      if (candidate.expectedSalary) {
-        expectedSalary = candidate.expectedSalary;
-      } else if (candidate.workExperience && candidate.workExperience.length > 0 && candidate.workExperience[0].expectedSalary) {
-        expectedSalary = candidate.workExperience[0].expectedSalary;
+      if (!expectedSalary && normalizedCandidate.workExperience && normalizedCandidate.workExperience.length > 0) {
+        expectedSalary = normalizedCandidate.workExperience[0].expectedSalary || ""
       }
-      
-      if (candidate.noticePeriod) {
-        noticePeriod = typeof candidate.noticePeriod === 'number' ? 
-          `${candidate.noticePeriod} days` : candidate.noticePeriod;
-      } else if (candidate.workExperience && candidate.workExperience.length > 0 && candidate.workExperience[0].noticePeriod) {
-        noticePeriod = typeof candidate.workExperience[0].noticePeriod === 'number' ? 
-          `${candidate.workExperience[0].noticePeriod} days` : candidate.workExperience[0].noticePeriod;
+      if (!noticePeriod && normalizedCandidate.workExperience && normalizedCandidate.workExperience.length > 0) {
+        noticePeriod = normalizedCandidate.workExperience[0].noticePeriod || ""
       }
-      
+
       // Format certifications properly
-      let certifications = "";
-      if (candidate.certifications) {
-        if (Array.isArray(candidate.certifications)) {
-          certifications = candidate.certifications
-            .map((cert, index) => {
-              if (typeof cert === 'string') {
-                return `${index + 1}. ${cert}`;
-              } else if (typeof cert === 'object' && cert !== null) {
-                const name = cert.name || cert.title || '';
-                const issuer = cert.issuer || cert.organization || '';
-                const date = cert.date || cert.issueDate || cert.year || '';
-                return `${index + 1}. ${name}${issuer ? ` from ${issuer}` : ''}${date ? ` (${date})` : ''}`;
+      let certifications = ""
+      if (normalizedCandidate.certifications) {
+        if (Array.isArray(normalizedCandidate.certifications)) {
+          certifications = normalizedCandidate.certifications
+            .map((cert: any, index: number) => {
+              if (typeof cert === "string") {
+                return `${index + 1}. ${cert}`
+              } else if (typeof cert === "object" && cert !== null) {
+                const name = cert.name || cert.title || ""
+                const issuer = cert.issuer || cert.organization || cert.issuingOrganization || ""
+                const date = cert.date || cert.issueDate || cert.year || ""
+                return `${index + 1}. ${name}${issuer ? ` from ${issuer}` : ""}${date ? ` (${date})` : ""}`
               }
-              return '';
+              return ""
             })
             .filter(Boolean)
-            .join("\n");
-        } else if (typeof candidate.certifications === 'string') {
-          certifications = candidate.certifications;
-        } else if (typeof candidate.certifications === 'object' && candidate.certifications !== null) {
-          certifications = Object.entries(candidate.certifications)
+            .join("\n")
+        } else if (typeof normalizedCandidate.certifications === "string") {
+          certifications = normalizedCandidate.certifications
+        } else if (
+          typeof normalizedCandidate.certifications === "object" &&
+          normalizedCandidate.certifications !== null
+        ) {
+          certifications = Object.entries(normalizedCandidate.certifications)
             .map(([key, value], index) => `${index + 1}. ${key}: ${value}`)
-            .join("\n");
+            .join("\n")
         }
       }
-      
+
       if (!certifications) {
-        certifications = "No Certifications";
+        certifications = "No Certifications"
+      }
+
+      // Safe property access with fallbacks
+      const getNestedProperty = (obj: any, path: string) => {
+        return path.split(".").reduce((current, key) => current && current[key], obj) || ""
       }
 
       return {
+        // Source Information
+        "Source Collection": candidate.source === "students" ? "Students Collection" : "Candidates Collection",
+
         // Personal Information
         "Full Name":
-          `${candidate.salutation || ""} ${candidate.firstName || ""} ${candidate.middleName || ""} ${candidate.lastName || ""}`.trim(),
-        Email: candidate.email || "",
-        Phone: candidate.phone || "",
-        "Alternative Phone": candidate.alternativePhone || "",
-        "Current Position": candidate.currentPosition || candidate.role || "",
-        Location: candidate.location || candidate.currentCity || "",
-        // State: candidate.state || "",
-        Pincode: candidate.pincode || "",
+          `${normalizedCandidate.salutation || ""} ${normalizedCandidate.firstName || ""} ${normalizedCandidate.middleName || ""} ${normalizedCandidate.lastName || normalizedCandidate.name || ""}`.trim(),
+        "First Name": normalizedCandidate.firstName || "",
+        "Middle Name": normalizedCandidate.middleName || "",
+        "Last Name": normalizedCandidate.lastName || "",
+        Email: normalizedCandidate.email || "",
+        Phone: normalizedCandidate.phone || "",
+        "Alternative Phone": normalizedCandidate.alternativePhone || "",
+        "Current Position": normalizedCandidate.currentPosition || normalizedCandidate.role || "",
+        Location: normalizedCandidate.location || normalizedCandidate.currentCity || "",
+        "Current City": normalizedCandidate.currentCity || "",
+        "Current State": normalizedCandidate.currentState || "",
+        Pincode: normalizedCandidate.pincode || "",
         "Full Address":
-          `${candidate.location || candidate.currentCity || ""}, ${candidate.state || ""} ${candidate.pincode ? `pincode: ${candidate.pincode}` : ""}`.trim(),
-        Gender: candidate.gender || "",
-        "Date of Birth": candidate.dateOfBirth ? new Date(candidate.dateOfBirth).toLocaleDateString() : "",
-        "Profile Outline": candidate.profileOutline || candidate.summary || "",
-        "Total Experience": `${candidate.yearsOfExperience || candidate.totalExperience || "0/fresher"} years`,
+          `${normalizedCandidate.location || normalizedCandidate.currentCity || ""}, ${normalizedCandidate.currentState || ""} ${normalizedCandidate.pincode ? `pincode: ${normalizedCandidate.pincode}` : ""}`.trim(),
+        Gender: normalizedCandidate.gender || "",
+        "Date of Birth": normalizedCandidate.dateOfBirth
+          ? new Date(normalizedCandidate.dateOfBirth).toLocaleDateString()
+          : "",
+        "Profile Outline": normalizedCandidate.profileOutline || normalizedCandidate.summary || "",
+        "Total Experience": `${normalizedCandidate.yearsOfExperience || normalizedCandidate.totalExperience || "0/fresher"} years`,
 
         // Skills
-        Skills: Array.isArray(candidate.skills) ? candidate.skills.join(", ") : "",
+        Skills: Array.isArray(normalizedCandidate.skills)
+          ? normalizedCandidate.skills.join(", ")
+          : normalizedCandidate.skills || "",
 
         // Education
-        Education: formatEducation(candidate.education),
+        Education: formatEducation(normalizedCandidate.education),
         Certifications: certifications,
 
         // Experience
-        Experience: formatExperience(candidate.workExperience || candidate.experience),
+        Experience: formatExperience(normalizedCandidate.workExperience || normalizedCandidate.experience),
         "Current Salary": currentSalary,
         "Expected Salary": expectedSalary,
         "Notice Period": noticePeriod,
 
         // Preferences
-        "Shift Preference": Array.isArray(candidate.shiftPreference)
-          ? candidate.shiftPreference.join(", ")
-          : candidate.shiftPreference || "",
-        "Preferred Cities": Array.isArray(candidate.preferredCities)
-          ? candidate.preferredCities.join(", ")
-          : candidate.preferredCities || "",
+        "Shift Preference": Array.isArray(normalizedCandidate.shiftPreference)
+          ? normalizedCandidate.shiftPreference.join(", ")
+          : normalizedCandidate.shiftPreference || "",
+        "Preferred Cities": Array.isArray(normalizedCandidate.preferredCities)
+          ? normalizedCandidate.preferredCities.join(", ")
+          : normalizedCandidate.preferredCities || "",
 
         // Assets and Documents
-        "Available Assets": Array.isArray(candidate.availableAssets)
-          ? candidate.availableAssets.map((asset: string) => asset.replace(/_/g, " ")).join(", ")
-          : "",
-        "Identity Documents": Array.isArray(candidate.identityDocuments)
-          ? candidate.identityDocuments.map((doc: string) => doc.replace(/_/g, " ")).join(", ")
-          : "",
+        "Available Assets": Array.isArray(normalizedCandidate.availableAssets)
+          ? normalizedCandidate.availableAssets.map((asset: string) => asset.replace(/_/g, " ")).join(", ")
+          : normalizedCandidate.availableAssets || "",
+        "Identity Documents": Array.isArray(normalizedCandidate.identityDocuments)
+          ? normalizedCandidate.identityDocuments.map((doc: string) => doc.replace(/_/g, " ")).join(", ")
+          : normalizedCandidate.identityDocuments || "",
 
-        // URLs and Links
-        "Portfolio Link": candidate.portfolioLink || "",
-        "Social Media Link": candidate.socialMediaLink || "",
-        "Resume URL": candidate.resumeUrl || "",
-        "Video Resume URL": candidate.videoResumeUrl || "",
-        "Audio Biodata URL": candidate.audioBiodataUrl || "",
-        "Photograph URL": candidate.photographUrl || "",
+        // URLs and Links - Safe property access
+        "Portfolio Link":
+          normalizedCandidate.portfolioLink || getNestedProperty(normalizedCandidate, "onlinePresence.portfolio") || "",
+        "Social Media Link":
+          normalizedCandidate.socialMediaLink ||
+          getNestedProperty(normalizedCandidate, "onlinePresence.socialMedia") ||
+          "",
+        LinkedIn:
+          normalizedCandidate.linkedIn || getNestedProperty(normalizedCandidate, "onlinePresence.linkedin") || "",
+        "Resume URL":
+          normalizedCandidate.resumeUrl || getNestedProperty(normalizedCandidate, "documents.resume.url") || "",
+        "Video Resume URL":
+          normalizedCandidate.videoResumeUrl ||
+          getNestedProperty(normalizedCandidate, "documents.videoResume.url") ||
+          "",
+        "Audio Biodata URL":
+          normalizedCandidate.audioBiodataUrl ||
+          getNestedProperty(normalizedCandidate, "documents.audioBiodata.url") ||
+          "",
+        "Photograph URL":
+          normalizedCandidate.photographUrl ||
+          getNestedProperty(normalizedCandidate, "documents.photograph.url") ||
+          normalizedCandidate.avatar ||
+          "",
 
         // Additional Information
-        "Cover Letter": candidate.coverLetter || "",
-        "Additional Information": candidate.additionalInfo || "",
-        Notes: candidate.notes || "",
+        "Cover Letter": normalizedCandidate.coverLetter || "",
+        "Additional Information": normalizedCandidate.additionalInfo || "",
+        Notes: normalizedCandidate.notes || "",
 
         // Status Information
-        Status: candidate.status || "",
-        "Applied Date": candidate.createdAt ? new Date(candidate.createdAt).toLocaleDateString() : "",
-        "Last Updated": candidate.updatedAt ? new Date(candidate.updatedAt).toLocaleDateString() : "",
-      };
-    });
+        Status: normalizedCandidate.status || "",
+        "Applied Date": normalizedCandidate.createdAt
+          ? new Date(normalizedCandidate.createdAt).toLocaleDateString()
+          : "",
+        "Last Updated": normalizedCandidate.updatedAt
+          ? new Date(normalizedCandidate.updatedAt).toLocaleDateString()
+          : "",
+      }
+    })
 
     // Create workbook
     const wb = XLSX.utils.book_new()
@@ -179,23 +243,24 @@ export async function POST(request: NextRequest) {
     // Add candidates sheet
     const ws = XLSX.utils.json_to_sheet(candidatesData)
 
-    // Set column widths (approximate as XLSX doesn't directly support column width)
+    // Set column widths
     const colWidths = [
-      { wch: 20 }, // Salutation
-      { wch: 20 }, // First Name
-      { wch: 20 }, // Middle Name
-      { wch: 20 }, // Last Name
-      { wch: 30 }, // Full Name
+      { wch: 20 }, // Source Collection
+      { wch: 25 }, // Full Name
+      { wch: 15 }, // First Name
+      { wch: 15 }, // Middle Name
+      { wch: 15 }, // Last Name
       { wch: 30 }, // Email
       { wch: 20 }, // Phone
       { wch: 20 }, // Alternative Phone
       { wch: 30 }, // Current Position
       { wch: 25 }, // Location
+      { wch: 20 }, // Current City
+      { wch: 20 }, // Current State
       { wch: 15 }, // Pincode
       { wch: 40 }, // Full Address
       { wch: 15 }, // Gender
       { wch: 20 }, // Date of Birth
-      { wch: 10 }, // Age
       { wch: 50 }, // Profile Outline
       { wch: 20 }, // Total Experience
       { wch: 50 }, // Skills
@@ -211,6 +276,7 @@ export async function POST(request: NextRequest) {
       { wch: 40 }, // Identity Documents
       { wch: 40 }, // Portfolio Link
       { wch: 40 }, // Social Media Link
+      { wch: 40 }, // LinkedIn
       { wch: 40 }, // Resume URL
       { wch: 40 }, // Video Resume URL
       { wch: 40 }, // Audio Biodata URL
@@ -234,7 +300,7 @@ export async function POST(request: NextRequest) {
     return new NextResponse(excelBuffer, {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="candidates_export_${new Date().toISOString().split("T")[0]}.xlsx"`,
+        "Content-Disposition": `attachment; filename="candidates_export_dual_collection_${new Date().toISOString().split("T")[0]}.xlsx"`,
       },
     })
   } catch (error) {
@@ -249,7 +315,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Helper function to format education data
+// Helper function to format education data with support for both collection field names
 function formatEducation(education: any): string {
   if (!education) return ""
 
@@ -260,11 +326,22 @@ function formatEducation(education: any): string {
       if (typeof edu === "string") {
         return edu
       } else if (edu && typeof edu === "object") {
-        let eduStr = `${index + 1}. ${edu.degree || ""} from ${edu.institution || ""} (${edu.startYear || ""} - ${edu.endYear || "Present"})`
+        // Handle different field names for start/end years
+        const startYear = edu.startYear || edu.fromYear || edu.yearFrom || edu.startingYear || ""
+        const endYear = edu.endYear || edu.toYear || edu.yearTo || edu.endingYear || ""
+
+        let eduStr = `${index + 1}. ${edu.degree || ""} from ${edu.institution || edu.school || ""}`
+
+        if (startYear || endYear) {
+          eduStr += ` (${startYear} - ${endYear || "Present"})`
+        }
 
         if (edu.level) eduStr += `, Level: ${edu.level}`
         if (edu.mode) eduStr += `, Mode: ${edu.mode}`
-        if (edu.percentage) eduStr += `, Percentage/CGPA: ${edu.percentage}`
+        if (edu.percentage || edu.grade || edu.cgpa || edu.marks) {
+          eduStr += `, Percentage/CGPA: ${edu.percentage || edu.grade || edu.cgpa || edu.marks}`
+        }
+        if (edu.field) eduStr += `, Field: ${edu.field}`
 
         return eduStr
       }
@@ -289,11 +366,17 @@ function formatExperience(experience: any): string {
       if (typeof exp === "string") {
         return exp
       } else if (exp && typeof exp === "object") {
-        let expStr = `${index + 1}. ${exp.title || ""} at ${exp.companyName || ""} (${exp.startDate || ""} - ${exp.endDate || exp.tenure || "Present"})`
+        let expStr = `${index + 1}. ${exp.title || ""} at ${exp.companyName || ""}`
+
+        if (exp.startDate || exp.endDate || exp.tenure) {
+          expStr += ` (${exp.startDate || ""} - ${exp.endDate || exp.tenure || "Present"})`
+        }
 
         if (exp.department) expStr += `, Department: ${exp.department}`
-        if (exp.summary || exp.description) expStr += `, Description: ${exp.summary || exp.description || ""}`
-        
+        if (exp.summary || exp.description || exp.professionalSummary) {
+          expStr += `, Description: ${exp.summary || exp.description || exp.professionalSummary || ""}`
+        }
+
         // Include salary and notice period information in the experience string
         if (exp.currentSalary) expStr += `, Current Salary: ${exp.currentSalary}`
         if (exp.expectedSalary) expStr += `, Expected Salary: ${exp.expectedSalary}`

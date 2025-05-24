@@ -1,12 +1,57 @@
-import { NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
+import { getUserFromRequest, getUserTypeFromRequest } from "@/lib/auth"
+import bcrypt from "bcryptjs"
 
-export async function GET(
-  request: NextRequest, 
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    console.log("Admin employee detail route called")
+
+    // Get user ID and type from request
+    const userId = await getUserFromRequest(request)
+    const userType = await getUserTypeFromRequest(request)
+
+    console.log("Auth check - User ID:", userId, "User Type:", userType)
+
+    // Check if this is email access (no authentication)
+    const url = new URL(request.url)
+    const isEmailAccess = url.pathname.includes("/admin/verify-employee/") || !userId
+
+    if (isEmailAccess) {
+      console.log("Email access detected, allowing temporary admin access")
+
+      // For email access, verify admin exists and allow access
+      const { db } = await connectToDatabase()
+      const adminEmail = process.env.EMAIL_TO
+      let admin = await db.collection("admins").findOne({ email: adminEmail })
+
+      if (!admin) {
+        const hashedPassword = await bcrypt.hash("Hridesh123!", 10)
+        const result = await db.collection("admins").insertOne({
+          email: adminEmail,
+          password: hashedPassword,
+          role: "admin",
+          name: "Admin",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        admin = await db.collection("admins").findOne({ _id: result.insertedId })
+      }
+    } else {
+      // Normal authentication check for logged-in users
+      if (!userId) {
+        console.log("No user ID found - unauthorized")
+        return NextResponse.json({ success: false, message: "Unauthorized - No user ID" }, { status: 401 })
+      }
+
+      // Verify user is admin
+      if (userType !== "admin") {
+        console.log("User type is not admin:", userType)
+        return NextResponse.json({ success: false, message: "Forbidden - Not admin" }, { status: 403 })
+      }
+    }
+
     // Await the params object before accessing its properties
     const { id: employeeId } = await params
 
@@ -24,9 +69,63 @@ export async function GET(
 
     const { password, ...employeeData } = employee
 
-    return NextResponse.json({ success: true, employee: employeeData }, { status: 200 })
+    // Ensure proper typing
+    const sanitizedEmployee = {
+      ...employeeData,
+      _id: employee._id.toString(),
+      firstName: employee.firstName || "",
+      lastName: employee.lastName || "",
+      email: employee.email || "",
+      companyName: employee.companyName || "",
+      companyLocation: employee.companyLocation || "",
+      designation: employee.designation || "",
+      verified: Boolean(employee.verified),
+      rejected: Boolean(employee.rejected),
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        employee: sanitizedEmployee,
+        isEmailAccess,
+      },
+      { status: 200 },
+    )
   } catch (error) {
     console.error("Error fetching employee:", error)
     return NextResponse.json({ success: false, message: "Failed to fetch employee" }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    // Get user ID and type from request
+    const userId = await getUserFromRequest(request)
+    const userType = await getUserTypeFromRequest(request)
+
+    if (!userId || userType !== "admin") {
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
+    }
+
+    // Await the params object before accessing its properties
+    const { id: employeeId } = await params
+
+    if (!employeeId) {
+      return NextResponse.json({ success: false, message: "Employee ID is required" }, { status: 400 })
+    }
+
+    const { db } = await connectToDatabase()
+
+    // Delete employee
+    const result = await db.collection("employees").deleteOne({ _id: new ObjectId(employeeId) })
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ success: false, message: "Employee not found" }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true, message: "Employee deleted successfully" }, { status: 200 })
+  } catch (error) {
+    console.error("Error deleting employee:", error)
+    return NextResponse.json({ success: false, message: "Failed to delete employee" }, { status: 500 })
   }
 }

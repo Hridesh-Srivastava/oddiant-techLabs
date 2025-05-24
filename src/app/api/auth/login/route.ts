@@ -14,56 +14,6 @@ export async function POST(request: NextRequest) {
 
     const { db } = await connectToDatabase()
 
-    // Special handling for super admin
-    if (email === process.env.EMAIL_TO) {
-      let admin = await db.collection("admins").findOne({ email })
-
-      if (!admin) {
-        const hashedPassword = await bcrypt.hash("Hridesh123!", 10)
-        const result = await db.collection("admins").insertOne({
-          email,
-          password: hashedPassword,
-          role: "admin",
-          name: "Admin",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })
-        admin = await db.collection("admins").findOne({ _id: result.insertedId })
-      }
-
-      const isPasswordValid = await bcrypt.compare(password, admin.password)
-
-      if (!isPasswordValid) {
-        return NextResponse.json({ success: false, message: "Invalid credentials" }, { status: 401 })
-      }
-
-      // Generate token with userType
-      const token = generateToken(admin._id.toString(), "admin")
-
-      // Create response with cookie
-      const response = NextResponse.json(
-        {
-          success: true,
-          role: "admin",
-          redirectUrl: "/admin/employees",
-        },
-        { status: 200 },
-      )
-
-      // Set cookie
-      response.cookies.set({
-        name: "auth_token",
-        value: token,
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 60 * 24, // 1 day
-        path: "/",
-        sameSite: "lax",
-      })
-
-      return response
-    }
-
     const collection = userType === "employee" ? "employees" : "students"
 
     // Check for login with primary or alternative email for students

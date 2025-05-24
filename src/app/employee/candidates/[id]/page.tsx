@@ -25,6 +25,7 @@ import {
   Award,
   FileSpreadsheet,
   Loader2,
+  DollarSign,
 } from "lucide-react"
 import { toast, Toaster } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -65,9 +66,10 @@ interface WorkExperience {
   companyName: string
   tenure: string
   summary: string
-  currentSalary: string
-  expectedSalary: string
-  noticePeriod: string
+  startDate: string
+  endDate: string
+  currentlyWorking: boolean
+  location: string
 }
 
 interface Candidate {
@@ -102,6 +104,9 @@ interface Candidate {
 
   // Experience
   totalExperience?: string
+  currentSalary?: string
+  expectedSalary?: string
+  noticePeriod?: string
   workExperience?: WorkExperience[]
   shiftPreference?: string[]
   preferredCities?: string[]
@@ -129,6 +134,29 @@ interface Candidate {
   // Formatted fields
   formattedEducation?: string
   fullName?: string
+}
+
+// Helper function to safely render any value
+const safeRender = (value: any): string => {
+  if (value === null || value === undefined) return "Not available"
+  if (typeof value === "string") return value
+  if (typeof value === "number" || typeof value === "boolean") return String(value)
+  if (Array.isArray(value)) return value.map((item) => safeRender(item)).join(", ")
+  if (typeof value === "object") {
+    // Handle specific object types
+    if (value.title && value.companyName) {
+      return `${value.title} at ${value.companyName}${value.tenure ? ` (${value.tenure})` : ""}`
+    }
+    if (value.degree && value.institution) {
+      return `${value.degree} from ${value.institution}`
+    }
+    // Generic object fallback
+    return Object.entries(value)
+      .filter(([key, val]) => val !== null && val !== undefined && val !== "")
+      .map(([key, val]) => `${key}: ${safeRender(val)}`)
+      .join(", ")
+  }
+  return String(value)
 }
 
 export default function CandidateDetailsPage({
@@ -315,7 +343,13 @@ export default function CandidateDetailsPage({
               </div>
               {typeof edu === "object" && edu !== null && (
                 <Badge variant="outline">
-                  {edu.startYear || "N/A"} - {edu.endYear || "N/A"}
+                  {edu.startYear && edu.endYear
+                    ? `${edu.startYear} - ${edu.endYear}`
+                    : edu.startYear
+                      ? `${edu.startYear}`
+                      : edu.endYear
+                        ? `${edu.endYear}`
+                        : "Duration not specified"}
                 </Badge>
               )}
             </div>
@@ -357,7 +391,13 @@ export default function CandidateDetailsPage({
                 </p>
               </div>
               <Badge variant="outline">
-                {education.startYear || "N/A"} - {education.endYear || "N/A"}
+                {education.startYear && education.endYear
+                  ? `${education.startYear} - ${education.endYear}`
+                  : education.startYear
+                    ? `${education.startYear}`
+                    : education.endYear
+                      ? `${education.endYear}`
+                      : "Duration not specified"}
               </Badge>
             </div>
             <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
@@ -743,7 +783,7 @@ export default function CandidateDetailsPage({
                     {candidate.experience && (
                       <div>
                         <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Experience</p>
-                        <p>{candidate.experience}</p>
+                        <p>{safeRender(candidate.experience)}</p>
                       </div>
                     )}
                     {candidate.totalExperience && (
@@ -753,6 +793,36 @@ export default function CandidateDetailsPage({
                       </div>
                     )}
                   </div>
+
+                  {/* Salary and Notice Period Section */}
+                  {(candidate.currentSalary || candidate.expectedSalary || candidate.noticePeriod) && (
+                    <div className="mt-4">
+                      <h4 className="text-md font-medium mb-2 flex items-center">
+                        <DollarSign className="h-4 w-4 mr-2" />
+                        Salary & Notice Period
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {candidate.currentSalary && (
+                          <div>
+                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Salary</p>
+                            <p className="text-green-600 font-medium">{candidate.currentSalary}</p>
+                          </div>
+                        )}
+                        {candidate.expectedSalary && (
+                          <div>
+                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Expected Salary</p>
+                            <p className="text-blue-600 font-medium">{candidate.expectedSalary}</p>
+                          </div>
+                        )}
+                        {candidate.noticePeriod && (
+                          <div>
+                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Notice Period</p>
+                            <p className="text-orange-600 font-medium">{candidate.noticePeriod} days</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Education */}
@@ -791,46 +861,42 @@ export default function CandidateDetailsPage({
                         Work Experience
                       </h3>
                       <div className="space-y-4">
-                        {candidate.workExperience.map((exp, index) => (
-                          <Card key={index} className="bg-gray-50 dark:bg-gray-800">
-                            <CardContent className="pt-4">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <h4 className="font-medium">{exp.title}</h4>
-                                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    {exp.companyName} {exp.department && `- ${exp.department}`}
-                                  </p>
+                        {candidate.workExperience.map((exp, index) => {
+                          // Safely handle work experience objects
+                          if (typeof exp === "string") {
+                            return (
+                              <Card key={index} className="bg-gray-50 dark:bg-gray-800">
+                                <CardContent className="pt-4">
+                                  <p>{exp}</p>
+                                </CardContent>
+                              </Card>
+                            )
+                          }
+
+                          // Handle work experience objects
+                          const workExp = exp as WorkExperience
+                          return (
+                            <Card key={index} className="bg-gray-50 dark:bg-gray-800">
+                              <CardContent className="pt-4">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <h4 className="font-medium">{workExp.title || "Position"}</h4>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                      {workExp.companyName || "Company"}{" "}
+                                      {workExp.department && `- ${workExp.department}`}
+                                    </p>
+                                  </div>
+                                  {workExp.tenure && <Badge variant="outline">{workExp.tenure}</Badge>}
                                 </div>
-                                <Badge variant="outline">{exp.tenure}</Badge>
-                              </div>
-                              {exp.summary && (
-                                <div className="mt-2">
-                                  <p className="text-sm whitespace-pre-line">{exp.summary}</p>
-                                </div>
-                              )}
-                              <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
-                                {exp.currentSalary && (
-                                  <div>
-                                    <span className="text-gray-500 dark:text-gray-400">Current Salary: </span>
-                                    {exp.currentSalary}
+                                {workExp.summary && (
+                                  <div className="mt-2">
+                                    <p className="text-sm whitespace-pre-line">{workExp.summary}</p>
                                   </div>
                                 )}
-                                {exp.expectedSalary && (
-                                  <div>
-                                    <span className="text-gray-500 dark:text-gray-400">Expected Salary: </span>
-                                    {exp.expectedSalary}
-                                  </div>
-                                )}
-                                {exp.noticePeriod && (
-                                  <div>
-                                    <span className="text-gray-500 dark:text-gray-400">Notice Period: </span>
-                                    {exp.noticePeriod} days
-                                  </div>
-                                )}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
+                              </CardContent>
+                            </Card>
+                          )
+                        })}
                       </div>
                     </div>
                   </>

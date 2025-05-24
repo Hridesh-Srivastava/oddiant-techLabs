@@ -1,12 +1,14 @@
 "use client"
 
-import React, { useState } from "react"
+import type React from "react"
+import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, ArrowLeft } from "lucide-react"
+import { toast, Toaster } from "sonner"
 
 const rejectionReasons = [
   { value: "", label: "Select a reason for rejection", disabled: true },
@@ -24,16 +26,16 @@ export default function RejectEmployeePage() {
   const router = useRouter()
   const [formData, setFormData] = useState({
     reason: "",
-    comments: ""
+    comments: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const employeeId = params.id as string
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }))
   }
 
@@ -41,7 +43,7 @@ export default function RejectEmployeePage() {
     e.preventDefault()
 
     if (!formData.reason) {
-      alert("Please select a rejection reason")
+      toast.error("Please select a rejection reason")
       return
     }
 
@@ -53,6 +55,7 @@ export default function RejectEmployeePage() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           employeeId,
           action: "reject",
@@ -61,24 +64,44 @@ export default function RejectEmployeePage() {
         }),
       })
 
-      if (!response.ok) throw new Error("Failed to reject employee")
-      
-      alert("Employee rejected successfully")
-      router.push("/admin/employees")
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Unknown error" }))
+        throw new Error(errorData.message || "Failed to reject employee")
+      }
+
+      toast.success("Employee rejected successfully")
+      setTimeout(() => {
+        router.push("/admin/employees")
+      }, 2000)
     } catch (error) {
-      alert("Failed to reject employee")
-      console.error(error)
+      console.error("Error rejecting employee:", error)
+      toast.error(`Failed to reject employee: ${error.message}`)
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  const handleBack = () => {
+    router.push(`/admin/verify-employee/${employeeId}`)
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 py-12">
+      <Toaster position="top-center" richColors />
       <div className="container mx-auto px-4 max-w-2xl">
-        <Card>
+        <div className="mb-6">
+          <Button variant="outline" onClick={handleBack} className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Employee Details
+          </Button>
+        </div>
+
+        <Card className="shadow-lg">
           <CardHeader className="bg-red-50 border-b">
-            <CardTitle className="text-2xl text-red-700">Reject Employee Application</CardTitle>
+            <CardTitle className="text-2xl text-red-700 flex items-center gap-2">
+              <AlertCircle className="h-6 w-6" />
+              Reject Employee Application
+            </CardTitle>
             <CardDescription>Please provide a reason for rejection and any additional comments</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
@@ -96,11 +119,7 @@ export default function RejectEmployeePage() {
                   required
                 >
                   {rejectionReasons.map((option) => (
-                    <option 
-                      key={option.value} 
-                      value={option.value}
-                      disabled={option.disabled}
-                    >
+                    <option key={option.value} value={option.value} disabled={option.disabled}>
                       {option.label}
                     </option>
                   ))}
@@ -132,19 +151,11 @@ export default function RejectEmployeePage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-between border-t p-6">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => router.back()}
-              >
+            <CardFooter className="flex justify-between border-t p-6 bg-gray-50">
+              <Button type="button" variant="outline" onClick={handleBack} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                className="bg-red-600 hover:bg-red-700 text-white"
-                disabled={isSubmitting}
-              >
+              <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white" disabled={isSubmitting}>
                 {isSubmitting ? "Processing..." : "Confirm Rejection"}
               </Button>
             </CardFooter>

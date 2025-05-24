@@ -6,27 +6,42 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { toast, Toaster } from "sonner"
-import { RotateCw, Search, Eye, Filter } from 'lucide-react'
+import { RotateCw, Search, Eye, Filter, AlertCircle } from "lucide-react"
+
+interface Employee {
+  _id: string
+  firstName: string
+  lastName: string
+  email: string
+  companyName: string
+  companyLocation: string
+  designation: string
+  verified: boolean
+  rejected: boolean
+}
 
 export default function AdminEmployeesPage() {
   const router = useRouter()
-  const [employees, setEmployees] = useState([])
+  const [employees, setEmployees] = useState<Employee[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filter, setFilter] = useState("all") // all, pending, verified, rejected
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isEmailAccess, setIsEmailAccess] = useState(false)
 
   // Function to fetch employees data
   const fetchEmployees = async () => {
     setIsLoading(true)
+    setError(null)
     try {
       const response = await fetch("/api/admin/employees", {
-        // Add cache: 'no-store' to prevent caching and ensure fresh data
         cache: "no-store",
         headers: {
           pragma: "no-cache",
           "cache-control": "no-cache",
         },
+        credentials: "include",
       })
 
       if (!response.ok) {
@@ -34,10 +49,10 @@ export default function AdminEmployeesPage() {
       }
 
       const data = await response.json()
-      
-      // Fix: Ensure employees is always an array
+
       if (data && Array.isArray(data.employees)) {
         setEmployees(data.employees)
+        setIsEmailAccess(data.isEmailAccess || false)
       } else if (Array.isArray(data)) {
         setEmployees(data)
       } else {
@@ -45,10 +60,16 @@ export default function AdminEmployeesPage() {
         setEmployees([])
         toast.error("Received invalid data format from server")
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to fetch employees:", error)
-      toast.error("Failed to fetch employees")
-      setEmployees([]) // Ensure employees is an array even on error
+      setError(error.message || "Failed to fetch employees")
+
+      if (error.message.includes("401")) {
+        toast.error("Authentication failed. Please log in again.")
+      } else {
+        toast.error("Failed to fetch employees")
+      }
+      setEmployees([])
     } finally {
       setIsLoading(false)
     }
@@ -58,13 +79,15 @@ export default function AdminEmployeesPage() {
   useEffect(() => {
     fetchEmployees()
 
-    // Set up polling for real-time updates
+    // Set up polling for real-time updates (only if not email access)
     const intervalId = setInterval(() => {
-      fetchEmployees()
+      if (!isEmailAccess) {
+        fetchEmployees()
+      }
     }, 30000) // Poll every 30 seconds
 
-    return () => clearInterval(intervalId) // Clean up on unmount
-  }, [])
+    return () => clearInterval(intervalId)
+  }, [isEmailAccess])
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -76,15 +99,19 @@ export default function AdminEmployeesPage() {
     }
   }
 
-  const handleViewEmployee = (employeeId) => {
+  const handleViewEmployee = (employeeId: string) => {
     router.push(`/admin/verify-employee/${employeeId}`)
   }
 
+  const handleLogin = () => {
+    router.push("/auth/employee/login")
+  }
+
   // Ensure employees is always an array before filtering
-  const filteredEmployees = Array.isArray(employees) 
+  const filteredEmployees = Array.isArray(employees)
     ? employees.filter((employee) => {
         const searchTermLower = searchTerm.toLowerCase()
-        const fullName = `${employee.firstName || ''} ${employee.lastName || ''}`.toLowerCase()
+        const fullName = `${employee.firstName || ""} ${employee.lastName || ""}`.toLowerCase()
         const email = employee.email?.toLowerCase() || ""
         const companyName = employee.companyName?.toLowerCase() || ""
 
@@ -106,20 +133,45 @@ export default function AdminEmployeesPage() {
       })
     : []
 
-  const getStatusBadge = (employee) => {
+  const getStatusBadge = (employee: Employee) => {
     if (employee.verified) {
-      return <Badge className="bg-green-300 text-green-700 hover:bg-black">verified</Badge>
+      return <Badge className="bg-green-300 text-green-700 hover:bg-green-400">Verified</Badge>
     } else if (employee.rejected) {
-      return <Badge className="bg-red-200 text-red-700 hover:bg-black">rejected</Badge>
+      return <Badge className="bg-red-200 text-red-700 hover:bg-red-300">Rejected</Badge>
     } else {
-      return <Badge className="bg-yellow-200 text-yellow-700 hover:bg-black">pending</Badge>
+      return <Badge className="bg-yellow-200 text-yellow-700 hover:bg-yellow-300">Pending</Badge>
     }
   }
 
+  if (error && error.includes("401")) {
+    return (
+      <div className="min-h-screen bg-gradient-to-r from-blue-700 to-purple-700 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Authentication Required</h2>
+          <p className="text-gray-600 mb-6">Please log in to access the admin panel.</p>
+          <Button onClick={handleLogin} className="w-full">
+            Go to Login
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="container mx-auto py-10 bg-gradient-to-r from-blue-500/20 to-purple-500/20">
+    <div className="container mx-auto py-10 bg-gradient-to-r from-blue-500/20 to-purple-500/20 min-h-screen">
       <Toaster richColors />
-      <h1 className="text-3xl font-semibold mb-6 text-white">Manage Employees</h1>
+
+      {isEmailAccess && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-blue-700">
+            📧 You are accessing this page through an email link. Some features may be limited.
+          </p>
+        </div>
+      )}
+
+      <h1 className="text-3xl font-semibold mb-6 text-black">Manage Employees</h1>
+
       <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
         <div className="flex flex-col md:flex-row items-center gap-2 w-full">
           <div className="relative w-full md:w-auto">
@@ -132,13 +184,18 @@ export default function AdminEmployeesPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button variant="ghost" disabled={isRefreshing} onClick={handleRefresh} className="flex-shrink-0 text-black bg-white hover:bg-green-600 hover:text-black">
+          <Button
+            variant="ghost"
+            disabled={isRefreshing}
+            onClick={handleRefresh}
+            className="flex-shrink-0 text-black bg-white hover:bg-green-600 hover:text-white"
+          >
             <RotateCw className={`h-4 w-4 mr-1 ${isRefreshing ? "animate-spin" : ""}`} />
             {isRefreshing ? "Refreshing..." : "Refresh"}
           </Button>
           <div className="flex items-center gap-2 ml-auto">
             <Filter className="h-4 w-4 text-gray-500" />
-            <select className="border rounded px-2 py-1" value={filter} onChange={(e) => setFilter(e.target.value)}> 
+            <select className="border rounded px-2 py-1" value={filter} onChange={(e) => setFilter(e.target.value)}>
               <option value="all">All</option>
               <option value="pending">Pending</option>
               <option value="verified">Verified</option>
@@ -151,6 +208,15 @@ export default function AdminEmployeesPage() {
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+        </div>
+      ) : error ? (
+        <div className="text-center py-10 bg-red-50 rounded-lg border border-red-200">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <p className="text-red-700 font-medium">Error loading employees</p>
+          <p className="text-red-600 text-sm mt-1">{error}</p>
+          <Button onClick={handleRefresh} className="mt-4" variant="outline">
+            Try Again
+          </Button>
         </div>
       ) : filteredEmployees.length === 0 ? (
         <div className="text-center py-10 bg-gray-50 rounded-lg">
@@ -180,27 +246,27 @@ export default function AdminEmployeesPage() {
             </thead>
             <tbody>
               {filteredEmployees.map((employee) => (
-                <tr key={employee._id || employee.id}>
+                <tr key={employee._id}>
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                     <div className="flex items-center">
                       <div className="ml-3">
                         <p className="text-gray-900 whitespace-no-wrap">
-                          {employee.firstName || ''} {employee.lastName || ''}
+                          {employee.firstName || ""} {employee.lastName || ""}
                         </p>
                       </div>
                     </div>
                   </td>
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">{employee.email || ''}</p>
+                    <p className="text-gray-900 whitespace-no-wrap">{employee.email || ""}</p>
                   </td>
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">{employee.companyName || ''}</p>
+                    <p className="text-gray-900 whitespace-no-wrap">{employee.companyName || ""}</p>
                   </td>
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{getStatusBadge(employee)}</td>
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <Button variant="outline" size="sm" onClick={() => handleViewEmployee(employee._id || employee.id)}>
+                    <Button variant="outline" size="sm" onClick={() => handleViewEmployee(employee._id)}>
                       <Eye className="h-4 w-4 mr-2" />
-                      View
+                      Review
                     </Button>
                   </td>
                 </tr>
