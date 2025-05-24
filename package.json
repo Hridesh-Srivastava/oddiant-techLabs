@@ -9,6 +9,10 @@
     "start": "next start",
     "lint": "echo 'Linting is ignored for now.'"
   },
+  "overrides": {
+    "@types/react": "19.1.4",
+    "@types/react-dom": "19.0.8"
+  },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
