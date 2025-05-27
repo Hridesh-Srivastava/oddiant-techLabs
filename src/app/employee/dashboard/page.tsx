@@ -29,6 +29,11 @@ import {
   UserCog,
   BarChart,
   ClipboardCheck,
+  ArrowUpRight,
+  Eye,
+  Plus,
+  Edit,
+  Video
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -179,6 +184,7 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
   const [isUpdatingNotifications, setIsUpdatingNotifications] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
   const [isExporting, setIsExporting] = useState(false);
   const [isSingleExporting, setIsSingleExporting] = useState<string | null>(
@@ -491,76 +497,89 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
   }, [employee]);
 
   const fetchInterviews = useCallback(async () => {
-    try {
-      if (!employee || !employee._id) {
-        console.log("No employee data available, skipping interviews fetch");
-        return;
-      }
-
-      const response = await fetch("/api/employee/interviews", {
-        cache: "no-store",
-        headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch interviews");
-      }
-
-      const data = await response.json();
-      console.log("Fetched interviews data:", data);
-
-      // Filter only current and future interviews
-      const now = new Date();
-      const currentInterviews = data.interviews.filter((interview: any) => {
-        const interviewDate = new Date(interview.date);
-        return (
-          interviewDate >= now &&
-          interview.status !== "cancelled" &&
-          interview.status !== "expired"
-        );
-      });
-
-      // Format the data
-      const formattedInterviews = currentInterviews.map((interview: any) => ({
-        _id: interview._id,
-        candidate: interview.candidate,
-        position: interview.position,
-        date: new Date(interview.date).toLocaleDateString(),
-        time: interview.time,
-        jobId: interview.jobId,
-        status: interview.status || "scheduled",
-        meetingLink: interview.meetingLink,
-        notes: interview.notes,
-        duration: interview.duration,
-        employerId: interview.scheduledBy || employee._id,
-      }));
-
-      setInterviews(formattedInterviews);
-
-      // Count today's interviews
-      const today = new Date().toDateString();
-      const todayInterviews = formattedInterviews.filter(
-        (interview: any) => new Date(interview.date).toDateString() === today
-      ).length;
-
-      // Update dashboard stats
-      setDashboardStats((prev) => ({
-        ...prev,
-        interviewsToday: todayInterviews,
-      }));
-
-      console.log(
-        `Set ${formattedInterviews.length} interviews, ${todayInterviews} today`
-      );
-    } catch (error) {
-      console.error("Error fetching interviews:", error);
-      toast.error("Failed to load interviews");
+  try {
+    if (!employee || !employee._id) {
+      console.log("No employee data available, skipping interviews fetch");
+      return;
     }
-  }, [employee]);
+
+    // First cleanup expired interviews
+    try {
+      await fetch("/api/cron/cleanup-interviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      console.log("✅ Expired interviews cleaned up");
+    } catch (error) {
+      console.error("❌ Error cleaning up interviews:", error);
+    }
+
+    const response = await fetch("/api/employee/interviews", {
+      cache: "no-store",
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch interviews");
+    }
+
+    const data = await response.json();
+    console.log("Fetched ALL interviews data:", data);
+
+    // Don't filter here - show ALL current and future interviews
+    const allCurrentInterviews = data.interviews.filter((interview: any) => {
+      const interviewDate = new Date(interview.date);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0); // Start of today
+      return (
+        interviewDate >= now &&
+        interview.status !== "cancelled" &&
+        interview.status !== "expired"
+      );
+    });
+
+    // Format the data
+    const formattedInterviews = allCurrentInterviews.map((interview: any) => ({
+      _id: interview._id,
+      candidate: interview.candidate,
+      position: interview.position,
+      date: new Date(interview.date).toLocaleDateString(),
+      time: interview.time,
+      jobId: interview.jobId,
+      status: interview.status || "scheduled",
+      meetingLink: interview.meetingLink,
+      notes: interview.notes,
+      duration: interview.duration,
+      employerId: interview.scheduledBy || employee._id,
+    }));
+
+    setInterviews(formattedInterviews);
+
+    // Count today's interviews
+    const today = new Date().toDateString();
+    const todayInterviews = formattedInterviews.filter(
+      (interview: any) => new Date(interview.date).toDateString() === today
+    ).length;
+
+    // Update dashboard stats
+    setDashboardStats((prev) => ({
+      ...prev,
+      interviewsToday: todayInterviews,
+    }));
+
+    console.log(
+      `Set ${formattedInterviews.length} total interviews, ${todayInterviews} today`
+    );
+  } catch (error) {
+    console.error("Error fetching interviews:", error);
+    toast.error("Failed to load interviews");
+  }
+}, [employee]);
+
 
   // Update job postings with interview counts
   const updateJobPostingsWithInterviewCounts = useCallback(
@@ -583,7 +602,19 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
     },
     []
   );
-
+// Handle action parameter for scheduling
+useEffect(() => {
+  const action = searchParams.get("action")
+  
+  if (action === "schedule") {
+    setShowScheduleModal(true)
+    
+    // Clean up URL parameter
+    const newUrl = new URL(window.location.href)
+    newUrl.searchParams.delete("action")
+    window.history.replaceState({}, "", newUrl.toString())
+  }
+}, [searchParams])
   // Effect to fetch employee data on mount
   useEffect(() => {
     const fetchEmployeeData = async () => {
@@ -2702,197 +2733,237 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
             </Card>
           </TabsContent>
 
-          <TabsContent value="interviews">
-            <Card>
-              <CardHeader>
-                <CardTitle>Interview Schedule</CardTitle>
-                <CardDescription>
-                  Manage your upcoming interviews
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-medium">Today</h3>
-                    <Button
-                      variant="outline"
-                      className="bg-black text-white"
-                      size="sm"
-                      onClick={() =>
-                        router.push("/employee/interviews/schedule")
-                      }
-                    >
-                      <Calendar className="h-4 w-4 mr-2" />
-                      Schedule Interview
-                    </Button>
-                  </div>
+         <TabsContent value="interviews">
+  <Card>
+    <CardHeader>
+      <div className="flex justify-between items-center">
+        <div>
+          <CardTitle>Interview Schedule</CardTitle>
+          <CardDescription>Manage your upcoming interviews</CardDescription>
+        </div>
+    <Button
+  onClick={() => router.push("/employee/interviews/schedule")}
+  className="bg-blue-600 hover:bg-blue-700"
+>
+  <Plus className="h-4 w-4 mr-2" />
+  Schedule Interview
+</Button>
+      </div>
+    </CardHeader>
+    <CardContent>
+      <div className="space-y-6">
+        {/* Today's Interviews Section */}
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold">Today's Interviews</h3>
+            <Button variant="outline" onClick={() => refreshData(true)} disabled={isRefreshing}>
+              {isRefreshing ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Refresh
+            </Button>
+          </div>
 
-                  <div className="space-y-4">
-                    {interviews
-                      .filter((interview) => {
-                        const interviewDate = new Date(interview.date);
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        const interviewDateOnly = new Date(interviewDate);
-                        interviewDateOnly.setHours(0, 0, 0, 0);
-                        return (
-                          interviewDateOnly.getTime() === today.getTime() &&
-                          interview.status !== "cancelled" &&
-                          interview.status !== "expired"
-                        );
-                      })
-                      .map((interview) => (
-                        <div
-                          key={interview._id}
-                          className="border rounded-lg p-4 flex justify-between items-center dark:border-gray-700"
-                        >
-                          <div className="flex items-center">
-                            <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-full mr-4">
-                              <Clock className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <div>
-                              <h4 className="font-medium">
-                                {interview.candidate.name}
-                              </h4>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">
-                                {interview.position}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                {interview.date} at {interview.time}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                router.push(
-                                  `/employee/interviews/${interview._id}/reschedule`
-                                )
-                              }
-                            >
-                              Reschedule
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() =>
-                                router.push(
-                                  `/employee/interviews/${interview._id}/join`
-                                )
-                              }
-                            >
-                              Join Meeting
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-
-                    {interviews.filter((interview) => {
-                      const interviewDate = new Date(interview.date);
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      const interviewDateOnly = new Date(interviewDate);
-                      interviewDateOnly.setHours(0, 0, 0, 0);
-                      return (
-                        interviewDateOnly.getTime() === today.getTime() &&
-                        interview.status !== "cancelled" &&
-                        interview.status !== "expired"
-                      );
-                    }).length === 0 && (
-                      <div className="text-center py-8 border rounded-lg dark:border-gray-700">
-                        <Calendar className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                        <p className="text-gray-500 dark:text-gray-400">
-                          No interviews scheduled for today
+          <div className="space-y-4">
+            {interviews
+              .filter((interview) => {
+                const interviewDate = new Date(interview.date);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const interviewDateOnly = new Date(interviewDate);
+                interviewDateOnly.setHours(0, 0, 0, 0);
+                return (
+                  interviewDateOnly.getTime() === today.getTime() &&
+                  interview.status !== "cancelled" &&
+                  interview.status !== "expired"
+                );
+              })
+              .map((interview) => (
+                <div
+                  key={interview._id}
+                  className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                        <span className="text-white font-semibold text-lg">
+                          {interview.candidate?.name?.charAt(0)?.toUpperCase() || "U"}
+                        </span>
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          {interview.candidate.name}
+                        </h4>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm">
+                          {interview.position}
+                        </p>
+                        <p className="text-gray-500 dark:text-gray-500 text-xs">
+                          {interview.date} at {interview.time}
                         </p>
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  <div className="mt-8">
-                    <h3 className="font-medium mb-4">Upcoming</h3>
-                    {interviews.filter((interview) => {
-                      const interviewDate = new Date(interview.date);
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      const interviewDateOnly = new Date(interviewDate);
-                      interviewDateOnly.setHours(0, 0, 0, 0);
-                      return (
-                        interviewDateOnly.getTime() > today.getTime() &&
-                        interview.status !== "cancelled" &&
-                        interview.status !== "expired"
-                      );
-                    }).length > 0 ? (
-                      <div className="space-y-4">
-                        {interviews
-                          .filter((interview) => {
-                            const interviewDate = new Date(interview.date);
-                            const today = new Date();
-                            today.setHours(0, 0, 0, 0);
-                            const interviewDateOnly = new Date(interviewDate);
-                            interviewDateOnly.setHours(0, 0, 0, 0);
-                            return (
-                              interviewDateOnly.getTime() > today.getTime() &&
-                              interview.status !== "cancelled" &&
-                              interview.status !== "expired"
-                            );
-                          })
-                          .sort(
-                            (a, b) =>
-                              new Date(a.date).getTime() -
-                              new Date(b.date).getTime()
-                          )
-                          .map((interview) => (
-                            <div
-                              key={interview._id}
-                              className="border rounded-lg p-4 flex justify-between items-center dark:border-gray-700"
-                            >
-                              <div className="flex items-center">
-                                <div className="bg-purple-100 dark:bg-purple-900 p-3 rounded-full mr-4">
-                                  <Calendar className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                                </div>
-                                <div>
-                                  <h4 className="font-medium">
-                                    {interview.candidate.name}
-                                  </h4>
-                                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    {interview.position}
-                                  </p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {interview.date} at {interview.time}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex space-x-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="bg-green-600 text-white"
-                                  onClick={() =>
-                                    router.push(
-                                      `/employee/interviews/${interview._id}`
-                                    )
-                                  }
-                                >
-                                  Details
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 border rounded-lg dark:border-gray-700">
-                        <Calendar className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                        <p className="text-gray-500 dark:text-gray-400">
-                          No upcoming interviews scheduled
-                        </p>
-                      </div>
-                    )}
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/employee/interviews/${interview._id}`)}
+                        className="flex items-center hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Details
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/employee/interviews/${interview._id}/reschedule`)}
+                        className="flex items-center hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Reschedule
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (interview.meetingLink) {
+                            window.open(interview.meetingLink, "_blank", "noopener,noreferrer")
+                          } else {
+                            window.open(`/interview/${interview._id}/join`, "_blank", "noopener,noreferrer")
+                          }
+                        }}
+                        className="flex items-center bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Video className="h-4 w-4 mr-1" />
+                        Join Meeting
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              ))}
+
+            {interviews.filter((interview) => {
+              const interviewDate = new Date(interview.date);
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const interviewDateOnly = new Date(interviewDate);
+              interviewDateOnly.setHours(0, 0, 0, 0);
+              return (
+                interviewDateOnly.getTime() === today.getTime() &&
+                interview.status !== "cancelled" &&
+                interview.status !== "expired"
+              );
+            }).length === 0 && (
+              <div className="text-center py-8 border rounded-lg dark:border-gray-700">
+                <Calendar className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                <p className="text-gray-500 dark:text-gray-400">
+                  No interviews scheduled for today
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Upcoming Interviews Section */}
+        <div className="mt-8">
+          <h3 className="text-xl font-semibold mb-4">Upcoming Interviews</h3>
+          {interviews.filter((interview) => {
+            const interviewDate = new Date(interview.date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const interviewDateOnly = new Date(interviewDate);
+            interviewDateOnly.setHours(0, 0, 0, 0);
+            return (
+              interviewDateOnly.getTime() > today.getTime() &&
+              interview.status !== "cancelled" &&
+              interview.status !== "expired"
+            );
+          }).length > 0 ? (
+            <div className="space-y-4">
+              {interviews
+                .filter((interview) => {
+                  const interviewDate = new Date(interview.date);
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const interviewDateOnly = new Date(interviewDate);
+                  interviewDateOnly.setHours(0, 0, 0, 0);
+                  return (
+                    interviewDateOnly.getTime() > today.getTime() &&
+                    interview.status !== "cancelled" &&
+                    interview.status !== "expired"
+                  );
+                })
+                .sort(
+                  (a, b) =>
+                    new Date(a.date).getTime() -
+                    new Date(b.date).getTime()
+                )
+                .map((interview) => (
+                  <div
+                    key={interview._id}
+                    className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-200 cursor-pointer group"
+                    onClick={() => router.push(`/employee/interviews/${interview._id}`)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                          <span className="text-white font-semibold text-lg">
+                            {interview.candidate?.name?.charAt(0)?.toUpperCase() || "U"}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                            {interview.candidate.name}
+                          </h4>
+                          <p className="text-gray-600 dark:text-gray-400 text-sm">
+                            {interview.position}
+                          </p>
+                          <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {interview.date}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {interview.time}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            router.push(`/employee/interviews/${interview._id}`)
+                          }}
+                          className="flex items-center hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:border-purple-300"
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          Details
+                        </Button>
+                        <ArrowUpRight className="h-5 w-5 text-gray-400 group-hover:text-purple-500 transition-colors" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 border rounded-lg dark:border-gray-700">
+              <Calendar className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+              <p className="text-gray-500 dark:text-gray-400">
+                No upcoming interviews scheduled
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+</TabsContent>
 
           <TabsContent value="ats">
             <Card>

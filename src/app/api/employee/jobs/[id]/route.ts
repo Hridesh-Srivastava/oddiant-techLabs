@@ -3,7 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 import { getUserFromRequest } from "@/lib/auth"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Get user ID from request
     const userId = await getUserFromRequest(request)
@@ -12,12 +12,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const jobId = params.id
+    const resolvedParams = await params
+    const jobId = resolvedParams.id
 
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Find job by ID - Important: Don't filter by employeeId here to ensure all job details are visible
+    // Find job by ID - Important: Don't filter by employerId here to ensure all job details are visible
     const job = await db.collection("jobs").findOne({ _id: new ObjectId(jobId) })
 
     if (!job) {
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Get user ID from request
     const userId = await getUserFromRequest(request)
@@ -77,7 +78,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const jobId = params.id
+    const resolvedParams = await params
+    const jobId = resolvedParams.id
 
     // Connect to database
     const { db } = await connectToDatabase()
@@ -85,9 +87,15 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     // Get job data from request body
     const jobData = await request.json()
 
-    // Update job in database
+    console.log(`Updating job ${jobId} for user ${userId}`)
+    console.log("Job data:", jobData)
+
+    // FIXED: Use employerId instead of employeeId to match the field name used in job creation
     const result = await db.collection("jobs").updateOne(
-      { _id: new ObjectId(jobId), employeeId: new ObjectId(userId) },
+      {
+        _id: new ObjectId(jobId),
+        employerId: new ObjectId(userId), // Changed from employeeId to employerId
+      },
       {
         $set: {
           ...jobData,
@@ -96,8 +104,18 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       },
     )
 
+    console.log("Update result:", result)
+
     if (result.matchedCount === 0) {
-      return NextResponse.json({ message: "Job not found or you don't have permission to update it" }, { status: 404 })
+      // Let's check if the job exists at all
+      const jobExists = await db.collection("jobs").findOne({ _id: new ObjectId(jobId) })
+
+      if (!jobExists) {
+        return NextResponse.json({ message: "Job not found" }, { status: 404 })
+      } else {
+        // Job exists but doesn't belong to this user
+        return NextResponse.json({ message: "You don't have permission to update this job" }, { status: 403 })
+      }
     }
 
     return NextResponse.json({ success: true, message: "Job updated successfully" }, { status: 200 })
@@ -107,7 +125,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Get user ID from request
     const userId = await getUserFromRequest(request)
@@ -116,7 +134,8 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
     }
 
-    const jobId = params.id
+    const resolvedParams = await params
+    const jobId = resolvedParams.id
 
     // Connect to database
     const { db } = await connectToDatabase()
@@ -126,9 +145,11 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ success: false, message: "Invalid job ID format" }, { status: 400 })
     }
 
-    // FIXED: Remove the employeeId filter to allow deletion of any job the user has access to
-    // This fixes the issue with older jobs not being deleted
-    const result = await db.collection("jobs").deleteOne({ _id: new ObjectId(jobId) })
+    // FIXED: Use employerId instead of employeeId and maintain proper ownership check
+    const result = await db.collection("jobs").deleteOne({
+      _id: new ObjectId(jobId),
+      employerId: new ObjectId(userId), // Changed from employeeId to employerId
+    })
 
     if (result.deletedCount === 0) {
       return NextResponse.json(

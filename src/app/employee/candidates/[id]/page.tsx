@@ -26,6 +26,7 @@ import {
   FileSpreadsheet,
   Loader2,
   DollarSign,
+  Send,
 } from "lucide-react"
 import { toast, Toaster } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -287,6 +288,11 @@ export default function CandidateDetailsPage({
     } finally {
       setIsExporting(false)
     }
+  }
+
+  // Function to handle invite to jobs
+  const handleInviteToJobs = () => {
+    router.push(`/employee/candidates/${candidateId}/invite`)
   }
 
   // Function to format website URL properly
@@ -594,6 +600,10 @@ export default function CandidateDetailsPage({
                         <FileSpreadsheet className="h-4 w-4 mr-2" />
                       )}
                       {isExporting ? "Exporting..." : "Export to Excel"}
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start" onClick={handleInviteToJobs}>
+                      <Send className="h-4 w-4 mr-2" />
+                      Invite to Jobs
                     </Button>
                   </div>
                 </div>

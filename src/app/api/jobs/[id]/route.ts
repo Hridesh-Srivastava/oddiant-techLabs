@@ -5,6 +5,8 @@ import { ObjectId } from "mongodb"
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const jobId = params.id
+    const { searchParams } = new URL(request.url)
+    const invitationToken = searchParams.get("invitation")
 
     // Connect to database
     const { db } = await connectToDatabase()
@@ -16,6 +18,40 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     if (!job) {
       return NextResponse.json({ success: false, message: "Job not found" }, { status: 404 })
+    }
+
+    // If there's an invitation token, validate and mark as viewed
+    if (invitationToken) {
+      try {
+        const invitation = await db.collection("invitations").findOne({
+          token: invitationToken,
+          jobId: new ObjectId(jobId),
+          status: { $in: ["pending", "sent"] },
+        })
+
+        if (invitation) {
+          // Mark invitation as viewed
+          await db.collection("invitations").updateOne(
+            { _id: invitation._id },
+            {
+              $set: {
+                status: "viewed",
+                viewedAt: new Date(),
+              },
+            },
+          )
+
+          // Add invitation context to the response
+          job.invitationContext = {
+            candidateName: invitation.candidateName,
+            invitedBy: invitation.companyName,
+            isInvited: true,
+          }
+        }
+      } catch (invitationError) {
+        console.error("Error processing invitation:", invitationError)
+        // Continue without invitation context if there's an error
+      }
     }
 
     // Add cache control headers to prevent caching

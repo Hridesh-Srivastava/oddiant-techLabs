@@ -4,59 +4,58 @@ import { getUserFromRequest } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 import { sendEmail } from "@/lib/email"
 
+// IST helper functions
+function getISTDate(): Date {
+  const now = new Date()
+  // Convert to IST by adding 5.5 hours to UTC
+  const istTime = new Date(now.getTime() + 5.5 * 60 * 60 * 1000)
+  return istTime
+}
+
+function getISTDateString(): string {
+  const istDate = getISTDate()
+  const year = istDate.getUTCFullYear()
+  const month = String(istDate.getUTCMonth() + 1).padStart(2, "0")
+  const day = String(istDate.getUTCDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function createISTDateFromString(dateString: string): Date {
+  const [year, month, day] = dateString.split("-").map(Number)
+  const istDate = new Date()
+  istDate.setUTCFullYear(year)
+  istDate.setUTCMonth(month - 1)
+  istDate.setUTCDate(day)
+  istDate.setUTCHours(5, 30, 0, 0) // Set to IST midnight (5:30 UTC)
+  return istDate
+}
+
 export async function GET(request: NextRequest) {
   try {
-    // Get user ID from request
     const userId = await getUserFromRequest(request)
 
     if (!userId) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    // Connect to database
     const { db } = await connectToDatabase()
-
-    // Find employee to get company information
     const employee = await db.collection("employees").findOne({ _id: new ObjectId(userId) })
 
     if (!employee) {
       return NextResponse.json({ message: "Employee not found" }, { status: 404 })
     }
 
-    console.log("Fetching interviews for employee:", userId)
+    console.log("=== FETCHING INTERVIEWS (IST) ===")
 
-    // Get current date and time for filtering
-    const now = new Date()
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    // Get today's date in IST
+    const todayIST = getISTDateString()
+    console.log("Today's IST date:", todayIST)
 
-    // First, automatically delete or mark expired interviews that are past
-    const expiredResult = await db.collection("interviews").deleteMany({
-      date: { $lt: today },
-      status: { $in: ["scheduled", "confirmed"] },
-    })
-
-    console.log(`Deleted ${expiredResult.deletedCount} past interviews`)
-
-    // Also delete very old expired interviews (older than 7 days)
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
-    const oldExpiredResult = await db.collection("interviews").deleteMany({
-      date: { $lt: sevenDaysAgo },
-      status: "expired",
-    })
-
-    console.log(`Deleted ${oldExpiredResult.deletedCount} old expired interviews`)
-
-    // Get only current and future interviews for this employee
+    // Get all interviews for this employee
     const interviews = await db
       .collection("interviews")
       .find({
         $and: [
-          // Date filter - only today and future dates
-          { date: { $gte: today } },
-          // Employee/Company filter for data isolation
           {
             $or: [
               { scheduledBy: new ObjectId(userId) },
@@ -66,16 +65,15 @@ export async function GET(request: NextRequest) {
               { companyName: employee.companyName },
             ],
           },
-          // Status filter - exclude cancelled and expired
           { status: { $nin: ["cancelled", "expired", "deleted"] } },
         ],
       })
-      .sort({ date: 1, time: 1 }) // Sort by date and time ascending
+      .sort({ date: 1, time: 1 })
       .toArray()
 
-    console.log(`Found ${interviews.length} current/future interviews for employee ${userId}`)
+    console.log(`Found ${interviews.length} interviews`)
 
-    // Format interviews with candidate details
+    // Format interviews with candidate details and IST categorization
     const formattedInterviews = await Promise.all(
       interviews.map(async (interview) => {
         let candidateName = "Unknown Candidate"
@@ -83,7 +81,6 @@ export async function GET(request: NextRequest) {
 
         try {
           if (interview.candidateId) {
-            // Try to get candidate from both collections
             let candidate = await db.collection("candidates").findOne({
               _id: new ObjectId(interview.candidateId),
             })
@@ -106,6 +103,43 @@ export async function GET(request: NextRequest) {
           console.error("Error fetching candidate details:", error)
         }
 
+        // Convert stored date to IST and extract date string
+        const storedDate = new Date(interview.date)
+        // Convert to IST by adding 5.5 hours
+        const istDate = new Date(storedDate.getTime() + 5.5 * 60 * 60 * 1000)
+        const interviewDateString =
+          istDate.getUTCFullYear() +
+          "-" +
+          String(istDate.getUTCMonth() + 1).padStart(2, "0") +
+          "-" +
+          String(istDate.getUTCDate()).padStart(2, "0")
+
+        // Simple string comparison for today (IST)
+        const isToday = interviewDateString === todayIST
+
+        // For upcoming, check if date is after today
+        const istDateObj = getISTDate()
+        const tomorrow = new Date(istDateObj)
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+        const tomorrowString =
+          tomorrow.getUTCFullYear() +
+          "-" +
+          String(tomorrow.getUTCMonth() + 1).padStart(2, "0") +
+          "-" +
+          String(tomorrow.getUTCDate()).padStart(2, "0")
+
+        const isUpcoming = interviewDateString >= tomorrowString
+
+        console.log(`Interview ${interview._id} (IST):`, {
+          position: interview.position,
+          storedDate: interview.date,
+          istDateString: interviewDateString,
+          todayIST,
+          tomorrowString,
+          isToday,
+          isUpcoming,
+        })
+
         return {
           _id: interview._id,
           candidateId: interview.candidateId,
@@ -124,11 +158,19 @@ export async function GET(request: NextRequest) {
           scheduledBy: interview.scheduledBy,
           employeeId: interview.employeeId,
           companyId: interview.companyId,
+          isToday,
+          isUpcoming,
         }
       }),
     )
 
-    console.log(`Returning ${formattedInterviews.length} formatted interviews`)
+    const todayCount = formattedInterviews.filter((i) => i.isToday).length
+    const upcomingCount = formattedInterviews.filter((i) => i.isUpcoming).length
+
+    console.log("=== IST CATEGORIZATION RESULTS ===")
+    console.log("Today's interviews:", todayCount)
+    console.log("Upcoming interviews:", upcomingCount)
+    console.log("Current IST time:", getISTDate().toISOString())
 
     return NextResponse.json({ success: true, interviews: formattedInterviews }, { status: 200 })
   } catch (error) {
@@ -139,14 +181,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get user ID from request
     const userId = await getUserFromRequest(request)
 
     if (!userId) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    // Parse request body
     const body = await request.json()
     const { candidateId, jobId, position, date, time, duration, interviewers, meetingLink, notes } = body
 
@@ -154,29 +194,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 })
     }
 
-    // Validate that the interview date is not in the past
-    const interviewDate = new Date(date)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    console.log("=== CREATING INTERVIEW (IST) ===")
+    console.log("Input date:", date)
 
-    if (interviewDate < today) {
-      return NextResponse.json(
-        { success: false, message: "Cannot schedule interview for a past date" },
-        { status: 400 },
-      )
-    }
+    // Create IST date for storage
+    const interviewDate = createISTDateFromString(date)
 
-    // Connect to database
+    console.log("IST date created:", {
+      inputDate: date,
+      istDate: interviewDate.toISOString(),
+      istLocal: interviewDate.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
+    })
+
     const { db } = await connectToDatabase()
-
-    // Find employee to get company information
     const employee = await db.collection("employees").findOne({ _id: new ObjectId(userId) })
 
     if (!employee) {
       return NextResponse.json({ message: "Employee not found" }, { status: 404 })
     }
 
-    // Find candidate (check both collections)
+    // Find candidate
     let candidate = null
     try {
       candidate = await db.collection("candidates").findOne({ _id: new ObjectId(candidateId) })
@@ -191,33 +228,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Candidate not found" }, { status: 404 })
     }
 
-    // Create new interview with proper data isolation
+    // Create interview object with IST date
     const newInterview = {
       candidateId: new ObjectId(candidateId),
       jobId: jobId ? new ObjectId(jobId) : null,
       position,
-      date: new Date(date),
+      date: interviewDate, // IST date
       time,
       duration: Number.parseInt(duration, 10) || 60,
       interviewers: Array.isArray(interviewers) ? interviewers : [],
       meetingLink,
       notes,
-      // Data isolation fields
       scheduledBy: new ObjectId(userId),
       employeeId: new ObjectId(userId),
       companyId: employee._id.toString(),
       companyName: employee.companyName,
-      // Status and timestamps
       status: "scheduled",
       createdAt: new Date(),
       updatedAt: new Date(),
       createdBy: new ObjectId(userId),
     }
 
-    console.log("Creating interview with data:", newInterview)
+    console.log("=== STORING INTERVIEW (IST) ===")
+    console.log("Final IST date:", newInterview.date.toISOString())
+    console.log("Final IST local:", newInterview.date.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }))
 
     const result = await db.collection("interviews").insertOne(newInterview)
-
     console.log("Interview created with ID:", result.insertedId)
 
     // Update job's interview count if jobId is provided
@@ -228,10 +264,8 @@ export async function POST(request: NextRequest) {
     // Update candidate status
     if (candidate) {
       await db.collection("candidates").updateOne({ _id: new ObjectId(candidateId) }, { $set: { status: "Interview" } })
-
       await db.collection("students").updateOne({ _id: new ObjectId(candidateId) }, { $set: { status: "Interview" } })
 
-      // Update job application status if applicable
       if (jobId) {
         await db.collection("job_applications").updateOne(
           {
@@ -255,13 +289,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Send email notification to candidate
+    // FIXED: Send interview portal link instead of direct Google Meet link
     try {
       const candidateEmail = candidate.email
       const candidateName =
         candidate.name || `${candidate.firstName || ""} ${candidate.lastName || ""}`.trim() || "Candidate"
 
       if (candidateEmail) {
+        // FIXED: Send public interview page link instead of direct meeting link
+        const publicInterviewUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/interview/${result.insertedId}/join`
+
         await sendEmail({
           to: candidateEmail,
           subject: `Interview Scheduled: ${position} at ${employee.companyName}`,
@@ -270,9 +307,10 @@ export async function POST(request: NextRequest) {
 
             Your interview for the ${position} position at ${employee.companyName} has been scheduled.
 
-            Date: ${new Date(date).toLocaleDateString()}
-            Time: ${time}
-            ${meetingLink ? `Meeting Link: ${meetingLink}` : ""}
+            Date: ${date}
+            Time: ${time} (IST)
+            
+            To join your interview, please visit: ${publicInterviewUrl}
 
             ${notes ? `Additional Notes: ${notes}` : ""}
 
@@ -283,18 +321,37 @@ export async function POST(request: NextRequest) {
             ${employee.companyName}
           `,
           html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-              <h2 style="color: #333;">Interview Scheduled</h2>
-              <p>Dear ${candidateName},</p>
-              <p>Your interview for the <strong>${position}</strong> position at <strong>${employee.companyName}</strong> has been scheduled.</p>
-              <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0;">
-                <p><strong>Date:</strong> ${new Date(date).toLocaleDateString()}</p>
-                <p><strong>Time:</strong> ${time}</p>
-                ${meetingLink ? `<p><strong>Meeting Link:</strong> <a href="${meetingLink}">${meetingLink}</a></p>` : ""}
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #333; margin-bottom: 10px;">Interview Scheduled</h1>
+                <p style="color: #666; font-size: 16px;">Your interview has been successfully scheduled!</p>
               </div>
-              ${notes ? `<p><strong>Additional Notes:</strong> ${notes}</p>` : ""}
-              <p>Please let us know if you have any questions or need to reschedule.</p>
-              <p>Best regards,<br>${employee.firstName} ${employee.lastName}<br>${employee.companyName}</p>
+
+              <div style="background-color: #f8f9fa; padding: 20px; border-radius: 6px; margin-bottom: 25px;">
+                <h2 style="color: #333; margin-top: 0;">${position}</h2>
+                <p style="color: #666; margin: 5px 0;"><strong>Company:</strong> ${employee.companyName}</p>
+                <p style="color: #666; margin: 5px 0;"><strong>Date:</strong> ${date}</p>
+                <p style="color: #666; margin: 5px 0;"><strong>Time:</strong> ${time} (IST)</p>
+                <p style="color: #666; margin: 5px 0;"><strong>Duration:</strong> ${duration} minutes</p>
+              </div>
+
+              ${notes ? `<div style="margin-bottom: 25px;"><h3 style="color: #333;">Additional Notes:</h3><p style="color: #666; line-height: 1.6;">${notes}</p></div>` : ""}
+
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${publicInterviewUrl}" 
+                   style="background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                  Join Interview
+                </a>
+              </div>
+
+              <div style="border-top: 1px solid #e0e0e0; padding-top: 20px; margin-top: 30px;">
+                <p style="color: #666; font-size: 14px; margin: 0;">
+                  This interview was scheduled by ${employee.firstName} ${employee.lastName} from ${employee.companyName}.
+                </p>
+                <p style="color: #666; font-size: 14px; margin: 5px 0 0 0;">
+                  Please save this link to join your interview at the scheduled time.
+                </p>
+              </div>
             </div>
           `,
         })

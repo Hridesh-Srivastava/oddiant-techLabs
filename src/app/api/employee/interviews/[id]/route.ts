@@ -4,7 +4,18 @@ import { getUserFromRequest } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 import { sendEmail } from "@/lib/email"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+// IST helper functions
+function createISTDateFromString(dateString: string): Date {
+  const [year, month, day] = dateString.split("-").map(Number)
+  const istDate = new Date()
+  istDate.setUTCFullYear(year)
+  istDate.setUTCMonth(month - 1)
+  istDate.setUTCDate(day)
+  istDate.setUTCHours(5, 30, 0, 0) // Set to IST midnight (5:30 UTC)
+  return istDate
+}
+
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Get user ID from request
     const userId = await getUserFromRequest(request)
@@ -13,7 +24,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const interviewId = await params.id
+    const resolvedParams = await params
+    const interviewId = resolvedParams.id
 
     // Validate ObjectId format
     if (!ObjectId.isValid(interviewId)) {
@@ -138,7 +150,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Get user ID from request
     const userId = await getUserFromRequest(request)
@@ -147,7 +159,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const interviewId = params.id
+    const resolvedParams = await params
+    const interviewId = resolvedParams.id
     const body = await request.json()
 
     // Validate ObjectId format
@@ -199,11 +212,23 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       console.error("Error fetching candidate:", error)
     }
 
-    // Update interview
-    const updateData = {
+    // FIXED: Proper IST date handling for reschedule
+    const updateData: any = {
       ...body,
-      date: body.date ? new Date(body.date) : interview.date,
       updatedAt: new Date(),
+    }
+
+    // If date is being updated, convert to proper IST format
+    if (body.date) {
+      console.log("=== RESCHEDULE DATE UPDATE (IST) ===")
+      console.log("Original date:", body.date)
+
+      // Create proper IST date for the new date
+      const newISTDate = createISTDateFromString(body.date)
+      updateData.date = newISTDate
+
+      console.log("New IST date:", newISTDate.toISOString())
+      console.log("New IST local:", newISTDate.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }))
     }
 
     const result = await db.collection("interviews").updateOne({ _id: new ObjectId(interviewId) }, { $set: updateData })
@@ -218,6 +243,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         const candidateName =
           candidate.name || `${candidate.firstName || ""} ${candidate.lastName || ""}`.trim() || "Candidate"
 
+        // FIXED: Send public interview page link instead of Google Meet link
+        const publicInterviewUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/interview/${interviewId}/join`
+
         await sendEmail({
           to: candidate.email,
           subject: `Interview Rescheduled: ${interview.position} at ${employee.companyName}`,
@@ -226,9 +254,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
             Your interview for the ${interview.position} position at ${employee.companyName} has been rescheduled.
 
-            New Date: ${new Date(body.date).toLocaleDateString()}
-            New Time: ${body.time}
-            ${body.meetingLink ? `Meeting Link: ${body.meetingLink}` : ""}
+            New Date: ${body.date}
+            New Time: ${body.time} (IST)
+            
+            To join your interview, please visit: ${publicInterviewUrl}
 
             ${body.notes ? `Additional Notes: ${body.notes}` : ""}
 
@@ -239,18 +268,36 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             ${employee.companyName}
           `,
           html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-              <h2 style="color: #333;">Interview Rescheduled</h2>
-              <p>Dear ${candidateName},</p>
-              <p>Your interview for the <strong>${interview.position}</strong> position at <strong>${employee.companyName}</strong> has been rescheduled.</p>
-              <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0;">
-                <p><strong>New Date:</strong> ${new Date(body.date).toLocaleDateString()}</p>
-                <p><strong>New Time:</strong> ${body.time}</p>
-                ${body.meetingLink ? `<p><strong>Meeting Link:</strong> <a href="${body.meetingLink}">${body.meetingLink}</a></p>` : ""}
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #333; margin-bottom: 10px;">Interview Rescheduled</h1>
+                <p style="color: #666; font-size: 16px;">Your interview has been updated with new timing!</p>
               </div>
-              ${body.notes ? `<p><strong>Additional Notes:</strong> ${body.notes}</p>` : ""}
-              <p>Please let us know if you have any questions.</p>
-              <p>Best regards,<br>${employee.firstName} ${employee.lastName}<br>${employee.companyName}</p>
+
+              <div style="background-color: #f8f9fa; padding: 20px; border-radius: 6px; margin-bottom: 25px;">
+                <h2 style="color: #333; margin-top: 0;">${interview.position}</h2>
+                <p style="color: #666; margin: 5px 0;"><strong>Company:</strong> ${employee.companyName}</p>
+                <p style="color: #666; margin: 5px 0;"><strong>New Date:</strong> ${body.date}</p>
+                <p style="color: #666; margin: 5px 0;"><strong>New Time:</strong> ${body.time} (IST)</p>
+              </div>
+
+              ${body.notes ? `<div style="margin-bottom: 25px;"><h3 style="color: #333;">Additional Notes:</h3><p style="color: #666; line-height: 1.6;">${body.notes}</p></div>` : ""}
+
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${publicInterviewUrl}" 
+                   style="background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                  Join Interview
+                </a>
+              </div>
+
+              <div style="border-top: 1px solid #e0e0e0; padding-top: 20px; margin-top: 30px;">
+                <p style="color: #666; font-size: 14px; margin: 0;">
+                  This interview was rescheduled by ${employee.firstName} ${employee.lastName} from ${employee.companyName}.
+                </p>
+                <p style="color: #666; font-size: 14px; margin: 5px 0 0 0;">
+                  Please save this link to join your interview at the scheduled time.
+                </p>
+              </div>
             </div>
           `,
         })
@@ -266,7 +313,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Get user ID from request
     const userId = await getUserFromRequest(request)
@@ -275,7 +322,8 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const interviewId = params.id
+    const resolvedParams = await params
+    const interviewId = resolvedParams.id
 
     // Validate ObjectId format
     if (!ObjectId.isValid(interviewId)) {

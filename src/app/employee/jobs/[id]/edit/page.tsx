@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -9,7 +8,7 @@ import { toast, Toaster } from "sonner"
 import JobPostingForm from "@/components/job-posting-form"
 import { use } from "react"
 
-export default function EditJobPage({ params }: { params: { id: string } }) {
+export default function EditJobPage({ params }: { params: Promise<{ id: string }> }) {
   // Unwrap the params object using React.use()
   const unwrappedParams = use(params)
   const jobId = unwrappedParams.id
@@ -23,13 +22,23 @@ export default function EditJobPage({ params }: { params: { id: string } }) {
     const fetchJob = async () => {
       try {
         setIsLoading(true)
-        const response = await fetch(`/api/employee/jobs/${jobId}`)
+        const response = await fetch(`/api/employee/jobs/${jobId}`, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        })
 
         if (!response.ok) {
-          throw new Error("Failed to fetch job details")
+          const errorData = await response.json()
+          console.error("Failed to fetch job:", errorData)
+          throw new Error(errorData.message || "Failed to fetch job details")
         }
 
         const data = await response.json()
+        console.log("Fetched job data:", data)
         setJob(data.job)
       } catch (error) {
         console.error("Error fetching job:", error)
@@ -45,16 +54,26 @@ export default function EditJobPage({ params }: { params: { id: string } }) {
   const handleSubmit = async (jobData: any) => {
     try {
       setIsSubmitting(true)
+      console.log("Submitting job data:", jobData)
+      console.log("Job ID:", jobId)
+
       const response = await fetch(`/api/employee/jobs/${jobId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "Cache-Control": "no-cache",
         },
         body: JSON.stringify(jobData),
       })
 
+      console.log("Response status:", response.status)
+      console.log("Response headers:", response.headers)
+
+      const responseData = await response.json()
+      console.log("Response data:", responseData)
+
       if (!response.ok) {
-        throw new Error("Failed to update job posting")
+        throw new Error(responseData.message || "Failed to update job posting")
       }
 
       toast.success("Job posting updated successfully!")
@@ -66,7 +85,7 @@ export default function EditJobPage({ params }: { params: { id: string } }) {
       }, 1500)
     } catch (error) {
       console.error("Error updating job posting:", error)
-      toast.error("Failed to update job posting")
+      toast.error(`Failed to update job posting: ${error instanceof Error ? error.message : "Unknown error"}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -118,7 +137,13 @@ export default function EditJobPage({ params }: { params: { id: string } }) {
             <CardDescription>Update the details of your job posting</CardDescription>
           </CardHeader>
           <CardContent>
-            <JobPostingForm jobId={jobId} isEditing={true} onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+            <JobPostingForm
+              jobId={jobId}
+              isEditing={true}
+              onSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
+              initialData={job}
+            />
           </CardContent>
         </Card>
       </div>
