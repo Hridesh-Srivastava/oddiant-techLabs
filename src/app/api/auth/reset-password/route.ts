@@ -14,15 +14,35 @@ export async function POST(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Determine collection based on user type
-    const collection = userType === "employee" ? "employees" : "students"
+    let user = null
+    let collection = ""
 
-    // Find user by email and reset token
-    const user = await db.collection(collection).findOne({
-      email,
-      resetToken,
-      resetTokenExpiry: { $gt: new Date() }, // Token must not be expired
-    })
+    if (userType === "employee") {
+      // For employees, only check employees collection
+      user = await db.collection("employees").findOne({
+        email,
+        resetToken,
+        resetTokenExpiry: { $gt: new Date() }, // Token must not be expired
+      })
+      collection = "employees"
+    } else {
+      // For students, check both students and candidates collections
+      user = await db.collection("students").findOne({
+        $or: [{ email: email.toLowerCase() }, { alternativeEmail: email.toLowerCase() }],
+        resetToken,
+        resetTokenExpiry: { $gt: new Date() }, // Token must not be expired
+      })
+      collection = "students"
+
+      if (!user) {
+        user = await db.collection("candidates").findOne({
+          $or: [{ email: email.toLowerCase() }, { alternativeEmail: email.toLowerCase() }],
+          resetToken,
+          resetTokenExpiry: { $gt: new Date() }, // Token must not be expired
+        })
+        collection = "candidates"
+      }
+    }
 
     if (!user) {
       return NextResponse.json({ success: false, message: "Invalid or expired reset token" }, { status: 400 })
@@ -31,9 +51,9 @@ export async function POST(request: NextRequest) {
     // Hash new password
     const hashedPassword = await hashPassword(newPassword)
 
-    // Update user with new password and remove reset token
+    // Update user with new password and remove reset token in the correct collection
     await db.collection(collection).updateOne(
-      { email },
+      { _id: user._id },
       {
         $set: {
           password: hashedPassword,

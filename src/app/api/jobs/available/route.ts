@@ -15,17 +15,29 @@ export async function GET(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Find student to verify
-    const student = await db.collection("students").findOne({ _id: new ObjectId(userId) })
+    // Check both students and candidates collections
+    let user = await db.collection("students").findOne({ _id: new ObjectId(userId) })
+    let userCollection = "students"
 
-    if (!student) {
-      return NextResponse.json({ success: false, message: "Student not found" }, { status: 404 })
+    if (!user) {
+      user = await db.collection("candidates").findOne({ _id: new ObjectId(userId) })
+      userCollection = "candidates"
+    }
+
+    if (!user) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
     }
 
     // Get all open jobs
-    const jobs = await db.collection("jobs").find({ status: "open" }).sort({ createdAt: -1 }).toArray()
+    const jobs = await db
+      .collection("jobs")
+      .find({
+        status: { $in: ["open", "active"] },
+      })
+      .sort({ createdAt: -1 })
+      .toArray()
 
-    // For each job, calculate days left and check if student has already applied
+    // For each job, calculate days left and check if user has already applied
     const jobsWithDetails = await Promise.all(
       jobs.map(async (job) => {
         // Calculate days left (30 days from creation by default)
@@ -35,16 +47,23 @@ export async function GET(request: NextRequest) {
         const today = new Date()
         const daysLeft = Math.max(0, Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)))
 
-        // Check if student has already applied
+        // Check if user has already applied (check multiple field names for compatibility)
         const application = await db.collection("job_applications").findOne({
-          candidateId: new ObjectId(userId),
           jobId: new ObjectId(job._id.toString()),
+          $or: [
+            { candidateId: new ObjectId(userId) },
+            { studentId: new ObjectId(userId) },
+            { applicantId: new ObjectId(userId) },
+          ],
         })
 
         return {
           ...job,
           daysLeft,
           hasApplied: !!application,
+          applicationId: application?._id || null,
+          applicationStatus: application?.status || null,
+          appliedAt: application?.appliedAt || application?.appliedDate || null,
         }
       }),
     )
@@ -56,7 +75,12 @@ export async function GET(request: NextRequest) {
     headers.append("Expires", "0")
 
     return NextResponse.json(
-      { success: true, jobs: jobsWithDetails },
+      {
+        success: true,
+        jobs: jobsWithDetails,
+        userCollection, // Include for debugging
+        totalJobs: jobsWithDetails.length,
+      },
       {
         status: 200,
         headers: headers,

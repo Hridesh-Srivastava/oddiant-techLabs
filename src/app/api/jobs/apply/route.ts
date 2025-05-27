@@ -6,7 +6,7 @@ import { sendEmail } from "@/lib/email"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { 
+    const {
       // Personal Information
       salutation,
       fullName,
@@ -22,39 +22,42 @@ export async function POST(request: NextRequest) {
       currentState,
       pincode,
       profileOutline,
-      
+
       // Education
       education,
       certifications,
-      
+
       // Experience
       totalExperience,
       workExperience,
+      currentSalary, // ✅ Added - moved from individual work experience
+      expectedSalary, // ✅ Added - moved from individual work experience
+      noticePeriod, // ✅ Added - moved from individual work experience
       shiftPreference,
       preferredCities,
-      
+
       // Assets & Documents
       availableAssets,
       identityDocuments,
-      
+
       // Additional
       skills,
       portfolioLink,
       socialMediaLink,
-      
+
       // Documents
       resumeUrl,
       videoResumeUrl,
       audioBiodataUrl,
       photographUrl,
-      
+
       // Original fields
       linkedIn,
       coverLetter,
       additionalInfo,
-      
+
       // Job ID
-      jobId 
+      jobId,
     } = body
 
     console.log("Application submission data received:", {
@@ -62,7 +65,10 @@ export async function POST(request: NextRequest) {
       email,
       resumeUrl: resumeUrl ? "URL provided" : "Missing",
       jobId,
-      totalFields: Object.keys(body).length
+      currentSalary,
+      expectedSalary,
+      noticePeriod,
+      totalFields: Object.keys(body).length,
     })
 
     // Validate required fields
@@ -71,7 +77,7 @@ export async function POST(request: NextRequest) {
     if (!email) missingFields.push("email")
     if (!resumeUrl) missingFields.push("resumeUrl")
     if (!jobId) missingFields.push("jobId")
-    
+
     if (missingFields.length > 0) {
       return NextResponse.json(
         {
@@ -96,14 +102,14 @@ export async function POST(request: NextRequest) {
 
     // Connect to database
     const { db } = await connectToDatabase()
-    
+
     // Start a session for transaction
     const session = db.client.startSession()
-    
+
     try {
       // Start transaction
       session.startTransaction()
-      
+
       // Find the job
       const job = await db.collection("jobs").findOne({ _id: new ObjectId(jobId) })
 
@@ -137,37 +143,40 @@ export async function POST(request: NextRequest) {
         currentState: currentState || "",
         pincode: pincode || "",
         profileOutline: profileOutline || "",
-        
+
         // Education
         education: education || [],
         certifications: certifications || [],
-        
+
         // Experience
         totalExperience: totalExperience || "",
         workExperience: workExperience || [],
+        currentSalary: currentSalary || "", // ✅ Added - top level field
+        expectedSalary: expectedSalary || "", // ✅ Added - top level field
+        noticePeriod: noticePeriod || "", // ✅ Added - top level field
         shiftPreference: shiftPreference || [],
         preferredCities: preferredCities || [],
-        
+
         // Assets & Documents
         availableAssets: availableAssets || [],
         identityDocuments: identityDocuments || [],
-        
+
         // Additional
         skills: skills || [],
         portfolioLink: portfolioLink || "",
         socialMediaLink: socialMediaLink || "",
-        
+
         // Documents
         resumeUrl,
         videoResumeUrl: videoResumeUrl || "",
         audioBiodataUrl: audioBiodataUrl || "",
         photographUrl: photographUrl || "",
-        
+
         // Original fields
         linkedIn: linkedIn || "",
         coverLetter: coverLetter || "",
         additionalInfo: additionalInfo || "",
-        
+
         // Standard fields
         status: "Applied",
         role: job.jobTitle,
@@ -200,24 +209,23 @@ export async function POST(request: NextRequest) {
       console.log("Job application created with ID:", applicationResult.insertedId.toString())
 
       // Update the job's applicant count
-      await db.collection("jobs").updateOne(
-        { _id: new ObjectId(jobId) }, 
-        { $inc: { applicants: 1 } },
-        { session }
-      )
+      await db.collection("jobs").updateOne({ _id: new ObjectId(jobId) }, { $inc: { applicants: 1 } }, { session })
 
       // Store the application ID in a temporary collection for linking during registration
-      await db.collection("pending_applications").insertOne({
-        email,
-        candidateId,
-        jobId: new ObjectId(jobId),
-        createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days expiry
-      }, { session })
+      await db.collection("pending_applications").insertOne(
+        {
+          email,
+          candidateId,
+          jobId: new ObjectId(jobId),
+          createdAt: new Date(),
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days expiry
+        },
+        { session },
+      )
 
       // Commit the transaction
       await session.commitTransaction()
-      
+
       // Send confirmation email to candidate
       try {
         await sendEmail({
@@ -310,7 +318,7 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         message: `Failed to submit application: ${error.message || "Unknown error"}`,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
       },
       { status: 500 },
     )

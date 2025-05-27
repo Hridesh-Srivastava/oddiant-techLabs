@@ -33,6 +33,15 @@ import {
   X,
   GraduationCap,
   Award,
+  Calendar,
+  DollarSign,
+  Timer,
+  BriefcaseIcon,
+  CalendarIcon,
+  Hash,
+  SlidersHorizontal,
+  Download,
+  AlertCircle,
   FileCheck,
   CreditCard,
   Laptop,
@@ -41,24 +50,13 @@ import {
   ImageIcon,
   Info,
   MessageSquare,
-  Calendar,
-  DollarSign,
-  Timer,
   Layers,
   FileSymlink,
-  BriefcaseIcon,
-  CalendarIcon,
-  Hash,
-  SlidersHorizontal,
-  Download,
-  AlertCircle,
-  
 } from "lucide-react"
 import { MapPinIcon } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 
 interface StudentData {
@@ -115,10 +113,27 @@ interface StudentData {
     totalExperience?: string
     yearsOfExperience?: string
   }>
+  // Add support for candidates collection field names
+  workExperience?: Array<{
+    title: string
+    companyName: string
+    department?: string
+    location?: string
+    tenure?: string
+    currentlyWorking?: boolean
+    professionalSummary?: string
+    summary?: string
+    currentSalary?: string
+    expectedSalary?: string
+    noticePeriod?: string
+    totalExperience?: string
+    yearsOfExperience?: string
+  }>
   totalExperience?: string
   yearsOfExperience?: string
   shiftPreference?: string | string[]
   preferenceCities?: string[]
+  preferredCities?: string[] 
   profileOutline?: string
   onlinePresence?: {
     portfolio?: string
@@ -166,8 +181,8 @@ interface StudentData {
     bankAccount?: boolean
     idProof?: boolean
   }
-  availableAssets?: string[]
-  identityDocuments?: string[]
+  // availableAssets?: string[]
+  // identityDocuments?: string[]
   settings?: {
     profileVisibility: boolean
     notifications: {
@@ -184,6 +199,39 @@ interface StudentData {
   currentSalary?: string
   expectedSalary?: string
   noticePeriod?: string
+  // Add source field to track which collection the user is from
+  source?: string
+
+  // Add candidates collection field mappings
+  dateOfBirth?: string // candidates use this instead of dob
+  workExperience?: Array<{
+    title: string
+    companyName: string
+    department?: string
+    location?: string
+    tenure?: string
+    currentlyWorking?: boolean
+    professionalSummary?: string
+    summary?: string
+    currentSalary?: string
+    expectedSalary?: string
+    noticePeriod?: string
+    totalExperience?: string
+    yearsOfExperience?: string
+  }>
+
+  // Document field mappings for candidates
+  resumeUrl?: string
+  videoResumeUrl?: string
+  audioBiodataUrl?: string
+  photographUrl?: string
+
+  // Other candidates fields
+  availableAssets?: string[]
+  identityDocuments?: string[]
+
+  // Add source field to track collection
+  source?: string
 }
 
 interface JobPosting {
@@ -240,22 +288,146 @@ const formatUrl = (url: string): string => {
   return url
 }
 
+// Helper function to format full name properly (FIXED)
+const getFullName = (student: StudentData): string => {
+  const parts: string[] = []
+
+  if (student.salutation) {
+    parts.push(student.salutation)
+  }
+
+  if (student.firstName) {
+    parts.push(student.firstName)
+  }
+
+  // Only add middleName if it exists and is not "noMid"
+  if (student.middleName && student.middleName.toLowerCase() !== "nomid") {
+    parts.push(student.middleName)
+  }
+
+  if (student.lastName) {
+    parts.push(student.lastName)
+  }
+
+  return parts.join(" ")
+}
+
+// Helper function to safely get experience array from either collection
+const getExperienceArray = (student: StudentData): Array<any> => {
+  // Try experience field first (students collection)
+  if (student.experience && Array.isArray(student.experience)) {
+    return student.experience
+  }
+
+  // Try workExperience field (candidates collection)
+  if (student.workExperience && Array.isArray(student.workExperience)) {
+    return student.workExperience
+  }
+
+  // Return empty array as fallback
+  return []
+}
+
+// Helper function to get date of birth from either collection
+const getDateOfBirth = (student: StudentData): string => {
+  return student.dob || student.dateOfBirth || ""
+}
+
+// Helper function to get documents safely
+const getDocuments = (student: StudentData) => {
+  return {
+    resume: {
+      url: student.documents?.resume?.url || student.resumeUrl || "",
+      filename: student.documents?.resume?.filename || "",
+      uploadDate: student.documents?.resume?.uploadDate || "",
+    },
+    videoResume: {
+      url: student.documents?.videoResume?.url || student.videoResumeUrl || "",
+      filename: student.documents?.videoResume?.filename || "",
+      uploadDate: student.documents?.videoResume?.uploadDate || "",
+    },
+    audioBiodata: {
+      url: student.documents?.audioBiodata?.url || student.audioBiodataUrl || "",
+      filename: student.documents?.audioBiodata?.filename || "",
+      uploadDate: student.documents?.audioBiodata?.uploadDate || "",
+    },
+    photograph: {
+      url: student.documents?.photograph?.url || student.photographUrl || student.avatar || "",
+      name: student.documents?.photograph?.name || "",
+      uploadDate: student.documents?.photograph?.uploadDate || "",
+    },
+  }
+}
+
+// Helper function to get available assets
+const getAvailableAssets = (student: StudentData): string[] => {
+  if (student.availableAssets && student.availableAssets.length > 0) {
+    return student.availableAssets
+  }
+
+  if (student.assets) {
+    const assets: string[] = []
+    if (student.assets.bike) assets.push("Bike / Car")
+    if (student.assets.wifi) assets.push("WiFi")
+    if (student.assets.laptop) assets.push("Laptop")
+    return assets
+  }
+
+  return []
+}
+
+// Helper function to get identity documents
+const getIdentityDocuments = (student: StudentData): string[] => {
+  if (student.identityDocuments && student.identityDocuments.length > 0) {
+    return student.identityDocuments
+  }
+
+  if (student.assets) {
+    const documents: string[] = []
+    if (student.assets.panCard) documents.push("PAN Card")
+    if (student.assets.aadhar) documents.push("Aadhar")
+    if (student.assets.bankAccount) documents.push("Bank Account")
+    if (student.assets.idProof) documents.push("Voter ID / Passport / DL (Any)")
+    return documents
+  }
+
+  return []
+}
+
+// Helper function to safely get preferred cities from either collection
+const getPreferredCities = (student: StudentData): string[] => {
+  // Try preferenceCities field first (students collection)
+  if (student.preferenceCities && Array.isArray(student.preferenceCities)) {
+    return student.preferenceCities
+  }
+
+  // Try preferredCities field (candidates collection)
+  if (student.preferredCities && Array.isArray(student.preferredCities)) {
+    return student.preferredCities
+  }
+
+  // Return empty array as fallback
+  return []
+}
+
 const getTotalExperience = (student: StudentData): string => {
   // First check direct properties
   if (student.totalExperience) return student.totalExperience
   if (student.yearsOfExperience) return student.yearsOfExperience
 
-  // Calculate from experience array if available
-  if (student.experience && student.experience.length > 0) {
+  // Get experience array safely
+  const experienceArray = getExperienceArray(student)
+
+  if (experienceArray.length > 0) {
     // First check if any experience entry has totalExperience or yearsOfExperience
-    for (const exp of student.experience) {
+    for (const exp of experienceArray) {
       if (exp.totalExperience) return exp.totalExperience
       if (exp.yearsOfExperience) return exp.yearsOfExperience
     }
 
     // Then try to calculate from tenure
     let totalYears = 0
-    student.experience.forEach((exp) => {
+    experienceArray.forEach((exp) => {
       if (exp.tenure) {
         const yearMatch = exp.tenure.match(/(\d+)\s*years?/i)
         if (yearMatch && yearMatch[1]) {
@@ -315,25 +487,24 @@ function StudentDashboardPage({ user }: { user: any }) {
   const [applicationDateTo, setApplicationDateTo] = useState("")
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
-const [showRecentApplicationsOnly, setShowRecentApplicationsOnly] = useState(false);
+  const [showRecentApplicationsOnly, setShowRecentApplicationsOnly] = useState(false)
 
-const [globalSearch, setGlobalSearch] = useState("");
-const [searchResults, setSearchResults] = useState({
-  jobs: [],
-  applications: []
-});
+  const [globalSearch, setGlobalSearch] = useState("")
+  const [searchResults, setSearchResults] = useState({
+    jobs: [],
+    applications: [],
+  })
 
+  // Add these state variables for job filters
+  const [jobFilters, setJobFilters] = useState({
+    searchTerm: "",
+    location: "",
+    jobType: "",
+    recentOnly: false, // New filter for recent jobs
+  })
 
-// Add these state variables for job filters
-const [jobFilters, setJobFilters] = useState({
-  searchTerm: "",
-  location: "",
-  jobType: "",
-  recentOnly: false // New filter for recent jobs
-});
-
-// Store all jobs for filtering
-const [allJobs, setAllJobs] = useState([]);
+  // Store all jobs for filtering
+  const [allJobs, setAllJobs] = useState([])
 
   useEffect(() => {
     const fetchStudentData = async () => {
@@ -423,20 +594,60 @@ const [allJobs, setAllJobs] = useState([]);
     }
   }
 
-const fetchJobs = async () => {
-  try {
-    setIsLoadingJobs(true)
-    const response = await fetch("/api/jobs/available", {
-      cache: "no-store",
-      headers: {
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        Pragma: "no-cache",
-        Expires: "0",
-      },
-    })
+  const fetchJobs = async () => {
+    try {
+      setIsLoadingJobs(true)
+      const response = await fetch("/api/jobs/available", {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      })
 
-    if (!response.ok) {
-      console.error("Failed to fetch jobs:", response.status)
+      if (!response.ok) {
+        console.error("Failed to fetch jobs:", response.status)
+        // Use mock data if API fails
+        const mockJobs = [
+          {
+            _id: "1",
+            jobTitle: "Frontend Developer",
+            jobLocation: "Remote",
+            experienceRange: "1-3 years",
+            jobType: "Full-time",
+            salaryRange: "$60,000 - $80,000",
+            companyName: "Tech Solutions Inc.",
+            skills: ["React", "JavaScript", "CSS"],
+            status: "open",
+            createdAt: new Date().toISOString(),
+            daysLeft: 30,
+          },
+          {
+            _id: "2",
+            jobTitle: "Backend Developer",
+            jobLocation: "New York",
+            experienceRange: "2-5 years",
+            jobType: "Full-time",
+            salaryRange: "$80,000 - $100,000",
+            companyName: "Data Systems LLC",
+            skills: ["Node.js", "Express", "MongoDB"],
+            status: "open",
+            createdAt: new Date().toISOString(),
+            daysLeft: 25,
+          },
+        ]
+        setJobs(mockJobs)
+        setAllJobs(mockJobs) // Store all jobs for filtering
+        return
+      }
+
+      const data = await response.json()
+      console.log("Fetched jobs:", data.jobs)
+      setJobs(data.jobs || [])
+      setAllJobs(data.jobs || []) // Store all jobs for filtering
+    } catch (error) {
+      console.error("Error fetching jobs:", error)
       // Use mock data if API fails
       const mockJobs = [
         {
@@ -465,53 +676,13 @@ const fetchJobs = async () => {
           createdAt: new Date().toISOString(),
           daysLeft: 25,
         },
-      ];
-      setJobs(mockJobs);
-      setAllJobs(mockJobs); // Store all jobs for filtering
-      return
+      ]
+      setJobs(mockJobs)
+      setAllJobs(mockJobs) // Store all jobs for filtering
+    } finally {
+      setIsLoadingJobs(false)
     }
-
-    const data = await response.json()
-    console.log("Fetched jobs:", data.jobs)
-    setJobs(data.jobs || [])
-    setAllJobs(data.jobs || []) // Store all jobs for filtering
-  } catch (error) {
-    console.error("Error fetching jobs:", error)
-    // Use mock data if API fails
-    const mockJobs = [
-      {
-        _id: "1",
-        jobTitle: "Frontend Developer",
-        jobLocation: "Remote",
-        experienceRange: "1-3 years",
-        jobType: "Full-time",
-        salaryRange: "$60,000 - $80,000",
-        companyName: "Tech Solutions Inc.",
-        skills: ["React", "JavaScript", "CSS"],
-        status: "open",
-        createdAt: new Date().toISOString(),
-        daysLeft: 30,
-      },
-      {
-        _id: "2",
-        jobTitle: "Backend Developer",
-        jobLocation: "New York",
-        experienceRange: "2-5 years",
-        jobType: "Full-time",
-        salaryRange: "$80,000 - $100,000",
-        companyName: "Data Systems LLC",
-        skills: ["Node.js", "Express", "MongoDB"],
-        status: "open",
-        createdAt: new Date().toISOString(),
-        daysLeft: 25,
-      },
-    ];
-    setJobs(mockJobs);
-    setAllJobs(mockJobs); // Store all jobs for filtering
-  } finally {
-    setIsLoadingJobs(false)
   }
-}
   const fetchApplications = async () => {
     try {
       setIsLoadingApplications(true)
@@ -582,50 +753,45 @@ const fetchJobs = async () => {
   }
 
   const handleSearchResultClick = (type: string, id?: string) => {
-  // Clear the search
-  setGlobalSearch("");
-  
-  if (type === "job" && id) {
-    // Redirect to specific job details
-    router.push(`/jobs/${id}`);
-  } 
-  else if (type === "application" && id) {
-    // Redirect to specific application details
-    router.push(`/student/applications/${id}`);
+    // Clear the search
+    setGlobalSearch("")
+
+    if (type === "job" && id) {
+      // Redirect to specific job details
+      router.push(`/jobs/${id}`)
+    } else if (type === "application" && id) {
+      // Redirect to specific application details
+      router.push(`/student/applications/${id}`)
+    } else if (type === "profile") {
+      // Switch to profile tab
+      handleTabChange("profile")
+    } else if (type === "settings") {
+      // Switch to settings tab
+      handleTabChange("settings")
+    } else if (type === "jobs") {
+      // Switch to jobs tab
+      handleTabChange("jobs")
+    } else if (type === "applications") {
+      // Switch to applications tab
+      handleTabChange("applications")
+    }
   }
-  else if (type === "profile") {
-    // Switch to profile tab
-    handleTabChange("profile");
-  }
-  else if (type === "settings") {
-    // Switch to settings tab
-    handleTabChange("settings");
-  }
-  else if (type === "jobs") {
-    // Switch to jobs tab
-    handleTabChange("jobs");
-  }
-  else if (type === "applications") {
-    // Switch to applications tab
-    handleTabChange("applications");
-  }
-};
 
   const handleAvatarEdit = () => {
     setIsEditingAvatar(true)
   }
 
   const filterRecentApplications = (applications) => {
-  if (!showRecentApplicationsOnly) return applications;
-  
-  const oneWeekAgo = new Date();
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-  
-  return applications.filter(app => {
-    const appliedDate = new Date(app.appliedDate);
-    return appliedDate >= oneWeekAgo;
-  });
-};
+    if (!showRecentApplicationsOnly) return applications
+
+    const oneWeekAgo = new Date()
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+
+    return applications.filter((app) => {
+      const appliedDate = new Date(app.appliedDate)
+      return appliedDate >= oneWeekAgo
+    })
+  }
 
   const handleAvatarUpload = () => {
     if (fileInputRef.current) {
@@ -633,67 +799,67 @@ const fetchJobs = async () => {
     }
   }
 
-
   // Add this search function with your other functions
-const handleSearchInput = (term) => {
-  setGlobalSearch(term);
-  
-  if (!term.trim()) {
-    setSearchResults({ jobs: [], applications: [] });
-    return;
+  const handleSearchInput = (term) => {
+    setGlobalSearch(term)
+
+    if (!term.trim()) {
+      setSearchResults({ jobs: [], applications: [] })
+      return
+    }
+
+    const searchTerm = term.toLowerCase()
+
+    // Search in jobs
+    const matchedJobs = jobs.filter(
+      (job) =>
+        job.jobTitle.toLowerCase().includes(searchTerm) ||
+        job.companyName.toLowerCase().includes(searchTerm) ||
+        job.jobLocation.toLowerCase().includes(searchTerm) ||
+        job.skills.some((skill) => skill.toLowerCase().includes(searchTerm)),
+    )
+
+    // Search in applications
+    const matchedApplications = applications.filter(
+      (app) =>
+        app.job.jobTitle.toLowerCase().includes(searchTerm) ||
+        app.job.companyName.toLowerCase().includes(searchTerm) ||
+        app.status.toLowerCase().includes(searchTerm),
+    )
+
+    setSearchResults({
+      jobs: matchedJobs,
+      applications: matchedApplications,
+    })
   }
-  
-  const searchTerm = term.toLowerCase();
-  
-  // Search in jobs
-  const matchedJobs = jobs.filter(job => 
-    job.jobTitle.toLowerCase().includes(searchTerm) ||
-    job.companyName.toLowerCase().includes(searchTerm) ||
-    job.jobLocation.toLowerCase().includes(searchTerm) ||
-    job.skills.some(skill => skill.toLowerCase().includes(searchTerm))
-  );
-  
-  // Search in applications
-  const matchedApplications = applications.filter(app => 
-    app.job.jobTitle.toLowerCase().includes(searchTerm) ||
-    app.job.companyName.toLowerCase().includes(searchTerm) ||
-    app.status.toLowerCase().includes(searchTerm)
-  );
-  
-  setSearchResults({
-    jobs: matchedJobs,
-    applications: matchedApplications
-  });
-};
 
+  // Update this function to work with your data structure
+  const filterRecentJobs = (days = 7) => {
+    const today = new Date()
+    const cutoffDate = new Date()
+    cutoffDate.setDate(today.getDate() - days)
 
-// Update this function to work with your data structure
-const filterRecentJobs = (days = 7) => {
-  const today = new Date();
-  const cutoffDate = new Date();
-  cutoffDate.setDate(today.getDate() - days);
-  
-  const recentJobs = allJobs.filter(job => {
-    const postedDate = new Date(job.createdAt);
-    return postedDate >= cutoffDate;
-  });
-  
-  setJobs(recentJobs);
-  setJobFilters({...jobFilters, recentOnly: true});
-  
-  toast.success(`Showing newly available jobs`);
-};
+    const recentJobs = allJobs.filter((job) => {
+      const postedDate = new Date(job.createdAt)
+      return postedDate >= cutoffDate
+    })
 
-// Update this function to work with your data structure
-const resetJobFilters = () => {
-  setSearchTerm("");
-  setFilterLocation("");
-  setFilterJobType("");
-  setJobFilters({...jobFilters, recentOnly: false});
-  setJobs(allJobs);
-  
-  toast.success("All job filters have been reset");
-};
+    setJobs(recentJobs)
+    setJobFilters({ ...jobFilters, recentOnly: true })
+
+    toast.success(`Showing newly available jobs`)
+  }
+
+  // Update this function to work with your data structure
+  const resetJobFilters = () => {
+    setSearchTerm("")
+    setFilterLocation("")
+    setFilterJobType("")
+    setJobFilters({ ...jobFilters, recentOnly: false })
+    setJobs(allJobs)
+
+    toast.success("All job filters have been reset")
+  }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -766,13 +932,15 @@ const resetJobFilters = () => {
       pdfContainer.style.top = "-9999px"
       document.body.appendChild(pdfContainer)
 
+      // Get experience array safely
+      const experienceArray = getExperienceArray(student)
+      const preferredCities = getPreferredCities(student)
+
       // Create the PDF content with proper styling
       pdfContainer.innerHTML = `
         <div id="pdf-content" style="width: 210mm; padding: 20mm; font-family: Arial, sans-serif; color: #333;">
           <div style="text-align: center; margin-bottom: 20px;">
-            <h1 style="font-size: 24px; color: #000; margin-bottom: 5px;">${student.firstName} ${
-              student.middleName ? student.middleName + " " : ""
-            }${student.lastName} - Resume</h1>
+          <h1 style="font-size: 24px; color: #000; margin-bottom: 5px;">${getFullName(student)} - Resume</h1>
             <p style="color: #666; font-size: 14px;">Generated on ${new Date().toLocaleDateString()}</p>
           </div>
 
@@ -782,9 +950,7 @@ const resetJobFilters = () => {
             <div style="display: flex; flex-wrap: wrap;">
               <div style="width: 50%; margin-bottom: 10px;">
                 <p style="font-size: 14px; color: #666; margin-bottom: 2px;">Full Name</p>
-                <p style="font-size: 16px; margin-top: 0;">${student.salutation ? student.salutation + " " : ""}${
-                  student.firstName
-                } ${student.middleName ? student.middleName + " " : ""}${student.lastName}</p>
+              <p style="font-size: 16px; margin-top: 0;">${getFullName(student)}</p>
               </div>
               <div style="width: 50%; margin-bottom: 10px;">
                 <p style="font-size: 14px; color: #666; margin-bottom: 2px;">Gender</p>
@@ -957,36 +1123,36 @@ const resetJobFilters = () => {
                 )}</p>
               </div>
               ${
-                student.currentSalary || (student.experience && student.experience[0]?.currentSalary)
+                student.currentSalary || (experienceArray.length > 0 && experienceArray[0]?.currentSalary)
                   ? `
               <div style="background-color: #ecfdf5; border-radius: 6px; padding: 15px; text-align: center; flex: 1;">
                 <p style="font-size: 14px; color: #666; margin-bottom: 5px;">Current Salary</p>
                 <p style="font-size: 18px; font-weight: bold; color: #059669; margin: 0;">${
-                  student.currentSalary || student.experience?.[0]?.currentSalary || "Not specified"
+                  student.currentSalary || experienceArray[0]?.currentSalary || "Not specified"
                 }</p>
               </div>
               `
                   : ""
               }
               ${
-                student.expectedSalary || (student.experience && student.experience[0]?.expectedSalary)
+                student.expectedSalary || (experienceArray.length > 0 && experienceArray[0]?.expectedSalary)
                   ? `
               <div style="background-color: #f5f3ff; border-radius: 6px; padding: 15px; text-align: center; flex: 1;">
                 <p style="font-size: 14px; color: #666; margin-bottom: 5px;">Expected Salary</p>
                 <p style="font-size: 18px; font-weight: bold; color: #7c3aed; margin: 0;">${
-                  student.expectedSalary || student.experience?.[0]?.expectedSalary || "Not specified"
+                  student.expectedSalary || experienceArray[0]?.expectedSalary || "Not specified"
                 }</p>
               </div>
               `
                   : ""
               }
               ${
-                student.noticePeriod || (student.experience && student.experience[0]?.noticePeriod)
+                student.noticePeriod || (experienceArray.length > 0 && experienceArray[0]?.noticePeriod)
                   ? `
               <div style="background-color: #fffbeb; border-radius: 6px; padding: 15px; text-align: center; flex: 1;">
                 <p style="font-size: 14px; color: #666; margin-bottom: 5px;">Notice Period</p>
                 <p style="font-size: 18px; font-weight: bold; color: #d97706; margin: 0;">${
-                  student.noticePeriod || student.experience?.[0]?.noticePeriod || "Not specified"
+                  student.noticePeriod || experienceArray[0]?.noticePeriod || "Not specified"
                 }</p>
               </div>
               `
@@ -1023,12 +1189,12 @@ const resetJobFilters = () => {
 
           <!-- Preferred Cities Section -->
           ${
-            student.preferenceCities && student.preferenceCities.length > 0
+            preferredCities.length > 0
               ? `
           <div style="margin-bottom: 20px;">
             <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">Preferred Cities</h2>
             <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-              ${student.preferenceCities
+              ${preferredCities
                 .slice(0, 5)
                 .map(
                   (city) =>
@@ -1110,7 +1276,7 @@ const resetJobFilters = () => {
 
           <!-- Work Experience Section -->
           ${
-            student.experience && student.experience.length > 0
+            experienceArray.length > 0
               ? `
           <div style="margin-bottom: 20px;">
             <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">
@@ -1120,7 +1286,7 @@ const resetJobFilters = () => {
               )}</span>
             </h2>
             <div style="display: flex; flex-direction: column; gap: 15px;">
-              ${student.experience
+              ${experienceArray
                 .map(
                   (exp) => `
                 <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px;">
@@ -1297,70 +1463,63 @@ const resetJobFilters = () => {
               : ""
           }
 
-          <!-- Documents Section -->
-          <div style="margin-bottom: 20px;">
-            <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">Documents</h2>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center;">
-                  <span style="margin-right: 8px; color: #6b7280;">📄</span>
-                  <span>Resume</span>
-                </div>
-                ${
-                  student.documents?.resume?.url
-                    ? `<span style="color: #2563eb;">${student.documents.resume.url}</span>`
-                    : `<span style="background-color: #fee2e2; border: 1px solid #fecaca; border-radius: 4px; padding: 2px 6px; font-size: 14px; color: #b91c1c;">Not uploaded</span>`
-                }
-              </div>
+         <!-- Documents Section -->
+<div style="margin-bottom: 20px;">
+  <h2>Documents</h2>
+  <div style="display: flex; flex-direction: column; gap: 10px;">
+    
+    <!-- Resume -->
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center;">
+        <span style="margin-right: 8px;">📄</span>
+        <span>Resume</span>
+      </div>
+      ${getDocuments(student).resume.url ? 
+        `<a href="${getDocuments(student).resume.url}" style="color: #2563eb; text-decoration: underline;">${getDocuments(student).resume.url}</a>` : 
+        `<span style="color: #b91c1c;">Not uploaded</span>`
+      }
+    </div>
 
-              ${
-                student.documents?.videoResume?.url
-                  ? `
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center;">
-                  <span style="margin-right: 8px; color: #6b7280;">🎥</span>
-                  <span>Video Resume</span>
-                </div>
-                <span style="color: #2563eb;">${student.documents.videoResume.url}</span>
-              </div>
-              `
-                  : ""
-              }
+    <!-- Video Resume -->
+    ${getDocuments(student).videoResume.url ? `
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center;">
+        <span style="margin-right: 8px;">🎥</span>
+        <span>Video Resume</span>
+      </div>
+      <a href="${getDocuments(student).videoResume.url}" style="color: #2563eb; text-decoration: underline;">${getDocuments(student).videoResume.url}</a>
+    </div>
+    ` : ''}
 
-              ${
-                student.documents?.audioBiodata?.url
-                  ? `
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center;">
-                  <span style="margin-right: 8px; color: #6b7280;">🎵</span>
-                  <span>Audio Bio</span>
-                </div>
-                <span style="color: #2563eb;">${student.documents.audioBiodata.url}</span>
-              </div>
-              `
-                  : ""
-              }
+    <!-- Audio Biodata -->
+    ${getDocuments(student).audioBiodata.url ? `
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center;">
+        <span style="margin-right: 8px;">🎵</span>
+        <span>Audio Bio</span>
+      </div>
+      <a href="${getDocuments(student).audioBiodata.url}" style="color: #2563eb; text-decoration: underline;">${getDocuments(student).audioBiodata.url}</a>
+    </div>
+    ` : ''}
 
-              ${
-                student.documents?.photograph?.url
-                  ? `
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center;">
-                  <span style="margin-right: 8px; color: #6b7280;">🖼️</span>
-                  <span>Photograph</span>
-                </div>
-                <span style="color: #2563eb;">${student.documents.photograph.url}</span>
-              </div>
-              `
-                  : ""
-              }
-            </div>
-          </div>
+    <!-- Photograph -->
+    ${getDocuments(student).photograph.url ? `
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center;">
+        <span style="margin-right: 8px;">🖼️</span>
+        <span>Profile Photo</span>
+      </div>
+      <a href="${getDocuments(student).photograph.url}" style="color: #2563eb; text-decoration: underline;">${getDocuments(student).photograph.url}</a>
+    </div>
+    ` : ''}
+
+  </div>
+</div>
 
           <!-- Footer -->
           <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #6b7280;">
-            <p>This document was generated from the student profile on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
-            <p>© ${new Date().getFullYear()} Student Profile System - All Rights Reserved</p>
+            <p>This document was generated from the candidate profile on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+            <p>© ${new Date().getFullYear()} Oddiant Techlabs - All Rights Reserved</p>
           </div>
         </div>
       `
@@ -1415,7 +1574,7 @@ const resetJobFilters = () => {
       }
 
       // Save the PDF
-      pdf.save(`${student.firstName}_${student.lastName}_Resume.pdf`)
+      pdf.save(`${getFullName(student).replace(/\s+/g, "_")}_Resume.pdf`)
 
       // Clean up
       document.body.removeChild(pdfContainer)
@@ -1487,16 +1646,18 @@ const resetJobFilters = () => {
     if (student.totalExperience) return student.totalExperience
     if (student.yearsOfExperience) return student.yearsOfExperience
 
-    // Calculate from experience array if available
-    if (student.experience && student.experience.length > 0) {
+    // Get experience array safely
+    const experienceArray = getExperienceArray(student)
+
+    if (experienceArray.length > 0) {
       // First check if any experience entry has totalExperience
-      for (const exp of student.experience) {
+      for (const exp of experienceArray) {
         if (exp.totalExperience) return exp.totalExperience
       }
 
       // Then try to calculate from tenure
       let totalYears = 0
-      student.experience.forEach((exp) => {
+      experienceArray.forEach((exp) => {
         if (exp.tenure) {
           const yearMatch = exp.tenure.match(/(\d+)\s*years?/i)
           if (yearMatch && yearMatch[1]) {
@@ -1884,126 +2045,133 @@ const resetJobFilters = () => {
     <div className="min-h-screen bg-gray-50">
       <Toaster position="top-center" />
 
-     <header className="bg-black shadow">
-  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-    <div className="flex items-center gap-4">
-      <h1 className="text-xl font-semibold text-white">Student Dashboard</h1>
-      
-      {/* Search Bar - RIGHT NEXT TO Student Dashboard text */}
-      <div className="relative w-64">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-        <Input
-          placeholder="Search Dashboard..."
-          className="pl-10 h-9 bg-white text-black w-full"
-          value={globalSearch}
-          onChange={(e) => handleSearchInput(e.target.value)}
-        />
-        
- {/* Search Results Dropdown */}
-{globalSearch.length > 0 && (
-  <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg p-3">
-    <div className="flex items-start">
-      <AlertCircle className="h-4 w-4 mr-2 text-gray-500 mt-0.5" />
-      <p className="text-sm">
-        Found {searchResults.jobs.length} jobs and {searchResults.applications.length} applications matching "{globalSearch}"
-      </p>
-    </div>
-    
-    {/* Jobs section */}
-    {searchResults.jobs.length > 0 && (
-      <div className="mt-2">
-        <p className="text-xs font-medium text-gray-500 mb-1">Jobs</p>
-        {searchResults.jobs.slice(0, 3).map(job => (
-          <div 
-            key={job._id}
-            className="px-2 py-1 hover:bg-gray-100 rounded cursor-pointer text-sm"
-            onClick={() => handleSearchResultClick("job", job._id)}
-          >
-            <div className="flex items-center">
-              <Briefcase className="h-3 w-3 mr-2 text-blue-500" />
-              <span>{job.jobTitle} - {job.companyName}</span>
+      <header className="bg-black shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-semibold text-white">Candidate Dashboard</h1>
+
+            {/* Search Bar - RIGHT NEXT TO Candidate Dashboard text */}
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Input
+                placeholder="Search Dashboard..."
+                className="pl-10 h-9 bg-white text-black w-full"
+                value={globalSearch}
+                onChange={(e) => handleSearchInput(e.target.value)}
+              />
+
+              {/* Search Results Dropdown */}
+              {globalSearch.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg p-3">
+                  <div className="flex items-start">
+                    <AlertCircle className="h-4 w-4 mr-2 text-gray-500 mt-0.5" />
+                    <p className="text-sm">
+                      Found {searchResults.jobs.length} jobs and {searchResults.applications.length} applications
+                      matching "{globalSearch}"
+                    </p>
+                  </div>
+
+                  {/* Jobs section */}
+                  {searchResults.jobs.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-xs font-medium text-gray-500 mb-1">Jobs</p>
+                      {searchResults.jobs.slice(0, 3).map((job) => (
+                        <div
+                          key={job._id}
+                          className="px-2 py-1 hover:bg-gray-100 rounded cursor-pointer text-sm"
+                          onClick={() => handleSearchResultClick("job", job._id)}
+                        >
+                          <div className="flex items-center">
+                            <Briefcase className="h-3 w-3 mr-2 text-blue-500" />
+                            <span>
+                              {job.jobTitle} - {job.companyName}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                      {searchResults.jobs.length > 3 && (
+                        <div
+                          className="px-2 py-1 text-xs text-blue-600 hover:underline cursor-pointer"
+                          onClick={() => handleSearchResultClick("jobs")}
+                        >
+                          View all {searchResults.jobs.length} jobs
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Applications section */}
+                  {searchResults.applications.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-xs font-medium text-gray-500 mb-1">Applications</p>
+                      {searchResults.applications.slice(0, 3).map((app) => (
+                        <div
+                          key={app._id}
+                          className="px-2 py-1 hover:bg-gray-100 rounded cursor-pointer text-sm"
+                          onClick={() => handleSearchResultClick("application", app._id)}
+                        >
+                          <div className="flex items-center">
+                            <FileText className="h-3 w-3 mr-2 text-green-500" />
+                            <span>
+                              {app.job?.jobTitle || "Unknown Job"} ({app.status})
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                      {searchResults.applications.length > 3 && (
+                        <div
+                          className="px-2 py-1 text-xs text-blue-600 hover:underline cursor-pointer"
+                          onClick={() => handleSearchResultClick("applications")}
+                        >
+                          View all {searchResults.applications.length} applications
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Quick links section */}
+                  <div className="mt-2 border-t pt-2">
+                    <p className="text-xs font-medium text-gray-500 mb-1">Quick Links</p>
+                    <div className="grid grid-cols-2 gap-1">
+                      <div
+                        className="px-2 py-1 hover:bg-gray-100 rounded cursor-pointer text-sm"
+                        onClick={() => handleSearchResultClick("profile")}
+                      >
+                        <div className="flex items-center">
+                          <User className="h-3 w-3 mr-2 text-purple-500" />
+                          <span>My Profile</span>
+                        </div>
+                      </div>
+                      <div
+                        className="px-2 py-1 hover:bg-gray-100 rounded cursor-pointer text-sm"
+                        onClick={() => handleSearchResultClick("settings")}
+                      >
+                        <div className="flex items-center">
+                          <Settings className="h-3 w-3 mr-2 text-gray-500" />
+                          <span>Settings</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        ))}
-        {searchResults.jobs.length > 3 && (
-          <div 
-            className="px-2 py-1 text-xs text-blue-600 hover:underline cursor-pointer"
-            onClick={() => handleSearchResultClick("jobs")}
-          >
-            View all {searchResults.jobs.length} jobs
-          </div>
-        )}
-      </div>
-    )}
-    
-    {/* Applications section */}
-    {searchResults.applications.length > 0 && (
-      <div className="mt-2">
-        <p className="text-xs font-medium text-gray-500 mb-1">Applications</p>
-        {searchResults.applications.slice(0, 3).map(app => (
-          <div 
-            key={app._id}
-            className="px-2 py-1 hover:bg-gray-100 rounded cursor-pointer text-sm"
-            onClick={() => handleSearchResultClick("application", app._id)}
-          >
-            <div className="flex items-center">
-              <FileText className="h-3 w-3 mr-2 text-green-500" />
-              <span>{app.job?.jobTitle || 'Unknown Job'} ({app.status})</span>
-            </div>
-          </div>
-        ))}
-        {searchResults.applications.length > 3 && (
-          <div 
-            className="px-2 py-1 text-xs text-blue-600 hover:underline cursor-pointer"
-            onClick={() => handleSearchResultClick("applications")}
-          >
-            View all {searchResults.applications.length} applications
-          </div>
-        )}
-      </div>
-    )}
-    
-    {/* Quick links section */}
-    <div className="mt-2 border-t pt-2">
-      <p className="text-xs font-medium text-gray-500 mb-1">Quick Links</p>
-      <div className="grid grid-cols-2 gap-1">
-        <div 
-          className="px-2 py-1 hover:bg-gray-100 rounded cursor-pointer text-sm"
-          onClick={() => handleSearchResultClick("profile")}
-        >
-          <div className="flex items-center">
-            <User className="h-3 w-3 mr-2 text-purple-500" />
-            <span>My Profile</span>
+
+          <div className="flex items-center space-x-4">
+            <span className="text-sm text-white">Welcome, {getFullName(student)}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="bg-transparent text-white border-white hover:bg-white hover:text-black"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
           </div>
         </div>
-        <div 
-          className="px-2 py-1 hover:bg-gray-100 rounded cursor-pointer text-sm"
-          onClick={() => handleSearchResultClick("settings")}
-        >
-          <div className="flex items-center">
-            <Settings className="h-3 w-3 mr-2 text-gray-500" />
-            <span>Settings</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
-</div>
-</div>
-    
-    
-    <div className="flex items-center space-x-4">
-      <span className="text-sm text-white">
-        Welcome, {student.firstName} {student.lastName}
-      </span>
-      <Button variant="outline" size="sm" onClick={handleLogout} className="bg-transparent text-white border-white hover:bg-white hover:text-black">
-        <LogOut className="h-4 w-4 mr-2" />
-        Logout
-      </Button>
-    </div>
-  </div>
-</header>
+      </header>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -2138,24 +2306,24 @@ const resetJobFilters = () => {
                           <option value="Remote">Remote</option>
                         </select>
                       </div>
-                      <Button 
-  variant={jobFilters.recentOnly ? "default" : "outline"} 
-  className="whitespace-nowrap"
-  onClick={() => filterRecentJobs(7)}
->
-  <Clock className="h-4 w-4 mr-2" />
-New Job Openings
-</Button>
-  
-  {/* Reset Button */}
-  <Button 
-    variant="ghost" 
-    onClick={resetJobFilters}
-    className="whitespace-nowrap bg-red-600 text-white hover:bg-red-900 hover:text-white"
-  >
-    <RefreshCw className="h-4 w-4 mr-2" />
-    Reset
-  </Button>
+                      <Button
+                        variant={jobFilters.recentOnly ? "default" : "outline"}
+                        className="whitespace-nowrap"
+                        onClick={() => filterRecentJobs(7)}
+                      >
+                        <Clock className="h-4 w-4 mr-2" />
+                        New Job Openings
+                      </Button>
+
+                      {/* Reset Button */}
+                      <Button
+                        variant="ghost"
+                        onClick={resetJobFilters}
+                        className="whitespace-nowrap bg-red-600 text-white hover:bg-red-900 hover:text-white"
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Reset
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -2267,14 +2435,14 @@ New Job Openings
                         onChange={(e) => setApplicationSearchTerm(e.target.value)}
                       />
                     </div>
-                    <Button 
-  variant={showRecentApplicationsOnly ? "default" : "outline"}
-  onClick={() => setShowRecentApplicationsOnly(!showRecentApplicationsOnly)}
-  className="whitespace-nowrap"
->
-  <Clock className="h-4 w-4 mr-2" />
-  {showRecentApplicationsOnly ? "All Applications" : "Recent Applications"}
-</Button>
+                    <Button
+                      variant={showRecentApplicationsOnly ? "default" : "outline"}
+                      onClick={() => setShowRecentApplicationsOnly(!showRecentApplicationsOnly)}
+                      className="whitespace-nowrap"
+                    >
+                      <Clock className="h-4 w-4 mr-2" />
+                      {showRecentApplicationsOnly ? "All Applications" : "Recent Applications"}
+                    </Button>
                     <div className="flex gap-4">
                       <div className="relative w-full md:w-40">
                         <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
@@ -2437,7 +2605,7 @@ New Job Openings
                   </div>
                 ) : (
                   <div className="space-y-4">
-                   {filterRecentApplications(filteredApplications).map((application) => (
+                    {filterRecentApplications(filteredApplications).map((application) => (
                       <Card key={application._id} className="overflow-hidden hover:shadow-md transition-shadow">
                         <CardContent className="p-6">
                           <div className="flex justify-between items-start">
@@ -2497,14 +2665,11 @@ New Job Openings
                           src={
                             student.avatar ||
                             student.documents?.photograph?.url ||
+                            student.photographUrl ||
                             "/placeholder.svg?height=128&width=128" ||
-                            "/placeholder.svg" ||
-                            "/placeholder.svg" ||
-                            "/placeholder.svg" ||
-                            "/placeholder.svg" ||
                             "/placeholder.svg"
                           }
-                          alt={`${student.firstName} ${student.lastName}`}
+                          alt={getFullName(student)}
                         />
                         <AvatarFallback className="text-3xl">
                           {student.firstName?.charAt(0)}
@@ -2556,11 +2721,7 @@ New Job Openings
                       )}
                     </div>
 
-                    <h3 className="text-xl font-semibold text-center">
-                      {student.salutation && `${student.salutation} `}
-                      {student.firstName} {student.middleName && `${student.middleName} `}
-                      {student.lastName}
-                    </h3>
+                  <h3 className="text-xl font-semibold text-center">{getFullName(student)}</h3>
                     <p className="text-gray-500 text-center mb-4">{student.email}</p>
                     <Button
                       variant="outline"
@@ -2569,13 +2730,13 @@ New Job Openings
                     >
                       Edit Profile
                     </Button>
-                    {student.documents?.resume?.url && (
-                      <Button variant="outline" className="w-full mb-2" asChild>
-                        <a href={student.documents.resume.url} target="_blank" rel="noopener noreferrer">
-                          View Resume
-                        </a>
-                      </Button>
-                    )}
+                    {(student.documents?.resume?.url || student.resumeUrl) && (
+  <Button variant="outline" className="w-full mb-2" asChild>
+    <a href={student.documents?.resume?.url || student.resumeUrl} target="_blank" rel="noopener noreferrer">
+      View Resume
+    </a>
+  </Button>
+)}
                     <Button
                       variant="outline"
                       className="w-full flex items-center justify-center"
@@ -2603,11 +2764,7 @@ New Job Openings
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <p className="text-sm text-gray-500">Full Name</p>
-                            <p>
-                              {student.salutation && `${student.salutation} `}
-                              {student.firstName} {student.middleName && `${student.middleName} `}
-                              {student.lastName}
-                            </p>
+                            <p>{getFullName(student)}</p>
                           </div>
                           <div>
                             <p className="text-sm text-gray-500">Gender</p>
@@ -2615,7 +2772,7 @@ New Job Openings
                           </div>
                           <div>
                             <p className="text-sm text-gray-500">Date of Birth</p>
-                            <p>{formatDate(student.dob)}</p>
+                            <p>{formatDate(getDateOfBirth(student))}</p>
                           </div>
                           {student.pincode && (
                             <div>
@@ -2769,30 +2926,41 @@ New Job Openings
                             </span>
                           </div>
 
-                          {(student.currentSalary || (student.experience && student.experience[0]?.currentSalary)) && (
+                          {(student.currentSalary ||
+                            (getExperienceArray(student).length > 0 &&
+                              getExperienceArray(student)[0]?.currentSalary)) && (
                             <div className="bg-green-50 p-3 rounded-md flex flex-col items-center">
                               <span className="text-sm text-gray-500">Current Salary</span>
                               <span className="text-lg font-semibold text-green-700">
-                                {student.currentSalary || student.experience?.[0]?.currentSalary || "Not specified"}
+                                {student.currentSalary ||
+                                  getExperienceArray(student)[0]?.currentSalary ||
+                                  "Not specified"}
                               </span>
                             </div>
                           )}
 
                           {(student.expectedSalary ||
-                            (student.experience && student.experience[0]?.expectedSalary)) && (
+                            (getExperienceArray(student).length > 0 &&
+                              getExperienceArray(student)[0]?.expectedSalary)) && (
                             <div className="bg-purple-50 p-3 rounded-md flex flex-col items-center">
                               <span className="text-sm text-gray-500">Expected Salary</span>
                               <span className="text-lg font-semibold text-purple-700">
-                                {student.expectedSalary || student.experience?.[0]?.expectedSalary || "Not specified"}
+                                {student.expectedSalary ||
+                                  getExperienceArray(student)[0]?.expectedSalary ||
+                                  "Not specified"}
                               </span>
                             </div>
                           )}
 
-                          {(student.noticePeriod || (student.experience && student.experience[0]?.noticePeriod)) && (
+                          {(student.noticePeriod ||
+                            (getExperienceArray(student).length > 0 &&
+                              getExperienceArray(student)[0]?.noticePeriod)) && (
                             <div className="bg-amber-50 p-3 rounded-md flex flex-col items-center">
                               <span className="text-sm text-gray-500">Notice Period</span>
                               <span className="text-lg font-semibold text-amber-700">
-                                {student.noticePeriod || student.experience?.[0]?.noticePeriod || "Not specified"}
+                                {student.noticePeriod ||
+                                  getExperienceArray(student)[0]?.noticePeriod ||
+                                  "Not specified"}
                               </span>
                             </div>
                           )}
@@ -2827,7 +2995,7 @@ New Job Openings
                       )}
 
                       {/* Preferred Cities */}
-                      {student.preferenceCities && student.preferenceCities.length > 0 && (
+                      {getPreferredCities(student).length > 0 && (
                         <>
                           <Separator />
                           <div>
@@ -2836,11 +3004,13 @@ New Job Openings
                               Preferred Cities (Max 5)
                             </h4>
                             <div className="flex flex-wrap gap-2 mt-2">
-                              {student.preferenceCities.slice(0, 5).map((city, index) => (
-                                <Badge key={index} variant="outline" className="bg-green-50 text-green-800">
-                                  {city}
-                                </Badge>
-                              ))}
+                              {getPreferredCities(student)
+                                .slice(0, 5)
+                                .map((city, index) => (
+                                  <Badge key={index} variant="outline" className="bg-green-50 text-green-800">
+                                    {city}
+                                  </Badge>
+                                ))}
                             </div>
                           </div>
                         </>
@@ -2895,7 +3065,7 @@ New Job Openings
                         </>
                       )}
 
-                      {student.experience && student.experience.length > 0 && (
+                      {getExperienceArray(student).length > 0 && (
                         <>
                           <Separator />
                           <div>
@@ -2907,7 +3077,7 @@ New Job Openings
                               </Badge>
                             </h4>
                             <div className="space-y-4">
-                              {student.experience.map((exp, index) => (
+                              {getExperienceArray(student).map((exp, index) => (
                                 <div key={index} className="border rounded-md p-3">
                                   <div className="flex justify-between">
                                     <h5 className="font-medium">Title: {exp.title || "Not specified"}</h5>
@@ -3071,65 +3241,72 @@ New Job Openings
                           Documents
                         </h4>
                         <div className="space-y-3 mt-2">
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center">
-                              <FileText className="h-4 w-4 mr-2 text-gray-500" />
-                              <span>Resume</span>
-                            </div>
-                            {student.documents?.resume?.url ? (
-                              <Button variant="outline" size="sm" asChild>
-                                <a href={student.documents.resume.url} target="_blank" rel="noopener noreferrer">
-                                  View Resume
-                                </a>
-                              </Button>
-                            ) : (
-                              <Badge variant="outline" className="bg-red-50 text-red-800">
-                                Not uploaded
-                              </Badge>
-                            )}
-                          </div>
+                          {(() => {
+                            const docs = getDocuments(student)
+                            return (
+                              <>
+                                <div className="flex justify-between items-center">
+                                  <div className="flex items-center">
+                                    <FileText className="h-4 w-4 mr-2 text-gray-500" />
+                                    <span>Resume</span>
+                                  </div>
+                                  {docs.resume.url ? (
+                                    <Button variant="outline" size="sm" asChild>
+                                      <a href={docs.resume.url} target="_blank" rel="noopener noreferrer">
+                                        View Resume
+                                      </a>
+                                    </Button>
+                                  ) : (
+                                    <Badge variant="outline" className="bg-red-50 text-red-800">
+                                      Not uploaded
+                                    </Badge>
+                                  )}
+                                </div>
 
-                          {student.documents?.videoResume?.url && (
-                            <div className="flex justify-between items-center">
-                              <div className="flex items-center">
-                                <Video className="h-4 w-4 mr-2 text-gray-500" />
-                                <span>Video Resume</span>
-                              </div>
-                              <Button variant="outline" size="sm" asChild>
-                                <a href={student.documents.videoResume.url} target="_blank" rel="noopener noreferrer">
-                                  View Video
-                                </a>
-                              </Button>
-                            </div>
-                          )}
+                                {docs.videoResume.url && (
+                                  <div className="flex justify-between items-center">
+                                    <div className="flex items-center">
+                                      <Video className="h-4 w-4 mr-2 text-gray-500" />
+                                      <span>Video Resume</span>
+                                    </div>
+                                    <Button variant="outline" size="sm" asChild>
+                                      <a href={docs.videoResume.url} target="_blank" rel="noopener noreferrer">
+                                        View Video
+                                      </a>
+                                    </Button>
+                                  </div>
+                                )}
 
-                          {student.documents?.audioBiodata?.url && (
-                            <div className="flex justify-between items-center">
-                              <div className="flex items-center">
-                                <Music className="h-4 w-4 mr-2 text-gray-500" />
-                                <span>Audio Bio</span>
-                              </div>
-                              <Button variant="outline" size="sm" asChild>
-                                <a href={student.documents.audioBiodata.url} target="_blank" rel="noopener noreferrer">
-                                  Listen
-                                </a>
-                              </Button>
-                            </div>
-                          )}
+                                {docs.audioBiodata.url && (
+                                  <div className="flex justify-between items-center">
+                                    <div className="flex items-center">
+                                      <Music className="h-4 w-4 mr-2 text-gray-500" />
+                                      <span>Audio Bio</span>
+                                    </div>
+                                    <Button variant="outline" size="sm" asChild>
+                                      <a href={docs.audioBiodata.url} target="_blank" rel="noopener noreferrer">
+                                        Listen
+                                      </a>
+                                    </Button>
+                                  </div>
+                                )}
 
-                          {student.documents?.photograph?.url && (
-                            <div className="flex justify-between items-center">
-                              <div className="flex items-center">
-                                <ImageIcon className="h-4 w-4 mr-2 text-gray-500" />
-                                <span>Photograph</span>
-                              </div>
-                              <Button variant="outline" size="sm" asChild>
-                                <a href={student.documents.photograph.url} target="_blank" rel="noopener noreferrer">
-                                  View Photo
-                                </a>
-                              </Button>
-                            </div>
-                          )}
+                                {docs.photograph.url && (
+                                  <div className="flex justify-between items-center">
+                                    <div className="flex items-center">
+                                      <ImageIcon className="h-4 w-4 mr-2 text-gray-500" />
+                                      <span>Photograph</span>
+                                    </div>
+                                    <Button variant="outline" size="sm" asChild>
+                                      <a href={docs.photograph.url} target="_blank" rel="noopener noreferrer">
+                                        View Photo
+                                      </a>
+                                    </Button>
+                                  </div>
+                                )}
+                              </>
+                            )
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -3150,117 +3327,8 @@ New Job Openings
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Profile Visibility</h3>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Make profile visible to employers</p>
-                        <p className="text-sm text-gray-500">
-                          Allow employers to find your profile when searching for candidates
-                        </p>
-                      </div>
-                      <div className="flex items-center h-6">
-                        <Switch
-                          checked={settings?.profileVisibility ?? true}
-                          onCheckedChange={(checked) =>
-                            setSettings((prev) => (prev ? { ...prev, profileVisibility: checked } : prev))
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-
                   <Separator />
-
                   <div>
-                    <h3 className="text-lg font-medium mb-4">Notification Settings</h3>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">Email notifications</p>
-                          <p className="text-sm text-gray-500">
-                            Receive email notifications about new job matches and application updates
-                          </p>
-                        </div>
-                        <div className="flex items-center h-6">
-                          <Switch
-                            checked={settings?.notifications?.email ?? true}
-                            onCheckedChange={(checked) =>
-                              setSettings((prev) =>
-                                prev
-                                  ? {
-                                      ...prev,
-                                      notifications: {
-                                        ...prev.notifications,
-                                        email: checked,
-                                      },
-                                    }
-                                  : prev,
-                              )
-                            }
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">Job recommendations</p>
-                          <p className="text-sm text-gray-500">
-                            Receive personalized job recommendations based on your profile
-                          </p>
-                        </div>
-                        <div className="flex items-center h-6">
-                          <Switch
-                            checked={settings?.notifications?.jobRecommendations ?? true}
-                            onCheckedChange={(checked) =>
-                              setSettings((prev) =>
-                                prev
-                                  ? {
-                                      ...prev,
-                                      notifications: {
-                                        ...prev.notifications,
-                                        jobRecommendations: checked,
-                                      },
-                                    }
-                                  : prev,
-                              )
-                            }
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">Application status updates</p>
-                          <p className="text-sm text-gray-500">
-                            Receive notifications when your application status changes
-                          </p>
-                        </div>
-                        <div className="flex items-center h-6">
-                          <Switch
-                            checked={settings?.notifications?.applicationUpdates ?? true}
-                            onCheckedChange={(checked) =>
-                              setSettings((prev) =>
-                                prev
-                                  ? {
-                                      ...prev,
-                                      notifications: {
-                                        ...prev.notifications,
-                                        applicationUpdates: checked,
-                                      },
-                                    }
-                                  : prev,
-                              )
-                            }
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                 <div>
                     <h3 className="text-lg font-medium mb-4">Email Settings</h3>
                     <div className="space-y-4">
                       {/* Primary Email */}
@@ -3346,7 +3414,6 @@ New Job Openings
                       </div>
                     </div>
                   </div>
-
 
                   <Separator />
 

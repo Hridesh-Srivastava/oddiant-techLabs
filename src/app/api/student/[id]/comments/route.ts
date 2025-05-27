@@ -29,8 +29,21 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ message: "Employee not found" }, { status: 404 })
     }
 
-    // Update student with comment
-    const result = await db.collection("students").updateOne(
+    // Check both students and candidates collections for the target user
+    let targetUser = await db.collection("students").findOne({ _id: new ObjectId(studentId) })
+    let targetUserCollection = "students"
+
+    if (!targetUser) {
+      targetUser = await db.collection("candidates").findOne({ _id: new ObjectId(studentId) })
+      targetUserCollection = "candidates"
+    }
+
+    if (!targetUser) {
+      return NextResponse.json({ message: "User not found" }, { status: 404 })
+    }
+
+    // Update user with comment in the correct collection
+    const result = await db.collection(targetUserCollection).updateOne(
       { _id: new ObjectId(studentId) },
       {
         $set: {
@@ -49,15 +62,19 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     )
 
     if (result.matchedCount === 0) {
-      return NextResponse.json({ message: "Student not found" }, { status: 404 })
+      return NextResponse.json({ message: "User not found" }, { status: 404 })
     }
 
     // If jobId is provided, also update the job application
     if (jobId) {
-      // Check if job application exists
+      // Check if job application exists (check multiple field names)
       const application = await db.collection("job_applications").findOne({
-        candidateId: new ObjectId(studentId),
         jobId: new ObjectId(jobId),
+        $or: [
+          { candidateId: new ObjectId(studentId) },
+          { studentId: new ObjectId(studentId) },
+          { applicantId: new ObjectId(studentId) },
+        ],
       })
 
       if (application) {
@@ -81,7 +98,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       }
     }
 
-    return NextResponse.json({ success: true, message: "Comment added successfully" }, { status: 201 })
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Comment added successfully",
+        targetUserCollection, // Include for debugging
+      },
+      { status: 201 },
+    )
   } catch (error) {
     console.error("Error adding comment:", error)
     return NextResponse.json({ success: false, message: "Failed to add comment" }, { status: 500 })

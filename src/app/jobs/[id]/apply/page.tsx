@@ -90,6 +90,10 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
 
     // Experience
     totalExperience: "",
+    // Moved these fields outside of individual work experience entries
+    currentSalary: "",
+    expectedSalary: "",
+    noticePeriod: "",
     workExperience: [
       {
         title: "",
@@ -97,9 +101,6 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
         companyName: "",
         tenure: "",
         summary: "",
-        currentSalary: "",
-        expectedSalary: "",
-        noticePeriod: "",
       },
     ],
     shiftPreference: [] as string[],
@@ -1919,9 +1920,6 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
           companyName: "",
           tenure: "",
           summary: "",
-          currentSalary: "",
-          expectedSalary: "",
-          noticePeriod: "",
         },
       ],
     }))
@@ -2710,6 +2708,43 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                       />
                     </div>
 
+                    {/* Moved salary and notice period fields to experience section level */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="currentSalary">Current Salary (per annum)</Label>
+                        <Input
+                          id="currentSalary"
+                          name="currentSalary"
+                          value={formData.currentSalary}
+                          onChange={handleChange}
+                          placeholder="e.g., 50000"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="expectedSalary">Expected Salary (per annum)*</Label>
+                        <Input
+                          id="expectedSalary"
+                          name="expectedSalary"
+                          value={formData.expectedSalary}
+                          onChange={handleChange}
+                          placeholder="e.g., 60000"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="noticePeriod">Notice Period (in days)</Label>
+                      <Input
+                        id="noticePeriod"
+                        name="noticePeriod"
+                        value={formData.noticePeriod}
+                        onChange={handleChange}
+                        placeholder="e.g., 30"
+                      />
+                    </div>
+
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <h3 className="text-lg font-medium">Work Experience</h3>
@@ -2793,35 +2828,6 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                                 onChange={(e) => handleExperienceChange(index, "summary", e.target.value)}
                                 placeholder="Brief summary of your professional background"
                                 rows={3}
-                              />
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <Label>Current Salary (per annum)</Label>
-                                <Input
-                                  value={exp.currentSalary}
-                                  onChange={(e) => handleExperienceChange(index, "currentSalary", e.target.value)}
-                                  placeholder="e.g., 50000"
-                                />
-                              </div>
-
-                              <div>
-                                <Label>Expected Salary (per annum)*</Label>
-                                <Input
-                                  value={exp.expectedSalary}
-                                  onChange={(e) => handleExperienceChange(index, "expectedSalary", e.target.value)}
-                                  placeholder="e.g., 60000"
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <Label>Notice Period (in days)</Label>
-                              <Input
-                                value={exp.noticePeriod}
-                                onChange={(e) => handleExperienceChange(index, "noticePeriod", e.target.value)}
-                                placeholder="e.g., 30"
                               />
                             </div>
                           </CardContent>

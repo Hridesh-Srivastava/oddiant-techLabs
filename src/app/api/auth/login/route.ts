@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
-import { generateToken } from "@/lib/auth"
+import { generateToken, generateOTP } from "@/lib/auth"
+import { sendEmail } from "@/lib/email"
 import bcrypt from "bcryptjs"
 
 export async function POST(request: NextRequest) {
@@ -14,21 +15,103 @@ export async function POST(request: NextRequest) {
 
     const { db } = await connectToDatabase()
 
-    const collection = userType === "employee" ? "employees" : "students"
-
-    // Check for login with primary or alternative email for students
     let user = null
-    if (userType === "student") {
-      user = await db.collection(collection).findOne({
+    let userCollection = null
+
+    if (userType === "employee") {
+      // For employees, only check primary email in employees collection
+      user = await db.collection("employees").findOne({ email })
+      userCollection = "employees"
+    } else {
+      // For students, check both students and candidates collections
+      // First check students collection with primary or alternative email
+      user = await db.collection("students").findOne({
         $or: [{ email: email }, { alternativeEmail: email }],
       })
-    } else {
-      // For employees, only check primary email
-      user = await db.collection(collection).findOne({ email })
+      userCollection = "students"
+
+      // If not found in students collection, check candidates collection
+      if (!user) {
+        user = await db.collection("candidates").findOne({
+          $or: [{ email: email }, { alternativeEmail: email }],
+        })
+        userCollection = "candidates"
+      }
     }
 
     if (!user) {
       return NextResponse.json({ success: false, message: "Invalid credentials" }, { status: 401 })
+    }
+
+    // Check if user has a password field
+    if (!user.password) {
+      // Only allow password setup for candidates collection
+      if (userCollection !== "candidates") {
+        return NextResponse.json({ success: false, message: "Invalid credentials" }, { status: 401 })
+      }
+
+      // Generate OTP for email verification
+      const otp = generateOTP()
+      const otpExpiry = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+
+      // Store OTP in database
+      await db.collection("candidates").updateOne(
+        { _id: user._id },
+        {
+          $set: {
+            passwordSetupOTP: otp,
+            passwordSetupOTPExpiry: otpExpiry,
+            passwordSetupAttemptedAt: new Date(),
+          },
+        },
+      )
+
+      // Send OTP email
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: "Password Setup - OTP Verification",
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #333;">Password Setup Required</h2>
+              <p>Hello ${user.firstName || "User"},</p>
+              <p>We found your account but it doesn't have a password set up yet. To access your dashboard, please complete the password setup process.</p>
+              <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
+                <h3 style="margin: 0; color: #333;">Your OTP Code:</h3>
+                <h1 style="margin: 10px 0; color: #007bff; font-size: 32px; letter-spacing: 5px;">${otp}</h1>
+              </div>
+              <p><strong>This OTP will expire in 10 minutes.</strong></p>
+              <p>If you didn't request this, please ignore this email.</p>
+              <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+              <p style="color: #666; font-size: 12px;">This is an automated email from Oddiant Techlabs.</p>
+            </div>
+          `,
+          text: `Password Setup Required. Your OTP: ${otp}. This OTP will expire in 10 minutes.`,
+        })
+      } catch (emailError) {
+        console.error("Failed to send OTP email:", emailError)
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Failed to send verification email. Please try again.",
+          },
+          { status: 500 },
+        )
+      }
+
+      // User exists but no password set - redirect to password setup
+      return NextResponse.json(
+        {
+          success: false,
+          needsPasswordSetup: true,
+          message:
+            "This email is registered but password is not set. Please check your email for OTP to complete password setup.",
+          email: user.email,
+          userId: user._id.toString(),
+          userCollection: userCollection,
+        },
+        { status: 200 },
+      )
     }
 
     if (userType === "employee" && !user.verified) {

@@ -69,31 +69,89 @@ export async function GET(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Find employee to verify
+    // Check if user is an employee
     const employee = await db.collection("employees").findOne({
       $or: [{ _id: new ObjectId(userId) }, { _id: userId }],
     })
 
-    if (!employee) {
-      return NextResponse.json({ success: false, message: "Employee not found" }, { status: 404 })
+    if (employee) {
+      // Get company ID for data isolation
+      const companyId = employee.companyId || employee._id.toString()
+
+      // Find all jobs for this employee only
+      const jobs = await db
+        .collection("jobs")
+        .find({
+          $or: [
+            { employerId: new ObjectId(userId) },
+            { companyId: companyId },
+            { employerId: userId },
+            { companyId: new ObjectId(companyId) },
+          ],
+        })
+        .sort({ createdAt: -1 })
+        .toArray()
+
+      // Add cache control headers to prevent caching
+      const headers = new Headers()
+      headers.append("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+      headers.append("Pragma", "no-cache")
+      headers.append("Expires", "0")
+
+      return NextResponse.json(
+        { success: true, jobs },
+        {
+          status: 200,
+          headers: headers,
+        },
+      )
     }
 
-    // Get company ID for data isolation
-    const companyId = employee.companyId || employee._id.toString()
+    // Check if user exists in either students or candidates collection
+    let user = await db.collection("students").findOne({ _id: new ObjectId(userId) })
+    let userCollection = "students"
 
-    // Find all jobs for this employee only
+    if (!user) {
+      user = await db.collection("candidates").findOne({ _id: new ObjectId(userId) })
+      userCollection = "candidates"
+    }
+
+    if (!user) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
+    }
+
+    // Fetch all active jobs for students/candidates
     const jobs = await db
       .collection("jobs")
       .find({
-        $or: [
-          { employerId: new ObjectId(userId) },
-          { companyId: companyId },
-          { employerId: userId },
-          { companyId: new ObjectId(companyId) },
-        ],
+        status: { $in: ["open", "active"] },
+        // Add any other filters if needed
       })
       .sort({ createdAt: -1 })
       .toArray()
+
+    // For each job, check if the current user has applied
+    const jobsWithApplicationStatus = await Promise.all(
+      jobs.map(async (job) => {
+        // Check if user has applied to this job from either collection
+        const application = await db.collection("job_applications").findOne({
+          jobId: job._id,
+          $or: [
+            { studentId: new ObjectId(userId) },
+            { candidateId: new ObjectId(userId) },
+            { applicantId: new ObjectId(userId) },
+          ],
+        })
+
+        return {
+          ...job,
+          hasApplied: !!application,
+          applicationId: application?._id || null,
+          applicationStatus: application?.status || null,
+          appliedAt: application?.appliedAt || application?.appliedDate || null,
+        }
+      }),
+    )
 
     // Add cache control headers to prevent caching
     const headers = new Headers()
@@ -102,7 +160,11 @@ export async function GET(request: NextRequest) {
     headers.append("Expires", "0")
 
     return NextResponse.json(
-      { success: true, jobs },
+      {
+        success: true,
+        jobs: jobsWithApplicationStatus,
+        userCollection, // Include this for debugging
+      },
       {
         status: 200,
         headers: headers,

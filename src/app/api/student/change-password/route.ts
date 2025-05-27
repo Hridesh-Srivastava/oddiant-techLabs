@@ -34,15 +34,21 @@ export async function POST(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Find student by ID
-    const student = await db.collection("students").findOne({ _id: new ObjectId(userId) })
+    // Check both students and candidates collections
+    let user = await db.collection("students").findOne({ _id: new ObjectId(userId) })
+    let userCollection = "students"
 
-    if (!student) {
-      return NextResponse.json({ success: false, message: "Student not found" }, { status: 404 })
+    if (!user) {
+      user = await db.collection("candidates").findOne({ _id: new ObjectId(userId) })
+      userCollection = "candidates"
+    }
+
+    if (!user) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
     }
 
     // Verify current password
-    const isPasswordValid = await bcrypt.compare(currentPassword, student.password)
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password)
 
     if (!isPasswordValid) {
       return NextResponse.json({ success: false, message: "Current password is incorrect" }, { status: 400 })
@@ -52,8 +58,8 @@ export async function POST(request: NextRequest) {
     const salt = await bcrypt.genSalt(10)
     const hashedPassword = await bcrypt.hash(newPassword, salt)
 
-    // Update password
-    const result = await db.collection("students").updateOne(
+    // Update password in the correct collection
+    const result = await db.collection(userCollection).updateOne(
       { _id: new ObjectId(userId) },
       {
         $set: {

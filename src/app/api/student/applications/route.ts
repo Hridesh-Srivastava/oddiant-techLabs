@@ -15,17 +15,29 @@ export async function GET(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Find student to verify
-    const student = await db.collection("students").findOne({ _id: new ObjectId(userId) })
+    // Check both students and candidates collections
+    let user = await db.collection("students").findOne({ _id: new ObjectId(userId) })
+    let userCollection = "students"
 
-    if (!student) {
-      return NextResponse.json({ success: false, message: "Student not found" }, { status: 404 })
+    if (!user) {
+      user = await db.collection("candidates").findOne({ _id: new ObjectId(userId) })
+      userCollection = "candidates"
     }
 
-    // Find all job applications for this student only
+    if (!user) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
+    }
+
+    // Find all job applications for this user (check multiple field names)
     const applications = await db
       .collection("job_applications")
-      .find({ candidateId: new ObjectId(userId) })
+      .find({
+        $or: [
+          { candidateId: new ObjectId(userId) },
+          { studentId: new ObjectId(userId) },
+          { applicantId: new ObjectId(userId) },
+        ],
+      })
       .sort({ appliedDate: -1 })
       .toArray()
 
@@ -50,6 +62,7 @@ export async function GET(request: NextRequest) {
                   jobLocation: "Unknown Location",
                   jobType: "Unknown Type",
                 },
+            userCollection, // Include for debugging
           }
         } catch (error) {
           console.error(`Error fetching job details for application ${application._id}:`, error)
@@ -61,13 +74,14 @@ export async function GET(request: NextRequest) {
               jobLocation: "Unknown Location",
               jobType: "Unknown Type",
             },
+            userCollection,
           }
         }
       }),
     )
 
     // Log the applications data for debugging
-    console.log(`Found ${applicationsWithJobDetails.length} applications for student ${userId}`)
+    console.log(`Found ${applicationsWithJobDetails.length} applications for user ${userId} from ${userCollection}`)
 
     // Add cache control headers to prevent caching
     const headers = new Headers()
@@ -76,14 +90,14 @@ export async function GET(request: NextRequest) {
     headers.append("Expires", "0")
 
     return NextResponse.json(
-      { success: true, applications: applicationsWithJobDetails },
+      { success: true, applications: applicationsWithJobDetails, userCollection },
       {
         status: 200,
         headers: headers,
       },
     )
   } catch (error) {
-    console.error("Error fetching student applications:", error)
+    console.error("Error fetching user applications:", error)
     return NextResponse.json({ success: false, message: "Failed to fetch applications" }, { status: 500 })
   }
 }
@@ -114,26 +128,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Job not found" }, { status: 404 })
     }
 
-    // Check if student has already applied to this job
+    // Check both students and candidates collections
+    let user = await db.collection("students").findOne({ _id: new ObjectId(userId) })
+    let userCollection = "students"
+
+    if (!user) {
+      user = await db.collection("candidates").findOne({ _id: new ObjectId(userId) })
+      userCollection = "candidates"
+    }
+
+    if (!user) {
+      return NextResponse.json({ success: false, message: "User profile not found" }, { status: 404 })
+    }
+
+    // Check if user has already applied to this job (check multiple field names)
     const existingApplication = await db.collection("job_applications").findOne({
-      candidateId: new ObjectId(userId),
       jobId: new ObjectId(jobId),
+      $or: [
+        { candidateId: new ObjectId(userId) },
+        { studentId: new ObjectId(userId) },
+        { applicantId: new ObjectId(userId) },
+      ],
     })
 
     if (existingApplication) {
       return NextResponse.json({ success: false, message: "You have already applied to this job" }, { status: 400 })
     }
 
-    // Get student data to include in application
-    const student = await db.collection("students").findOne({ _id: new ObjectId(userId) })
-
-    if (!student) {
-      return NextResponse.json({ success: false, message: "Student profile not found" }, { status: 404 })
-    }
-
-    // Create new application
+    // Create new application with appropriate user reference
     const newApplication = {
-      candidateId: new ObjectId(userId),
+      // Use the appropriate field based on user collection
+      ...(userCollection === "students" ? { studentId: new ObjectId(userId) } : { candidateId: new ObjectId(userId) }),
+      // Also add a generic applicantId for easier querying
+      applicantId: new ObjectId(userId),
+      applicantCollection: userCollection, // Track which collection the user is from
+
       jobId: new ObjectId(jobId),
       status: "applied",
       appliedDate: new Date(),
@@ -145,9 +174,9 @@ export async function POST(request: NextRequest) {
           note: "Application submitted",
         },
       ],
-      // Include basic student info for easier querying
-      studentName: `${student.firstName || ""} ${student.lastName || ""}`.trim() || "Unknown",
-      studentEmail: student.email || "",
+      // Include basic user info for easier querying
+      studentName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Unknown",
+      studentEmail: user.email || "",
       // Include employer ID for isolation
       employerId: job.employerId || null,
       createdAt: new Date(),
@@ -164,6 +193,7 @@ export async function POST(request: NextRequest) {
         success: true,
         message: "Application submitted successfully",
         applicationId: result.insertedId,
+        userCollection,
       },
       { status: 201 },
     )

@@ -25,20 +25,30 @@ export async function POST(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Find student by email
-    const student = await db.collection("students").findOne({ email: email.toLowerCase() })
+    // Check both students and candidates collections
+    let user = await db.collection("students").findOne({
+      $or: [{ email: email.toLowerCase() }, { alternativeEmail: email.toLowerCase() }],
+    })
+    let userCollection = "students"
 
-    if (!student) {
+    if (!user) {
+      user = await db.collection("candidates").findOne({
+        $or: [{ email: email.toLowerCase() }, { alternativeEmail: email.toLowerCase() }],
+      })
+      userCollection = "candidates"
+    }
+
+    if (!user) {
       return NextResponse.json({ success: false, message: "Invalid email or OTP" }, { status: 400 })
     }
 
     // Check if OTP exists and is valid
-    if (!student.otp || student.otp !== otp) {
+    if (!user.otp || user.otp !== otp) {
       return NextResponse.json({ success: false, message: "Invalid OTP" }, { status: 400 })
     }
 
     // Check if OTP is expired
-    if (!student.otpExpiry || new Date() > new Date(student.otpExpiry)) {
+    if (!user.otpExpiry || new Date() > new Date(user.otpExpiry)) {
       return NextResponse.json({ success: false, message: "OTP has expired" }, { status: 400 })
     }
 
@@ -46,9 +56,9 @@ export async function POST(request: NextRequest) {
     const salt = await bcrypt.genSalt(10)
     const hashedPassword = await bcrypt.hash(newPassword, salt)
 
-    // Update password and clear OTP
-    const result = await db.collection("students").updateOne(
-      { email: email.toLowerCase() },
+    // Update password and clear OTP in the correct collection
+    const result = await db.collection(userCollection).updateOne(
+      { _id: user._id },
       {
         $set: {
           password: hashedPassword,

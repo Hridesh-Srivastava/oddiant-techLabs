@@ -41,12 +41,18 @@ export default function LoginPage() {
 
       const data = await response.json()
 
-      if (!response.ok) {
-        throw new Error(data.message || "Login failed")
+      if (data.success) {
+        // Normal login success
+        toast.success("Login successful!")
+        router.push(data.redirectUrl || "/student/dashboard")
+      } else if (data.needsPasswordSetup) {
+        // Redirect to password setup with proper message
+        toast.info(data.message)
+        router.push(`/setup-password?userId=${data.userId}&collection=${data.userCollection}&email=${data.email}`)
+      } else {
+        // Show error message
+        toast.error(data.message || "Login failed")
       }
-
-      toast.success("Login successful!")
-      router.push(data.redirectUrl || "/student/dashboard")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Login failed")
     } finally {

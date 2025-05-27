@@ -15,10 +15,20 @@ export async function POST(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Find student by email
-    const student = await db.collection("students").findOne({ email: email.toLowerCase() })
+    // Check both students and candidates collections
+    let user = await db.collection("students").findOne({
+      $or: [{ email: email.toLowerCase() }, { alternativeEmail: email.toLowerCase() }],
+    })
+    let userCollection = "students"
 
-    if (!student) {
+    if (!user) {
+      user = await db.collection("candidates").findOne({
+        $or: [{ email: email.toLowerCase() }, { alternativeEmail: email.toLowerCase() }],
+      })
+      userCollection = "candidates"
+    }
+
+    if (!user) {
       // For security reasons, don't reveal that the email doesn't exist
       return NextResponse.json(
         { success: true, message: "If your email exists, an OTP has been sent" },
@@ -30,9 +40,9 @@ export async function POST(request: NextRequest) {
     const otp = generateOTP()
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
 
-    // Update student with OTP
-    await db.collection("students").updateOne(
-      { email: email.toLowerCase() },
+    // Update user with OTP in the correct collection
+    await db.collection(userCollection).updateOne(
+      { _id: user._id },
       {
         $set: {
           otp,

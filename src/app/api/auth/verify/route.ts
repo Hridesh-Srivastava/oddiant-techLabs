@@ -15,11 +15,27 @@ export async function POST(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Determine collection based on user type
-    const collection = userType === "employee" ? "employees" : "students"
+    let user = null
+    let collection = ""
 
-    // Find user by email
-    const user = await db.collection(collection).findOne({ email })
+    if (userType === "employee") {
+      // For employees, only check employees collection
+      user = await db.collection("employees").findOne({ email })
+      collection = "employees"
+    } else {
+      // For students, check both students and candidates collections
+      user = await db.collection("students").findOne({
+        $or: [{ email: email.toLowerCase() }, { alternativeEmail: email.toLowerCase() }],
+      })
+      collection = "students"
+
+      if (!user) {
+        user = await db.collection("candidates").findOne({
+          $or: [{ email: email.toLowerCase() }, { alternativeEmail: email.toLowerCase() }],
+        })
+        collection = "candidates"
+      }
+    }
 
     if (!user) {
       return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
@@ -43,7 +59,7 @@ export async function POST(request: NextRequest) {
     if (userType === "employee") {
       // For employees, mark as email verified but not fully verified yet
       await db.collection(collection).updateOne(
-        { email },
+        { _id: user._id },
         {
           $set: {
             emailVerified: true,
@@ -107,9 +123,9 @@ ${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/admin/verify-emplo
         { status: 200 },
       )
     } else {
-      // For students, mark as fully verified immediately
+      // For students and candidates, mark as fully verified immediately
       await db.collection(collection).updateOne(
-        { email },
+        { _id: user._id },
         {
           $set: {
             verified: true,
@@ -119,13 +135,20 @@ ${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/admin/verify-emplo
         },
       )
 
-      // Generate JWT token
-      const token = generateToken(user._id.toString())
+      // Generate JWT token with userType
+      const token = generateToken(user._id.toString(), "student") // Both students and candidates use "student" userType for dashboard access
 
       // Set auth cookie
       setAuthCookie(token)
 
-      return NextResponse.json({ success: true, message: "Email verified successfully" }, { status: 200 })
+      return NextResponse.json(
+        {
+          success: true,
+          message: "Email verified successfully",
+          userCollection: collection, // Include for debugging
+        },
+        { status: 200 },
+      )
     }
   } catch (error) {
     console.error("Error in email verification:", error)

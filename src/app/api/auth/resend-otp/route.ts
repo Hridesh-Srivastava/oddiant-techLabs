@@ -15,8 +15,18 @@ export async function POST(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Find user by email
-    const user = await db.collection("students").findOne({ email })
+    // Check both students and candidates collections
+    let user = await db.collection("students").findOne({
+      $or: [{ email: email.toLowerCase() }, { alternativeEmail: email.toLowerCase() }],
+    })
+    let userCollection = "students"
+
+    if (!user) {
+      user = await db.collection("candidates").findOne({
+        $or: [{ email: email.toLowerCase() }, { alternativeEmail: email.toLowerCase() }],
+      })
+      userCollection = "candidates"
+    }
 
     if (!user) {
       return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
@@ -32,9 +42,9 @@ export async function POST(request: NextRequest) {
     const otpExpiry = new Date()
     otpExpiry.setMinutes(otpExpiry.getMinutes() + 5) // OTP valid for 5 minutes
 
-    // Update user with new OTP
-    await db.collection("students").updateOne(
-      { email },
+    // Update user with new OTP in the correct collection
+    await db.collection(userCollection).updateOne(
+      { _id: user._id },
       {
         $set: {
           otp,

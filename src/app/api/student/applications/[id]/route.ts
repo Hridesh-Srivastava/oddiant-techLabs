@@ -17,10 +17,27 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Find application by ID and ensure it belongs to the current user
+    // Check both students and candidates collections
+    let user = await db.collection("students").findOne({ _id: new ObjectId(userId) })
+    let userCollection = "students"
+
+    if (!user) {
+      user = await db.collection("candidates").findOne({ _id: new ObjectId(userId) })
+      userCollection = "candidates"
+    }
+
+    if (!user) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
+    }
+
+    // Find application by ID and ensure it belongs to the current user (check multiple field names)
     const application = await db.collection("job_applications").findOne({
       _id: new ObjectId(applicationId),
-      candidateId: new ObjectId(userId),
+      $or: [
+        { candidateId: new ObjectId(userId) },
+        { studentId: new ObjectId(userId) },
+        { applicantId: new ObjectId(userId) },
+      ],
     })
 
     if (!application) {
@@ -49,6 +66,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             jobLocation: "Unknown Location",
             jobType: "Unknown Type",
           },
+      userCollection, // Include for debugging
     }
 
     // Add cache control headers to prevent caching

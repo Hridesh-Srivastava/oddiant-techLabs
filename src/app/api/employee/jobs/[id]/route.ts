@@ -25,8 +25,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     // Calculate real-time stats
-    // Count applicants
-    const applicantsCount = await db.collection("job_applications").countDocuments({ jobId: new ObjectId(jobId) })
+    // Count applicants from both students and candidates collections
+    const applicantsCount = await db.collection("job_applications").countDocuments({
+      jobId: new ObjectId(jobId),
+      $or: [{ studentId: { $exists: true } }, { candidateId: { $exists: true } }, { applicantId: { $exists: true } }],
+    })
 
     // Count interviews
     const interviewsCount = await db.collection("interviews").countDocuments({ jobId: new ObjectId(jobId) })

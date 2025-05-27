@@ -24,22 +24,40 @@ export async function POST(request: Request) {
 
     const { db } = await connectToDatabase()
 
-    // Check if email is already in use by another student
-    const existingStudent = await db.collection("students").findOne({
-      email: primaryEmail,
+    // Check both students and candidates collections for the current user
+    let user = await db.collection("students").findOne({ _id: new ObjectId(authResult.user._id) })
+    let userCollection = "students"
+
+    if (!user) {
+      user = await db.collection("candidates").findOne({ _id: new ObjectId(authResult.user._id) })
+      userCollection = "candidates"
+    }
+
+    if (!user) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
+    }
+
+    // Check if email is already in use by another user in both collections
+    const existingInStudents = await db.collection("students").findOne({
+      $or: [{ email: primaryEmail }, { alternativeEmail: primaryEmail }],
       _id: { $ne: new ObjectId(authResult.user._id) },
     })
 
-    if (existingStudent) {
+    const existingInCandidates = await db.collection("candidates").findOne({
+      $or: [{ email: primaryEmail }, { alternativeEmail: primaryEmail }],
+      _id: { $ne: new ObjectId(authResult.user._id) },
+    })
+
+    if (existingInStudents || existingInCandidates) {
       return NextResponse.json(
         { success: false, message: "Email is already in use by another account" },
         { status: 400 },
       )
     }
 
-    // Update the student's primary email
+    // Update the user's primary email in the correct collection
     const result = await db
-      .collection("students")
+      .collection(userCollection)
       .updateOne({ _id: new ObjectId(authResult.user._id) }, { $set: { email: primaryEmail, updatedAt: new Date() } })
 
     if (result.modifiedCount === 0) {

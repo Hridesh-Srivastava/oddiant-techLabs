@@ -15,17 +15,25 @@ export async function GET(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Find student settings and alternativeEmail
-    const student = await db
+    // Check both students and candidates collections
+    let user = await db
       .collection("students")
       .findOne({ _id: new ObjectId(userId) }, { projection: { settings: 1, alternativeEmail: 1, email: 1 } })
+    let userCollection = "students"
 
-    if (!student) {
-      return NextResponse.json({ success: false, message: "Student not found" }, { status: 404 })
+    if (!user) {
+      user = await db
+        .collection("candidates")
+        .findOne({ _id: new ObjectId(userId) }, { projection: { settings: 1, alternativeEmail: 1, email: 1 } })
+      userCollection = "candidates"
+    }
+
+    if (!user) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
     }
 
     // Return settings or default settings if not set
-    const settings = student.settings || {
+    const settings = user.settings || {
       profileVisibility: true,
       notifications: {
         email: true,
@@ -42,13 +50,14 @@ export async function GET(request: NextRequest) {
       {
         success: true,
         settings,
-        alternativeEmail: student.alternativeEmail || "",
-        primaryEmail: student.email,
+        alternativeEmail: user.alternativeEmail || "",
+        primaryEmail: user.email,
+        userCollection, // Include for debugging
       },
       { status: 200 },
     )
   } catch (error) {
-    console.error("Error fetching student settings:", error)
+    console.error("Error fetching user settings:", error)
     return NextResponse.json({ success: false, message: "Failed to fetch settings" }, { status: 500 })
   }
 }
@@ -68,6 +77,19 @@ export async function PUT(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
+    // Check both students and candidates collections
+    let user = await db.collection("students").findOne({ _id: new ObjectId(userId) }, { projection: { email: 1 } })
+    let userCollection = "students"
+
+    if (!user) {
+      user = await db.collection("candidates").findOne({ _id: new ObjectId(userId) }, { projection: { email: 1 } })
+      userCollection = "candidates"
+    }
+
+    if (!user) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
+    }
+
     // If alternativeEmail is provided, validate it
     if (alternativeEmail !== undefined) {
       // Check if alternativeEmail is valid
@@ -82,11 +104,7 @@ export async function PUT(request: NextRequest) {
       }
 
       // Check if alternativeEmail is the same as primary email
-      const student = await db
-        .collection("students")
-        .findOne({ _id: new ObjectId(userId) }, { projection: { email: 1 } })
-
-      if (alternativeEmail && student && student.email === alternativeEmail) {
+      if (alternativeEmail && user.email === alternativeEmail) {
         return NextResponse.json(
           {
             success: false,
@@ -96,14 +114,19 @@ export async function PUT(request: NextRequest) {
         )
       }
 
-      // Check if alternativeEmail is already used by another account
+      // Check if alternativeEmail is already used by another account in both collections
       if (alternativeEmail) {
-        const existingUser = await db.collection("students").findOne({
+        const existingInStudents = await db.collection("students").findOne({
           $or: [{ email: alternativeEmail }, { alternativeEmail: alternativeEmail }],
           _id: { $ne: new ObjectId(userId) },
         })
 
-        if (existingUser) {
+        const existingInCandidates = await db.collection("candidates").findOne({
+          $or: [{ email: alternativeEmail }, { alternativeEmail: alternativeEmail }],
+          _id: { $ne: new ObjectId(userId) },
+        })
+
+        if (existingInStudents || existingInCandidates) {
           return NextResponse.json(
             {
               success: false,
@@ -125,7 +148,7 @@ export async function PUT(request: NextRequest) {
     if (alternativeEmail !== undefined) {
       // If alternativeEmail is empty string, remove it using $unset
       if (!alternativeEmail) {
-        await db.collection("students").updateOne(
+        await db.collection(userCollection).updateOne(
           { _id: new ObjectId(userId) },
           {
             $unset: { alternativeEmail: "" },
@@ -135,11 +158,11 @@ export async function PUT(request: NextRequest) {
       } else {
         // Otherwise, set it
         updateObj.alternativeEmail = alternativeEmail
-        await db.collection("students").updateOne({ _id: new ObjectId(userId) }, { $set: updateObj })
+        await db.collection(userCollection).updateOne({ _id: new ObjectId(userId) }, { $set: updateObj })
       }
     } else {
       // If alternativeEmail is not provided, just update settings
-      await db.collection("students").updateOne({ _id: new ObjectId(userId) }, { $set: updateObj })
+      await db.collection(userCollection).updateOne({ _id: new ObjectId(userId) }, { $set: updateObj })
     }
 
     return NextResponse.json(
@@ -148,11 +171,12 @@ export async function PUT(request: NextRequest) {
         message: "Settings updated successfully",
         settings,
         alternativeEmail: alternativeEmail === "" ? null : alternativeEmail,
+        userCollection, // Include for debugging
       },
       { status: 200 },
     )
   } catch (error) {
-    console.error("Error updating student settings:", error)
+    console.error("Error updating user settings:", error)
     return NextResponse.json({ success: false, message: "Failed to update settings" }, { status: 500 })
   }
 }

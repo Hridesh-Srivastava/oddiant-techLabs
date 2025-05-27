@@ -21,34 +21,45 @@ export async function GET(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Check in students collection
+    // Check in students collection first
     let user = await db.collection("students").findOne({ _id: new ObjectId(finalUserId) })
     let userType = "student"
+    let sourceCollection = "students"
 
-    // If not found in students, check in employees
+    // If not found in students, check in candidates collection
+    if (!user) {
+      user = await db.collection("candidates").findOne({ _id: new ObjectId(finalUserId) })
+      userType = "student" // Keep as student for dashboard access
+      sourceCollection = "candidates"
+    }
+
+    // If not found in candidates, check in employees
     if (!user) {
       user = await db.collection("employees").findOne({ _id: new ObjectId(finalUserId) })
       userType = "employee"
+      sourceCollection = "employees"
+    }
 
-      // If not found in employees, check in admins
-      if (!user) {
-        user = await db.collection("admins").findOne({ _id: new ObjectId(finalUserId) })
-        userType = "admin"
+    // If not found in employees, check in admins
+    if (!user) {
+      user = await db.collection("admins").findOne({ _id: new ObjectId(finalUserId) })
+      userType = "admin"
+      sourceCollection = "admins"
+    }
 
-        // If not found anywhere, return unauthorized
-        if (!user) {
-          return NextResponse.json({ success: false, message: "User not found" }, { status: 401 })
-        }
-      }
+    // If not found anywhere, return unauthorized
+    if (!user) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 401 })
     }
 
     // Remove sensitive information
-    const { password, ...userWithoutPassword } = user
+    const { password, resetToken, resetTokenExpiry, otp, otpExpiry, ...userWithoutPassword } = user
 
     return NextResponse.json({
       success: true,
       user: userWithoutPassword,
       userType,
+      sourceCollection, // Include source collection for debugging
     })
   } catch (error) {
     console.error("Error checking authentication:", error)

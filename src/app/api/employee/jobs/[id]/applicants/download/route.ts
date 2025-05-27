@@ -316,37 +316,138 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       }
     }
 
+    // Helper function to get available assets from students collection
+    const getAvailableAssetsFromStudent = (student: any): string[] => {
+      // First check if availableAssets array exists (direct field)
+      if (student.availableAssets && Array.isArray(student.availableAssets)) {
+        return student.availableAssets
+      }
+
+      // Then check the assets object structure from students collection
+      if (student.assets && typeof student.assets === "object") {
+        const assets: string[] = []
+        if (student.assets.bike) assets.push("Bike / Car")
+        if (student.assets.wifi) assets.push("WiFi")
+        if (student.assets.laptop) assets.push("Laptop")
+        return assets
+      }
+
+      return []
+    }
+
+    // Helper function to get identity documents from students collection
+    const getIdentityDocumentsFromStudent = (student: any): string[] => {
+      // First check if identityDocuments array exists (direct field)
+      if (student.identityDocuments && Array.isArray(student.identityDocuments)) {
+        return student.identityDocuments
+      }
+
+      // Then check the assets object structure from students collection
+      if (student.assets && typeof student.assets === "object") {
+        const documents: string[] = []
+        if (student.assets.panCard) documents.push("PAN Card")
+        if (student.assets.aadhar) documents.push("Aadhar")
+        if (student.assets.bankAccount) documents.push("Bank Account")
+        if (student.assets.idProof) documents.push("Voter ID / Passport / DL (Any)")
+        return documents
+      }
+
+      return []
+    }
+
+    // Helper function to build current location for students
+    const buildCurrentLocation = (candidate: any): string => {
+      if (candidate.source === "students") {
+        // For students collection, build from currentCity and currentState
+        const city = candidate.currentCity || ""
+        const state = candidate.currentState || ""
+        
+        if (city && state) {
+          return `${city}, ${state}`
+        } else if (city) {
+          return city
+        } else if (state) {
+          return state
+        }
+        
+        // Fallback to location field if exists
+        return candidate.location || ""
+      } else {
+        // For candidates collection, use location field directly
+        return candidate.location || ""
+      }
+    }
+
     // Add comprehensive data to worksheet
     allCandidates.forEach((candidate: any, candidateIndex: number) => {
+      // Log candidate data for debugging
+      console.log(`Processing candidate ${candidateIndex + 1} from ${candidate.source}:`, {
+        firstName: candidate.firstName,
+        lastName: candidate.lastName,
+        currentCity: candidate.currentCity,
+        currentState: candidate.currentState,
+        location: candidate.location,
+        onlinePresence: candidate.onlinePresence,
+        linkedIn: candidate.linkedIn,
+        coverLetter: candidate.coverLetter,
+        additionalInfo: candidate.additionalInfo
+      })
+
       // Normalize candidate data based on source
-      const normalizedCandidate =
-        candidate.source === "students"
-          ? {
-              ...candidate,
-              name: candidate.name || `${candidate.firstName || ""} ${candidate.lastName || ""}`.trim(),
-              // Map student fields to candidate fields for consistency
-              currentPosition: candidate.currentPosition || (candidate.experience && candidate.experience[0]?.title),
-              role: candidate.role || (candidate.experience && candidate.experience[0]?.title),
-              workExperience: candidate.workExperience || candidate.experience,
-              yearsOfExperience: candidate.yearsOfExperience || candidate.totalExperience,
-              currentCity: candidate.currentCity || candidate.location,
-              currentState: candidate.currentState || candidate.state,
-              // Handle different field names for preferred cities
-              preferredCities: candidate.preferredCities || candidate.preferenceCities || [],
-              // Handle different field names for date of birth
-              dateOfBirth: candidate.dateOfBirth || candidate.dob,
-              // Handle nested document URLs
-              resumeUrl: candidate.resumeUrl || getNestedProperty(candidate, "documents.resume.url"),
-              videoResumeUrl: candidate.videoResumeUrl || getNestedProperty(candidate, "documents.videoResume.url"),
-              audioBiodataUrl: candidate.audioBiodataUrl || getNestedProperty(candidate, "documents.audioBiodata.url"),
-              photographUrl:
-                candidate.photographUrl || getNestedProperty(candidate, "documents.photograph.url") || candidate.avatar,
-              // Handle online presence
-              portfolioLink: candidate.portfolioLink || getNestedProperty(candidate, "onlinePresence.portfolio"),
-              socialMediaLink: candidate.socialMediaLink || getNestedProperty(candidate, "onlinePresence.socialMedia"),
-              linkedIn: candidate.linkedIn || getNestedProperty(candidate, "onlinePresence.linkedin"),
-            }
-          : candidate
+      const normalizedCandidate = candidate.source === "students" 
+        ? {
+            ...candidate,
+            // Map student-specific field names to candidate field names
+            name: candidate.name || `${candidate.firstName || ""} ${candidate.lastName || ""}`.trim(),
+            currentPosition: candidate.currentPosition || (candidate.experience && candidate.experience[0]?.title),
+            role: candidate.role || (candidate.experience && candidate.experience[0]?.title),
+            workExperience: candidate.workExperience || candidate.experience,
+            yearsOfExperience: candidate.yearsOfExperience || candidate.totalExperience,
+            
+            // FIXED: Properly handle location fields for students
+            location: buildCurrentLocation(candidate),
+            currentCity: candidate.currentCity || "",
+            currentState: candidate.currentState || "",
+            
+            // Handle different field names for preferred cities
+            preferredCities: candidate.preferredCities || candidate.preferenceCities || [],
+            
+            // Handle different field names for date of birth
+            dateOfBirth: candidate.dateOfBirth || candidate.dob,
+            
+            // Handle nested document URLs from students collection
+            resumeUrl: candidate.resumeUrl || getNestedProperty(candidate, "documents.resume.url"),
+            videoResumeUrl: candidate.videoResumeUrl || getNestedProperty(candidate, "documents.videoResume.url"),
+            audioBiodataUrl: candidate.audioBiodataUrl || getNestedProperty(candidate, "documents.audioBiodata.url"),
+            photographUrl: candidate.photographUrl || getNestedProperty(candidate, "documents.photograph.url") || candidate.avatar,
+            
+            // FIXED: Handle online presence from students collection
+            portfolioLink: candidate.portfolioLink || getNestedProperty(candidate, "onlinePresence.portfolio"),
+            socialMediaLink: candidate.socialMediaLink || getNestedProperty(candidate, "onlinePresence.socialMedia"),
+            linkedIn: candidate.linkedIn || getNestedProperty(candidate, "onlinePresence.linkedin"),
+            
+            // FIXED: Handle cover letter and additional info from students collection
+            coverLetter: candidate.coverLetter || "",
+            additionalInfo: candidate.additionalInfo || "",
+            
+            // Handle assets and documents from students collection
+            availableAssets: getAvailableAssetsFromStudent(candidate),
+            identityDocuments: getIdentityDocumentsFromStudent(candidate),
+            
+            // Handle salary and notice period from students collection
+            currentSalary: candidate.currentSalary || (candidate.experience && candidate.experience[0]?.currentSalary),
+            expectedSalary: candidate.expectedSalary || (candidate.experience && candidate.experience[0]?.expectedSalary),
+            noticePeriod: candidate.noticePeriod || (candidate.experience && candidate.experience[0]?.noticePeriod),
+          }
+        : {
+            ...candidate,
+            // For candidates collection, ensure location is properly set
+            location: candidate.location || buildCurrentLocation(candidate),
+            // Ensure other fields are properly mapped for candidates too
+            linkedIn: candidate.linkedIn || candidate.linkedin || "",
+            coverLetter: candidate.coverLetter || "",
+            additionalInfo: candidate.additionalInfo || "",
+          }
 
       // Get salary and notice period from top level or work experience
       let currentSalary = normalizedCandidate.currentSalary || ""
@@ -405,6 +506,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         .join(" ")
         .trim()
 
+      // Log final normalized data for debugging
+      console.log(`Final normalized data for ${fullName}:`, {
+        location: normalizedCandidate.location,
+        linkedIn: normalizedCandidate.linkedIn,
+        coverLetter: normalizedCandidate.coverLetter,
+        additionalInfo: normalizedCandidate.additionalInfo
+      })
+
       // Add comprehensive row to worksheet
       const row = worksheet.addRow({
         // Source Information
@@ -422,7 +531,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         gender: normalizedCandidate.gender || "",
         dateOfBirth: formatDate(normalizedCandidate.dateOfBirth),
 
-        // Location Information
+        // Location Information - FIXED
         location: normalizedCandidate.location || "",
         currentCity: normalizedCandidate.currentCity || "",
         currentState: normalizedCandidate.currentState || "",
@@ -463,12 +572,12 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         audioBiodataUrl: normalizedCandidate.audioBiodataUrl || "",
         photographUrl: normalizedCandidate.photographUrl || "",
 
-        // Online Presence
+        // Online Presence - FIXED
         portfolioLink: normalizedCandidate.portfolioLink || "",
         socialMediaLink: normalizedCandidate.socialMediaLink || "",
         linkedIn: normalizedCandidate.linkedIn || "",
 
-        // Additional Information
+        // Additional Information - FIXED
         coverLetter: normalizedCandidate.coverLetter || "",
         additionalInfo: normalizedCandidate.additionalInfo || "",
         notes: normalizedCandidate.notes || "",

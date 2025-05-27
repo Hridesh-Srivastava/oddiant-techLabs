@@ -27,15 +27,21 @@ export async function POST(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Get student's primary email
-    const student = await db.collection("students").findOne({ _id: new ObjectId(userId) }, { projection: { email: 1 } })
+    // Check both students and candidates collections
+    let user = await db.collection("students").findOne({ _id: new ObjectId(userId) }, { projection: { email: 1 } })
+    let userCollection = "students"
 
-    if (!student) {
-      return NextResponse.json({ success: false, message: "Student not found" }, { status: 404 })
+    if (!user) {
+      user = await db.collection("candidates").findOne({ _id: new ObjectId(userId) }, { projection: { email: 1 } })
+      userCollection = "candidates"
+    }
+
+    if (!user) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
     }
 
     // Check if alternativeEmail is the same as primary email
-    if (student.email === alternativeEmail) {
+    if (user.email === alternativeEmail) {
       return NextResponse.json(
         {
           success: false,
@@ -45,13 +51,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if alternativeEmail is already used by another account
-    const existingUser = await db.collection("students").findOne({
+    // Check if alternativeEmail is already used by another account in both collections
+    const existingInStudents = await db.collection("students").findOne({
       $or: [{ email: alternativeEmail }, { alternativeEmail: alternativeEmail }],
       _id: { $ne: new ObjectId(userId) },
     })
 
-    if (existingUser) {
+    const existingInCandidates = await db.collection("candidates").findOne({
+      $or: [{ email: alternativeEmail }, { alternativeEmail: alternativeEmail }],
+      _id: { $ne: new ObjectId(userId) },
+    })
+
+    if (existingInStudents || existingInCandidates) {
       return NextResponse.json(
         {
           success: false,
@@ -61,9 +72,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update student with alternative email
+    // Update user with alternative email in the correct collection
     const result = await db
-      .collection("students")
+      .collection(userCollection)
       .updateOne({ _id: new ObjectId(userId) }, { $set: { alternativeEmail, updatedAt: new Date() } })
 
     if (result.modifiedCount === 0) {
@@ -75,6 +86,7 @@ export async function POST(request: NextRequest) {
         success: true,
         message: "Alternative email added successfully",
         alternativeEmail,
+        userCollection, // Include for debugging
       },
       { status: 200 },
     )
@@ -96,8 +108,21 @@ export async function DELETE(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Remove alternative email
-    const result = await db.collection("students").updateOne(
+    // Check both students and candidates collections
+    let user = await db.collection("students").findOne({ _id: new ObjectId(userId) })
+    let userCollection = "students"
+
+    if (!user) {
+      user = await db.collection("candidates").findOne({ _id: new ObjectId(userId) })
+      userCollection = "candidates"
+    }
+
+    if (!user) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
+    }
+
+    // Remove alternative email from the correct collection
+    const result = await db.collection(userCollection).updateOne(
       { _id: new ObjectId(userId) },
       {
         $unset: { alternativeEmail: "" },
@@ -113,6 +138,7 @@ export async function DELETE(request: NextRequest) {
       {
         success: true,
         message: "Alternative email removed successfully",
+        userCollection, // Include for debugging
       },
       { status: 200 },
     )

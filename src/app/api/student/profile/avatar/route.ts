@@ -54,8 +54,21 @@ export async function POST(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Update student document with new avatar URL
-    const result = await db.collection("students").updateOne(
+    // Check both students and candidates collections
+    let user = await db.collection("students").findOne({ _id: new ObjectId(userId) })
+    let userCollection = "students"
+
+    if (!user) {
+      user = await db.collection("candidates").findOne({ _id: new ObjectId(userId) })
+      userCollection = "candidates"
+    }
+
+    if (!user) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
+    }
+
+    // Update user document with new avatar URL in the correct collection
+    const result = await db.collection(userCollection).updateOne(
       { _id: new ObjectId(userId) },
       {
         $set: {
@@ -78,6 +91,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: "Avatar uploaded successfully",
       avatarUrl: uploadResult.url,
+      userCollection, // Include for debugging
     })
   } catch (error) {
     console.error("Error uploading avatar:", error)

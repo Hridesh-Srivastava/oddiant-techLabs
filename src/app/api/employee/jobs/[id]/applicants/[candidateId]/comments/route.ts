@@ -19,20 +19,27 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Find the specific job application
+    // Find the specific job application - handle all possible candidate ID fields
     const application = await db.collection("job_applications").findOne({
       jobId: new ObjectId(jobId),
-      candidateId: new ObjectId(candidateId),
+      $or: [
+        { candidateId: new ObjectId(candidateId) },
+        { studentId: new ObjectId(candidateId) },
+        { applicantId: new ObjectId(candidateId) }
+      ]
     })
 
     if (!application) {
       return NextResponse.json({ message: "Application not found" }, { status: 404 })
     }
 
-    // Return the comments for this specific job application
+    // Return the comments for this SPECIFIC job application only
     return NextResponse.json({
       success: true,
       comments: application.comments || [],
+      lastComment: application.lastComment || null,
+      jobId: jobId,
+      candidateId: candidateId
     })
   } catch (error) {
     console.error("Error fetching comments:", error)
@@ -54,37 +61,62 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const candidateId = params.candidateId
     const { comment } = await request.json()
 
-    if (!comment) {
+    if (!comment || !comment.trim()) {
       return NextResponse.json({ message: "Comment is required" }, { status: 400 })
     }
 
     // Connect to database
     const { db } = await connectToDatabase()
 
+    // Get employee details for the comment
+    const employee = await db.collection("employees").findOne({ _id: new ObjectId(userId) })
+    const employeeName = employee ? `${employee.firstName || ""} ${employee.lastName || ""}`.trim() || employee.email : "Unknown Employee"
+
     // Create a new comment object
     const newComment = {
-      text: comment,
+      _id: new ObjectId(),
+      text: comment.trim(),
       createdAt: new Date(),
       createdBy: userId,
+      createdByName: employeeName,
+      jobId: jobId, // Add jobId to comment for tracking
+      candidateId: candidateId // Add candidateId to comment for tracking
     }
 
-    // Update the job application with the new comment
+    // Update ONLY the specific job application with the new comment
     const result = await db.collection("job_applications").updateOne(
-      { jobId: new ObjectId(jobId), candidateId: new ObjectId(candidateId) },
+      { 
+        jobId: new ObjectId(jobId), 
+        $or: [
+          { candidateId: new ObjectId(candidateId) },
+          { studentId: new ObjectId(candidateId) },
+          { applicantId: new ObjectId(candidateId) }
+        ]
+      },
       {
         $push: { comments: newComment },
-        $set: { lastComment: comment, updatedAt: new Date() },
+        $set: { 
+          lastComment: comment.trim(), 
+          lastCommentDate: new Date(),
+          lastCommentBy: userId,
+          lastCommentByName: employeeName,
+          updatedAt: new Date() 
+        },
       },
     )
 
     if (result.modifiedCount === 0) {
-      return NextResponse.json({ message: "Failed to add comment" }, { status: 500 })
+      return NextResponse.json({ message: "Failed to add comment - Application not found" }, { status: 404 })
     }
+
+    console.log(`Comment added successfully to job ${jobId} for candidate ${candidateId} - Comment: "${comment.trim()}"`)
 
     return NextResponse.json({
       success: true,
       message: "Comment added successfully",
       comment: newComment,
+      jobId: jobId,
+      candidateId: candidateId
     })
   } catch (error) {
     console.error("Error adding comment:", error)

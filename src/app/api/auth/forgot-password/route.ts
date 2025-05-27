@@ -15,11 +15,27 @@ export async function POST(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Determine collection based on user type
-    const collection = userType === "employee" ? "employees" : "students"
+    let user = null
+    let collection = ""
 
-    // Find user by email
-    const user = await db.collection(collection).findOne({ email })
+    if (userType === "employee") {
+      // For employees, only check employees collection
+      user = await db.collection("employees").findOne({ email })
+      collection = "employees"
+    } else {
+      // For students, check both students and candidates collections
+      user = await db.collection("students").findOne({
+        $or: [{ email: email.toLowerCase() }, { alternativeEmail: email.toLowerCase() }],
+      })
+      collection = "students"
+
+      if (!user) {
+        user = await db.collection("candidates").findOne({
+          $or: [{ email: email.toLowerCase() }, { alternativeEmail: email.toLowerCase() }],
+        })
+        collection = "candidates"
+      }
+    }
 
     if (!user) {
       return NextResponse.json({ success: false, message: "Email not found" }, { status: 404 })
@@ -30,9 +46,9 @@ export async function POST(request: NextRequest) {
     const resetTokenExpiry = new Date()
     resetTokenExpiry.setMinutes(resetTokenExpiry.getMinutes() + 15) // Token valid for 15 minutes
 
-    // Update user with reset token
+    // Update user with reset token in the correct collection
     await db.collection(collection).updateOne(
-      { email },
+      { _id: user._id },
       {
         $set: {
           resetToken,

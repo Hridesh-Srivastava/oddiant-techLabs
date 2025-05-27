@@ -29,8 +29,21 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ message: "Employee not found" }, { status: 404 })
     }
 
-    // Update student status
-    const result = await db.collection("students").updateOne(
+    // Check both students and candidates collections for the target user
+    let targetUser = await db.collection("students").findOne({ _id: new ObjectId(studentId) })
+    let targetUserCollection = "students"
+
+    if (!targetUser) {
+      targetUser = await db.collection("candidates").findOne({ _id: new ObjectId(studentId) })
+      targetUserCollection = "candidates"
+    }
+
+    if (!targetUser) {
+      return NextResponse.json({ message: "User not found" }, { status: 404 })
+    }
+
+    // Update user status in the correct collection
+    const result = await db.collection(targetUserCollection).updateOne(
       { _id: new ObjectId(studentId) },
       {
         $set: {
@@ -42,15 +55,19 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     )
 
     if (result.matchedCount === 0) {
-      return NextResponse.json({ message: "Student not found" }, { status: 404 })
+      return NextResponse.json({ message: "User not found" }, { status: 404 })
     }
 
     // If jobId is provided, also update the job application
     if (jobId) {
-      // Check if job application exists
+      // Check if job application exists (check multiple field names)
       const application = await db.collection("job_applications").findOne({
-        candidateId: new ObjectId(studentId),
         jobId: new ObjectId(jobId),
+        $or: [
+          { candidateId: new ObjectId(studentId) },
+          { studentId: new ObjectId(studentId) },
+          { applicantId: new ObjectId(studentId) },
+        ],
       })
 
       if (application) {
@@ -75,7 +92,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       } else {
         // Create new application if it doesn't exist
         const newApplication = {
-          candidateId: new ObjectId(studentId),
+          // Use the appropriate field based on user collection
+          ...(targetUserCollection === "students"
+            ? { studentId: new ObjectId(studentId) }
+            : { candidateId: new ObjectId(studentId) }),
+          // Also add a generic applicantId for easier querying
+          applicantId: new ObjectId(studentId),
+          applicantCollection: targetUserCollection,
+
           jobId: new ObjectId(jobId),
           status: status,
           appliedDate: new Date(),
@@ -90,6 +114,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           employerId: new ObjectId(userId),
           createdAt: new Date(),
           updatedAt: new Date(),
+
+          // Include basic user info for easier querying
+          studentName: `${targetUser.firstName || ""} ${targetUser.lastName || ""}`.trim() || "Unknown",
+          studentEmail: targetUser.email || "",
         }
 
         await db.collection("job_applications").insertOne(newApplication)
@@ -99,9 +127,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     }
 
-    return NextResponse.json({ success: true, message: "Student status updated successfully" }, { status: 200 })
+    return NextResponse.json(
+      {
+        success: true,
+        message: "User status updated successfully",
+        targetUserCollection, // Include for debugging
+      },
+      { status: 200 },
+    )
   } catch (error) {
-    console.error("Error updating student status:", error)
-    return NextResponse.json({ success: false, message: "Failed to update student status" }, { status: 500 })
+    console.error("Error updating user status:", error)
+    return NextResponse.json({ success: false, message: "Failed to update user status" }, { status: 500 })
   }
 }

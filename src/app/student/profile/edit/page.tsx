@@ -155,6 +155,7 @@ interface StudentData {
     bankAccount?: boolean;
     idProof?: boolean;
   };
+  
   availableAssets?: string[];
   identityDocuments?: string[];
   settings?: {
@@ -172,6 +173,116 @@ interface StudentData {
   currentSalary?: string;
   expectedSalary?: string;
   noticePeriod?: string;
+  workExperience?: Array<{
+    title: string
+    companyName: string
+    department?: string
+    location?: string
+    tenure?: string
+    currentlyWorking?: boolean
+    professionalSummary?: string
+    summary?: string
+    currentSalary?: string
+    expectedSalary?: string
+    noticePeriod?: string
+    totalExperience?: string
+    yearsOfExperience?: string
+  }>;
+  dateOfBirth?: string // For candidates collection
+  preferredCities?: string[] // Alternative field name for candidates
+  // availableAssets?: string[]
+  // identityDocuments?: string[]
+  
+  // Document field mappings for candidates
+  resumeUrl?: string
+  videoResumeUrl?: string
+  audioBiodataUrl?: string
+  photographUrl?: string
+}
+
+// Helper function to safely get experience array from either collection
+const getExperienceArray = (student: any): Array<any> => {
+  // Try experience field first (students collection)
+  if (student.experience && Array.isArray(student.experience)) {
+    return student.experience
+  }
+
+  // Try workExperience field (candidates collection)
+  if (student.workExperience && Array.isArray(student.workExperience)) {
+    return student.workExperience
+  }
+
+  // Return empty array as fallback
+  return []
+}
+// Helper function to get date of birth from either collection
+const getDateOfBirth = (student: any): string => {
+  return student.dob || student.dateOfBirth || ""
+}
+
+// Helper function to get preferred cities from either collection
+const getPreferredCities = (student: any): string[] => {
+  // Try preferenceCities field first (students collection)
+  if (student.preferenceCities && Array.isArray(student.preferenceCities)) {
+    return student.preferenceCities
+  }
+
+  // Try preferredCities field (candidates collection)
+  if (student.preferredCities && Array.isArray(student.preferredCities)) {
+    return student.preferredCities
+  }
+
+  // Return empty array as fallback
+  return []
+}
+
+// Helper function to get documents safely
+const getDocuments = (student: any) => {
+  return {
+    resume: {
+      url: student.documents?.resume?.url || student.resumeUrl || "",
+      filename: student.documents?.resume?.filename || "",
+      uploadDate: student.documents?.resume?.uploadDate || "",
+    },
+    videoResume: {
+      url: student.documents?.videoResume?.url || student.videoResumeUrl || "",
+      filename: student.documents?.videoResume?.filename || "",
+      uploadDate: student.documents?.videoResume?.uploadDate || "",
+    },
+    audioBiodata: {
+      url: student.documents?.audioBiodata?.url || student.audioBiodataUrl || "",
+      filename: student.documents?.audioBiodata?.filename || "",
+      uploadDate: student.documents?.audioBiodata?.uploadDate || "",
+    },
+    photograph: {
+      url: student.documents?.photograph?.url || student.photographUrl || student.avatar || "",
+      name: student.documents?.photograph?.name || "",
+      uploadDate: student.documents?.photograph?.uploadDate || "",
+    },
+  }
+}
+// Helper function to format full name properly (FIXED)
+const getFullName = (student: any): string => {
+  const parts: string[] = []
+
+  if (student.salutation) {
+    parts.push(student.salutation)
+  }
+
+  if (student.firstName) {
+    parts.push(student.firstName)
+  }
+
+  // Only add middleName if it exists and is not "noMid"
+  if (student.middleName && student.middleName.toLowerCase() !== "nomid") {
+    parts.push(student.middleName)
+  }
+
+  if (student.lastName) {
+    parts.push(student.lastName)
+  }
+
+  return parts.join(" ")
 }
 
 export default function EditStudentProfile() {
@@ -240,7 +351,15 @@ export default function EditStudentProfile() {
 
         // Log the student data for debugging
         console.log("Student data:", data.student);
-
+        console.log("Salutation:", data.student.salutation)
+console.log("Education data:", data.student.education)
+console.log("Available fields:", Object.keys(data.student))
+// Remove middleName from lastName if it exists there
+if (data.student.middleName && data.student.lastName) {
+  if (data.student.lastName.includes(data.student.middleName)) {
+    data.student.lastName = data.student.lastName.replace(data.student.middleName, "").trim()
+  }
+}
         // Format date if it exists
         if (data.student.dob) {
           try {
@@ -254,39 +373,132 @@ export default function EditStudentProfile() {
         }
 
         // Ensure experience data is properly structured
-        if (data.student.experience) {
-          data.student.experience = data.student.experience.map((exp: any) => {
-            return {
-              ...exp,
-              currentlyWorking:
-                exp.currentlyWorking === true ||
-                exp.currentlyWorking === "true",
-              location: exp.location || "",
-              department: exp.department || "",
-              tenure: exp.tenure || "",
-              professionalSummary: exp.professionalSummary || exp.summary || "",
-            };
-          });
-        } else {
-          data.student.experience = [];
-        }
+    // Ensure experience data is properly structured using helper function
+const experienceArray = getExperienceArray(data.student)
+if (experienceArray && Array.isArray(experienceArray)) {
+  data.student.experience = experienceArray.map((exp: any) => {
+    return {
+      ...exp,
+      currentlyWorking: exp.currentlyWorking === true || exp.currentlyWorking === "true",
+      location: exp.location || "",
+      department: exp.department || "",
+      tenure: exp.tenure || "",
+      professionalSummary: exp.professionalSummary || exp.summary || "",
+    }
+  })
+} else {
+  data.student.experience = []
+}
+
+// Format date if it exists - use helper function
+const dobValue = getDateOfBirth(data.student)
+if (dobValue) {
+  try {
+    const date = new Date(dobValue)
+    if (!isNaN(date.getTime())) {
+      data.student.dob = date.toISOString().split("T")[0]
+    }
+  } catch (e) {
+    console.error("Error formatting date:", e)
+  }
+}
+
+// Ensure preferred cities are properly set using helper function
+const preferredCities = getPreferredCities(data.student)
+data.student.preferenceCities = preferredCities
+
+// Ensure shift preference is properly formatted
+if (Array.isArray(data.student.shiftPreference)) {
+  // It's already an array, keep it as is
+} else if (typeof data.student.shiftPreference === "string" && data.student.shiftPreference) {
+  // If it's a string, convert to array with single item
+  data.student.shiftPreference = [data.student.shiftPreference]
+} else {
+  // If it's undefined or null, initialize as empty array
+  data.student.shiftPreference = []
+}
+
+// Ensure documents are properly mapped using helper function
+const documents = getDocuments(data.student)
+data.student.documents = {
+  resume: documents.resume.url ? documents.resume : undefined,
+  videoResume: documents.videoResume.url ? documents.videoResume : undefined,
+  audioBiodata: documents.audioBiodata.url ? documents.audioBiodata : undefined,
+  photograph: documents.photograph.url ? documents.photograph : undefined,
+}
+
+// Ensure avatar is set from various sources
+if (!data.student.avatar) {
+  data.student.avatar = documents.photograph.url
+}
+
+// Ensure assets are properly structured
+if (!data.student.assets) {
+  data.student.assets = {}
+}
+
+// Map available assets to assets structure if needed
+if (data.student.availableAssets && Array.isArray(data.student.availableAssets)) {
+  data.student.availableAssets.forEach((asset: string) => {
+    if (asset.toLowerCase().includes("bike") || asset.toLowerCase().includes("car")) {
+      data.student.assets!.bike = true
+    }
+    if (asset.toLowerCase().includes("wifi")) {
+      data.student.assets!.wifi = true
+    }
+    if (asset.toLowerCase().includes("laptop")) {
+      data.student.assets!.laptop = true
+    }
+  })
+}
+
+// Map identity documents to assets structure if needed
+if (data.student.identityDocuments && Array.isArray(data.student.identityDocuments)) {
+  data.student.identityDocuments.forEach((doc: string) => {
+    if (doc.toLowerCase().includes("pan")) {
+      data.student.assets!.panCard = true
+    }
+    if (doc.toLowerCase().includes("aadhar")) {
+      data.student.assets!.aadhar = true
+    }
+    if (doc.toLowerCase().includes("bank")) {
+      data.student.assets!.bankAccount = true
+    }
+    if (
+      doc.toLowerCase().includes("voter") ||
+      doc.toLowerCase().includes("passport") ||
+      doc.toLowerCase().includes("dl")
+    ) {
+      data.student.assets!.idProof = true
+    }
+  })
+}
 
         // Ensure education data is properly structured
-        if (data.student.education) {
-          data.student.education = data.student.education.map((edu: any) => {
-            return {
-              ...edu,
-              institution: edu.institution || edu.school || "",
-              level: edu.level || "",
-              mode: edu.mode || "",
-              percentage: edu.percentage || edu.grade || "",
-              startingYear: edu.startingYear || "",
-              endingYear: edu.endingYear || "",
-            };
-          });
-        } else {
-          data.student.education = [];
-        }
+if (data.student.education && Array.isArray(data.student.education)) {
+  data.student.education = data.student.education.map((edu: any) => {
+    return {
+      ...edu,
+      institution: edu.institution || edu.school || edu.college || "",
+      level: edu.level || edu.educationLevel || "",
+      mode: edu.mode || edu.modeOfEducation || "regular",
+      percentage: edu.percentage || edu.grade || edu.marks || "",
+      startingYear: edu.startingYear || edu.fromYear || "",
+      endingYear: edu.endingYear || edu.toYear || "",
+      degree: edu.degree || edu.course || edu.qualification || "",
+      field: edu.field || edu.specialization || edu.stream || "",
+    }
+  })
+} else {
+  data.student.education = []
+}
+// Ensure salutation is properly set
+data.student.salutation = data.student.salutation || data.student.title || ""
+
+// Ensure gender is properly set (case-insensitive)
+if (data.student.gender) {
+  data.student.gender = data.student.gender.toLowerCase()
+}
 
         // Ensure shift preference is properly formatted
         if (Array.isArray(data.student.shiftPreference)) {
@@ -1020,16 +1232,10 @@ export default function EditStudentProfile() {
   };
 
   // Helper function to get formatted name with salutation
-  const getFormattedName = () => {
-    if (!formData) return "";
-
-    const salutation = formData.salutation ? `${formData.salutation} ` : "";
-    const firstName = formData.firstName || "";
-    const middleName = formData.middleName ? `${formData.middleName} ` : "";
-    const lastName = formData.lastName || "";
-
-    return `${salutation}${firstName} ${middleName}${lastName}`.trim();
-  };
+const getFormattedName = () => {
+  if (!formData) return "";
+  return getFullName(formData);
+};
 
   // Helper function to check if shift preference includes a value
   const isShiftPreferenceSelected = (value: string): boolean => {
