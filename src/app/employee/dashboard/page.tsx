@@ -506,8 +506,13 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
     // First cleanup expired interviews
     try {
       await fetch("/api/cron/cleanup-interviews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "GET",
+       cache: "no-store",
+       headers: {
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0",
+    },
       });
       console.log("✅ Expired interviews cleaned up");
     } catch (error) {
