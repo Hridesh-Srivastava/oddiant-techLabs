@@ -511,6 +511,13 @@ function StudentDashboardPage({ user }: { user: any }) {
   // Store all jobs for filtering
   const [allJobs, setAllJobs] = useState([])
 
+  // Add pagination state for applications
+  const [currentApplicationPage, setCurrentApplicationPage] = useState(1)
+  const applicationsPerPage = 6
+
+  // Store all applications for filtering
+  const [allApplications, setAllApplications] = useState([])
+
   useEffect(() => {
     const fetchStudentData = async () => {
       try {
@@ -1872,6 +1879,7 @@ function StudentDashboardPage({ user }: { user: any }) {
     setApplicationDateTo("")
     setShowAdvancedFilters(false)
     setShowRecentApplicationsOnly(false)
+    setCurrentApplicationPage(1)  // Reset to first page when filters are cleared
   }
 
   const handleSaveAlternativeEmail = async () => {
@@ -2658,42 +2666,86 @@ function StudentDashboardPage({ user }: { user: any }) {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {filterRecentApplications(filteredApplications).map((application) => (
-                      <Card key={application._id} className="overflow-hidden hover:shadow-md transition-shadow">
-                        <CardContent className="p-6">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="text-lg font-semibold mb-1">
-                                {application.job?.jobTitle || "Unknown Job"}
-                              </h3>
-                              <p className="text-gray-600 mb-2">{application.job?.companyName || "Unknown Company"}</p>
-                              <div className="flex items-center text-sm text-gray-500 mb-2">
-                                <MapPin className="h-4 w-4 mr-1" />
-                                {application.job?.jobLocation || "Unknown Location"}
+                    {filterRecentApplications(filteredApplications)
+                      .slice((currentApplicationPage - 1) * applicationsPerPage, currentApplicationPage * applicationsPerPage)
+                      .map((application) => (
+                        <Card key={application._id} className="overflow-hidden hover:shadow-md transition-shadow">
+                          <CardContent className="p-6">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h3 className="text-lg font-semibold mb-1">
+                                  {application.job?.jobTitle || "Unknown Job"}
+                                </h3>
+                                <p className="text-gray-600 mb-2">{application.job?.companyName || "Unknown Company"}</p>
+                                <div className="flex items-center text-sm text-gray-500 mb-2">
+                                  <MapPin className="h-4 w-4 mr-1" />
+                                  {application.job?.jobLocation || "Unknown Location"}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Job ID: {application.jobId || application._id}
+                                </div>
                               </div>
-                              <div className="text-xs text-gray-500">
-                                Job ID: {application.jobId || application._id}
+                              <div className="text-right">
+                                {getStatusBadge(application.status)}
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Applied on {new Date(application.appliedDate).toLocaleDateString()}
+                                </p>
                               </div>
                             </div>
-                            <div className="text-right">
-                              {getStatusBadge(application.status)}
-                              <p className="text-xs text-gray-500 mt-1">
-                                Applied on {new Date(application.appliedDate).toLocaleDateString()}
-                              </p>
+                            <div className="flex justify-end mt-4">
+                              <Button
+                                variant="outline"
+                                onClick={() => router.push(`/student/applications/${application._id}`)}
+                              >
+                                View Application
+                                <ChevronRight className="ml-2 h-4 w-4" />
+                              </Button>
                             </div>
-                          </div>
-                          <div className="flex justify-end mt-4">
-                            <Button
-                              variant="outline"
-                              onClick={() => router.push(`/student/applications/${application._id}`)}
-                            >
-                              View Application
-                              <ChevronRight className="ml-2 h-4 w-4" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          </CardContent>
+                        </Card>
+                      ))}
+
+                    {/* Applications Pagination UI */}
+                    {filteredApplications.length > applicationsPerPage && (
+                      <div className="flex justify-center items-center space-x-2 mt-6">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentApplicationPage(currentApplicationPage - 1)}
+                          disabled={currentApplicationPage === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                          Previous
+                        </Button>
+
+                        {Array.from(
+                          { length: Math.ceil(filteredApplications.length / applicationsPerPage) },
+                          (_, i) => i + 1
+                        ).map((number) => (
+                          <Button
+                            key={number}
+                            variant={currentApplicationPage === number ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentApplicationPage(number)}
+                            className={`w-8 ${
+                              currentApplicationPage === number ? "bg-blue-600 text-white" : "hover:bg-gray-100"
+                            }`}
+                          >
+                            {number}
+                          </Button>
+                        ))}
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentApplicationPage(currentApplicationPage + 1)}
+                          disabled={currentApplicationPage === Math.ceil(filteredApplications.length / applicationsPerPage)}
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
