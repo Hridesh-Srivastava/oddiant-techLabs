@@ -52,6 +52,7 @@ import {
   MessageSquare,
   Layers,
   FileSymlink,
+  ChevronLeft,
 } from "lucide-react"
 import { MapPinIcon } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -502,6 +503,10 @@ function StudentDashboardPage({ user }: { user: any }) {
     jobType: "",
     recentOnly: false, // New filter for recent jobs
   })
+
+  // Add pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const jobsPerPage = 6
 
   // Store all jobs for filtering
   const [allJobs, setAllJobs] = useState([])
@@ -1749,6 +1754,15 @@ function StudentDashboardPage({ user }: { user: any }) {
     return matchesSearch && matchesLocation && matchesJobType
   })
 
+  // Get current jobs for pagination
+  const indexOfLastJob = currentPage * jobsPerPage
+  const indexOfFirstJob = indexOfLastJob - jobsPerPage
+  const currentJobs = filteredJobs.slice(indexOfFirstJob, indexOfLastJob)
+  const totalPages = Math.ceil(filteredJobs.length / jobsPerPage)
+
+  // Change page
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber)
+
   // Filter applications based on all filter criteria
   const filteredApplications = applications.filter((application) => {
     // Main search term (searches across multiple fields)
@@ -2344,7 +2358,7 @@ function StudentDashboardPage({ user }: { user: any }) {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {filteredJobs.map((job) => (
+                    {currentJobs.map((job) => (
                       <Card key={job._id} className="overflow-hidden hover:shadow-md transition-shadow">
                         <CardContent className="p-0">
                           <div className="p-6">
@@ -2407,6 +2421,45 @@ function StudentDashboardPage({ user }: { user: any }) {
                         </CardContent>
                       </Card>
                     ))}
+
+                    {/* Pagination UI */}
+                    {filteredJobs.length > jobsPerPage && (
+                      <div className="flex justify-center items-center space-x-2 mt-6">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => paginate(currentPage - 1)}
+                          disabled={currentPage === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4" /> 
+                          Previous
+                        </Button>
+
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
+                          <Button
+                            key={number}
+                            variant={currentPage === number ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => paginate(number)}
+                            className={`w-8 ${
+                              currentPage === number ? "bg-blue-600 text-white" : "hover:bg-gray-100"
+                            }`}
+                          >
+                            {number}
+                          </Button>
+                        ))}
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => paginate(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
