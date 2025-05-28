@@ -4,7 +4,18 @@ import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Briefcase, MapPin, Clock, Calendar, Send, Loader2, AlertTriangle } from "lucide-react"
+import {
+  ArrowLeft,
+  Briefcase,
+  MapPin,
+  Clock,
+  Calendar,
+  Send,
+  Loader2,
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react"
 import { toast, Toaster } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -52,6 +63,16 @@ export default function InviteCandidateToJobsPage({
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingJobs, setIsLoadingJobs] = useState(true)
   const [invitingJobs, setInvitingJobs] = useState<Set<string>>(new Set())
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const jobsPerPage = 6
+
+  // Calculate pagination values
+  const totalPages = Math.ceil(jobs.length / jobsPerPage)
+  const startIndex = (currentPage - 1) * jobsPerPage
+  const endIndex = startIndex + jobsPerPage
+  const currentJobs = jobs.slice(startIndex, endIndex)
 
   useEffect(() => {
     const fetchCandidate = async () => {
@@ -104,6 +125,11 @@ export default function InviteCandidateToJobsPage({
     fetchEmployeeJobs()
   }, [candidateId, router])
 
+  // Reset to first page when jobs change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [jobs])
+
   const handleInviteToJob = async (jobId: string) => {
     if (!candidate) return
 
@@ -142,6 +168,14 @@ export default function InviteCandidateToJobsPage({
     }
   }
 
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page)
+      // Scroll to top of jobs section
+      document.getElementById("jobs-section")?.scrollIntoView({ behavior: "smooth" })
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "open":
@@ -161,6 +195,95 @@ export default function InviteCandidateToJobsPage({
     } catch (e) {
       return "N/A"
     }
+  }
+
+  // Pagination component
+  const PaginationComponent = () => {
+    if (totalPages <= 1) return null
+
+    const getPageNumbers = () => {
+      const pages = []
+      const maxVisiblePages = 5
+
+      if (totalPages <= maxVisiblePages) {
+        for (let i = 1; i <= totalPages; i++) {
+          pages.push(i)
+        }
+      } else {
+        if (currentPage <= 3) {
+          for (let i = 1; i <= 4; i++) {
+            pages.push(i)
+          }
+          pages.push("...")
+          pages.push(totalPages)
+        } else if (currentPage >= totalPages - 2) {
+          pages.push(1)
+          pages.push("...")
+          for (let i = totalPages - 3; i <= totalPages; i++) {
+            pages.push(i)
+          }
+        } else {
+          pages.push(1)
+          pages.push("...")
+          for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+            pages.push(i)
+          }
+          pages.push("...")
+          pages.push(totalPages)
+        }
+      }
+
+      return pages
+    }
+
+    return (
+      <div className="flex items-center justify-center space-x-2 mt-6">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="flex items-center"
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          Previous
+        </Button>
+
+        <div className="flex items-center space-x-1">
+          {getPageNumbers().map((page, index) => (
+            <React.Fragment key={index}>
+              {page === "..." ? (
+                <span className="px-3 py-2 text-gray-500">...</span>
+              ) : (
+                <Button
+                  variant={currentPage === page ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handlePageChange(page as number)}
+                  className={`min-w-[40px] ${
+                    currentPage === page
+                      ? "bg-blue-600 hover:bg-blue-700 text-white"
+                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  {page}
+                </Button>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="flex items-center"
+        >
+          Next
+          <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
+      </div>
+    )
   }
 
   if (isLoading) {
@@ -231,13 +354,20 @@ export default function InviteCandidateToJobsPage({
         </Card>
 
         {/* Jobs List */}
-        <Card>
+        <Card id="jobs-section">
           <CardHeader>
             <CardTitle className="flex items-center">
               <Briefcase className="h-5 w-5 mr-2" />
               Your Job Postings
             </CardTitle>
-            <p className="text-gray-500 dark:text-gray-400">Select jobs to invite {candidate.name} to apply for</p>
+            <div className="flex items-center justify-between">
+              <p className="text-gray-500 dark:text-gray-400">Select jobs to invite {candidate.name} to apply for</p>
+              {jobs.length > 0 && (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Showing {startIndex + 1}-{Math.min(endIndex, jobs.length)} of {jobs.length} jobs
+                </p>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {isLoadingJobs ? (
@@ -257,108 +387,117 @@ export default function InviteCandidateToJobsPage({
                 <Button onClick={() => router.push("/employee/dashboard?tab=jobs")}>Create Job Posting</Button>
               </div>
             ) : (
-              <div className="space-y-4">
-                {jobs.map((job) => (
-                  <Card key={job._id} className="border border-gray-200 dark:border-gray-700">
-                    <CardContent className="p-6">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between mb-2">
-                            <h3 className="text-lg font-semibold">{job.jobTitle}</h3>
-                            <Badge className={getStatusColor(job.status)}>
-                              {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
-                            </Badge>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                            <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                              <MapPin className="h-4 w-4 mr-2" />
-                              {job.jobLocation}
+              <>
+                <div className="space-y-4">
+                  {currentJobs.map((job) => (
+                    <Card key={job._id} className="border border-gray-200 dark:border-gray-700">
+                      <CardContent className="p-6">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-2">
+                              <h3 className="text-lg font-semibold">{job.jobTitle}</h3>
+                              <Badge className={getStatusColor(job.status)}>
+                                {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+                              </Badge>
                             </div>
-                            <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                              <Clock className="h-4 w-4 mr-2" />
-                              {job.experienceRange}
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                              <Calendar className="h-4 w-4 mr-2" />
-                              Posted {formatDate(job.createdAt)}
-                            </div>
-                          </div>
 
-                          {job.salaryRange && (
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                              <span className="font-medium">Salary:</span> {job.salaryRange}
-                            </p>
-                          )}
-
-                          {job.department && (
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                              <span className="font-medium">Department:</span> {job.department}
-                            </p>
-                          )}
-
-                          <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-                            <span>{job.applicants} applicants</span>
-                            {job.daysLeft > 0 && <span>{job.daysLeft} days left</span>}
-                          </div>
-
-                          {job.skills && job.skills.length > 0 && (
-                            <div className="mt-3">
-                              <div className="flex flex-wrap gap-1">
-                                {job.skills.slice(0, 5).map((skill, index) => (
-                                  <Badge key={index} variant="outline" className="text-xs">
-                                    {skill}
-                                  </Badge>
-                                ))}
-                                {job.skills.length > 5 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{job.skills.length - 5} more
-                                  </Badge>
-                                )}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                              <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                                <MapPin className="h-4 w-4 mr-2" />
+                                {job.jobLocation}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                                <Clock className="h-4 w-4 mr-2" />
+                                {job.experienceRange}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                                <Calendar className="h-4 w-4 mr-2" />
+                                Posted {formatDate(job.createdAt)}
                               </div>
                             </div>
-                          )}
-                        </div>
 
-                        <div className="ml-6 flex flex-col space-y-2">
-                          <Button
-                            onClick={() => handleInviteToJob(job._id)}
-                            disabled={invitingJobs.has(job._id) || job.status !== "open"}
-                            className="min-w-[120px]"
-                          >
-                            {invitingJobs.has(job._id) ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Sending...
-                              </>
-                            ) : (
-                              <>
-                                <Send className="h-4 w-4 mr-2" />
-                                Invite
-                              </>
+                            {job.salaryRange && (
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                <span className="font-medium">Salary:</span> {job.salaryRange}
+                              </p>
                             )}
-                          </Button>
 
-                          <Button variant="outline" size="sm" onClick={() => router.push(`/employee/jobs/${job._id}`)}>
-                            View Details
-                          </Button>
-                        </div>
-                      </div>
+                            {job.department && (
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                <span className="font-medium">Department:</span> {job.department}
+                              </p>
+                            )}
 
-                      {job.status !== "open" && (
-                        <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                          <div className="flex items-center">
-                            <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mr-2" />
-                            <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                              This job is currently {job.status}. Invitations can only be sent for open positions.
-                            </p>
+                            <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                              <span>{job.applicants} applicants</span>
+                              {job.daysLeft > 0 && <span>{job.daysLeft} days left</span>}
+                            </div>
+
+                            {job.skills && job.skills.length > 0 && (
+                              <div className="mt-3">
+                                <div className="flex flex-wrap gap-1">
+                                  {job.skills.slice(0, 5).map((skill, index) => (
+                                    <Badge key={index} variant="outline" className="text-xs">
+                                      {skill}
+                                    </Badge>
+                                  ))}
+                                  {job.skills.length > 5 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{job.skills.length - 5} more
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="ml-6 flex flex-col space-y-2">
+                            <Button
+                              onClick={() => handleInviteToJob(job._id)}
+                              disabled={invitingJobs.has(job._id) || job.status !== "open"}
+                              className="min-w-[120px]"
+                            >
+                              {invitingJobs.has(job._id) ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Sending...
+                                </>
+                              ) : (
+                                <>
+                                  <Send className="h-4 w-4 mr-2" />
+                                  Invite
+                                </>
+                              )}
+                            </Button>
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => router.push(`/employee/jobs/${job._id}`)}
+                            >
+                              View Details
+                            </Button>
                           </div>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+
+                        {job.status !== "open" && (
+                          <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                            <div className="flex items-center">
+                              <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mr-2" />
+                              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                This job is currently {job.status}. Invitations can only be sent for open positions.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Pagination Component */}
+                <PaginationComponent />
+              </>
             )}
           </CardContent>
         </Card>

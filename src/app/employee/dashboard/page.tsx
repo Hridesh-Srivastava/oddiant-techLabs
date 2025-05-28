@@ -28,6 +28,8 @@ import {
   Plus,
   Edit,
   Video,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -142,6 +144,75 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tabParam = searchParams.get("tab")
+
+  // Add pagination states
+  const [currentCandidatesPage, setCurrentCandidatesPage] = useState(1)
+  const [currentJobsPage, setCurrentJobsPage] = useState(1)
+  const itemsPerPage = 6
+
+  // Pagination calculation functions
+  const paginateItems = (items: any[], currentPage: number) => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    return items.slice(startIndex, endIndex)
+  }
+
+  const calculateTotalPages = (totalItems: number) => {
+    return Math.ceil(totalItems / itemsPerPage)
+  }
+
+  // Pagination UI component
+  const PaginationControls = ({ 
+    currentPage, 
+    totalItems, 
+    onPageChange 
+  }: { 
+    currentPage: number, 
+    totalItems: number, 
+    onPageChange: (page: number) => void 
+  }) => {
+    const totalPages = calculateTotalPages(totalItems)
+    
+    return (
+      <div className="flex items-center justify-center space-x-2 mt-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+        >
+          <ChevronLeft className="h-4 w-4 ml-1" />
+          Previous
+        </Button>
+        
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+          <Button
+            key={pageNum}
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(pageNum)}
+            className={`${
+              pageNum === currentPage 
+                ? "bg-blue-500 text-white hover:bg-blue-600" 
+                : "hover:bg-gray-100"
+            }`}
+          >
+            {pageNum}
+          </Button>
+        ))}
+        
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+        >
+          Next
+          <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
+      </div>
+    )
+  }
 
   const [employee, setEmployee] = useState<EmployeeData | null>(null)
 
@@ -2413,107 +2484,112 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                 </div>
 
                 {filteredCandidates.length > 0 ? (
-                  <div className="rounded-md border dark:border-gray-700">
-                    <div className="grid grid-cols-8 bg-gray-50 dark:bg-gray-800 p-3 text-sm font-medium text-gray-500 dark:text-gray-400">
-                      <div className="col-span-1 flex items-center">
-                        <Checkbox
-                          id="select-all"
-                          checked={
-                            selectedCandidates.length === filteredCandidates.length && filteredCandidates.length > 0
-                          }
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              selectAllCandidates(filteredCandidates.map((c) => c._id))
-                            } else {
-                              clearSelectedCandidates()
-                            }
-                          }}
-                          className="mr-2"
-                        />
-                        <Label htmlFor="select-all" className="cursor-pointer text-black font-bold">
-                          Select All
-                        </Label>
-                      </div>
-                      <div className="col-span-2 text-black font-bold">Candidate</div>
-                      <div className="text-black font-bold">Position</div>
-                      <div className="text-black font-bold">Status</div>
-                      <div className="text-black font-bold">Applied Date</div>
-                      <div className="text-right col-span-2 text-black font-bold">Actions</div>
-                    </div>
-
-                    {filteredCandidates.map((candidate, index) => (
-                      <div
-                        key={candidate._id}
-                        className={`grid grid-cols-8 border-t dark:border-gray-700 p-3 items-center ${
-                          index % 2 === 0 ? "bg-gray-200 dark:bg-gray-200" : "bg-white dark:bg-gray-800"
-                        }`}
-                      >
-                        <div className="col-span-1">
+                  <>
+                    <div className="rounded-md border dark:border-gray-700">
+                      <div className="grid grid-cols-8 bg-gray-50 dark:bg-gray-800 p-3 text-sm font-medium text-gray-500 dark:text-gray-400">
+                        <div className="col-span-1 flex items-center">
                           <Checkbox
-                            id={`select-${candidate._id}`}
-                            checked={isSelected(candidate._id)}
-                            onCheckedChange={() => toggleCandidateSelection(candidate._id)}
+                            id="select-all"
+                            checked={selectedCandidates.length === filteredCandidates.length && filteredCandidates.length > 0}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                selectAllCandidates(filteredCandidates.map((c) => c._id))
+                              } else {
+                                clearSelectedCandidates()
+                              }
+                            }}
+                            className="mr-2"
                           />
+                          <Label htmlFor="select-all" className="cursor-pointer text-black font-bold">
+                            Select All
+                          </Label>
                         </div>
-                        <div className="col-span-2 flex items-center">
-                          <Avatar className="h-8 w-8 mr-2">
-                            <AvatarImage src={candidate.avatar || "/placeholder.svg"} alt={candidate.name} />
-                            <AvatarFallback>{candidate.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
+                        <div className="col-span-2 text-black font-bold">Candidate</div>
+                        <div className="text-black font-bold">Position</div>
+                        <div className="text-black font-bold">Status</div>
+                        <div className="text-black font-bold">Applied Date</div>
+                        <div className="text-right col-span-2 text-black font-bold">Actions</div>
+                      </div>
+
+                      {paginateItems(filteredCandidates, currentCandidatesPage).map((candidate, index) => (
+                        <div
+                          key={candidate._id}
+                          className={`grid grid-cols-8 border-t dark:border-gray-700 p-3 items-center ${
+                            index % 2 === 0 ? "bg-gray-200 dark:bg-gray-200" : "bg-white dark:bg-gray-800"
+                          }`}
+                        >
+                          <div className="col-span-1">
+                            <Checkbox
+                              id={`select-${candidate._id}`}
+                              checked={isSelected(candidate._id)}
+                              onCheckedChange={() => toggleCandidateSelection(candidate._id)}
+                            />
+                          </div>
+                          <div className="col-span-2 flex items-center">
+                            <Avatar className="h-8 w-8 mr-2">
+                              <AvatarImage src={candidate.avatar || "/placeholder.svg"} alt={candidate.name} />
+                              <AvatarFallback>{candidate.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium">{candidate.name}</p>
+                              <p className="text-xs text-black dark:text-black">{candidate.email}</p>
+                            </div>
+                          </div>
+                          <div>{candidate.role}</div>
                           <div>
-                            <p className="font-medium">{candidate.name}</p>
-                            <p className="text-xs text-black dark:text-black">{candidate.email}</p>
+                            <Badge
+                              className={
+                                candidate.status === "Shortlisted"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                  : candidate.status === "Interview"
+                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                                    : candidate.status === "Rejected"
+                                      ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                                      : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                              }
+                            >
+                              {candidate.status}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-black dark:text-black">{candidate.appliedDate}</div>
+                          <div className="flex justify-end space-x-2 col-span-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="bg-black text-white"
+                              onClick={() => router.push(`/employee/candidates/${candidate._id}`)}
+                            >
+                              View
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-white dark:text-white bg-black"
+                              onClick={() => router.push(`/employee/candidates/${candidate._id}/contact`)}
+                            >
+                              <Send className="h-4 w-4 mr-1" />
+                              Contact
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="bg-green-600 text-white"
+                              onClick={() => handleExportSingleCandidate(candidate._id, candidate.name)}
+                              disabled={isSingleExporting === candidate._id}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              {isSingleExporting === candidate._id ? "Exporting..." : "Export"}
+                            </Button>
                           </div>
                         </div>
-                        <div>{candidate.role}</div>
-                        <div>
-                          <Badge
-                            className={
-                              candidate.status === "Shortlisted"
-                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                                : candidate.status === "Interview"
-                                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-                                  : candidate.status === "Rejected"
-                                    ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                                    : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
-                            }
-                          >
-                            {candidate.status}
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-black dark:text-black">{candidate.appliedDate}</div>
-                        <div className="flex justify-end space-x-2 col-span-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="bg-black text-white"
-                            onClick={() => router.push(`/employee/candidates/${candidate._id}`)}
-                          >
-                            View
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-white dark:text-white bg-black"
-                            onClick={() => router.push(`/employee/candidates/${candidate._id}/contact`)}
-                          >
-                            <Send className="h-4 w-4 mr-1" />
-                            Contact
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="bg-green-600 text-white"
-                            onClick={() => handleExportSingleCandidate(candidate._id, candidate.name)}
-                            disabled={isSingleExporting === candidate._id}
-                          >
-                            <Download className="h-4 w-4 mr-1" />
-                            {isSingleExporting === candidate._id ? "Exporting..." : "Export"}
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                    <PaginationControls
+                      currentPage={currentCandidatesPage}
+                      totalItems={filteredCandidates.length}
+                      onPageChange={setCurrentCandidatesPage}
+                    />
+                  </>
                 ) : (
                   <div className="text-center py-12 border rounded-lg dark:border-gray-700">
                     <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
@@ -2547,54 +2623,61 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
               </CardHeader>
               <CardContent>
                 {jobPostings.length > 0 ? (
-                  <div className="space-y-4">
-                    {jobPostings.map((job, index) => (
-                      <div
-                        key={job._id}
-                        className={`border rounded-lg p-4 dark:border-gray-700 ${
-                          index % 2 === 0 ? "bg-gray-200" : "bg-white"
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-medium">{job.jobTitle}</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              {job.department} • {job.jobType} • {job.jobLocation}
-                            </p>
-                            <div className="flex mt-2 space-x-4">
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                <strong>{job.applicants}</strong> Applicants
-                              </span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                <strong>{job.interviews}</strong> Interviews
-                              </span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                <strong>{job.daysLeft}</strong> Days Left
-                              </span>
+                  <>
+                    <div className="space-y-4">
+                      {paginateItems(jobPostings, currentJobsPage).map((job, index) => (
+                        <div
+                          key={job._id}
+                          className={`border rounded-lg p-4 dark:border-gray-700 ${
+                            index % 2 === 0 ? "bg-gray-200" : "bg-white"
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-medium">{job.jobTitle}</h3>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                                {job.department} • {job.jobType} • {job.jobLocation}
+                              </p>
+                              <div className="flex mt-2 space-x-4">
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  <strong>{job.applicants}</strong> Applicants
+                                </span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  <strong>{job.interviews}</strong> Interviews
+                                </span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  <strong>{job.daysLeft}</strong> Days Left
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="bg-black text-white"
+                                onClick={() => router.push(`/employee/jobs/${job._id}`)}
+                              >
+                                View
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="bg-black text-white"
+                                onClick={() => router.push(`/employee/jobs/${job._id}/edit`)}
+                              >
+                                Edit
+                              </Button>
                             </div>
                           </div>
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="bg-black text-white"
-                              onClick={() => router.push(`/employee/jobs/${job._id}`)}
-                            >
-                              View
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="bg-black text-white"
-                              onClick={() => router.push(`/employee/jobs/${job._id}/edit`)}
-                            >
-                              Edit
-                            </Button>
-                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                    <PaginationControls
+                      currentPage={currentJobsPage}
+                      totalItems={jobPostings.length}
+                      onPageChange={setCurrentJobsPage}
+                    />
+                  </>
                 ) : (
                   <JobPostingForm onSubmit={handleCreateJobPosting} />
                 )}
