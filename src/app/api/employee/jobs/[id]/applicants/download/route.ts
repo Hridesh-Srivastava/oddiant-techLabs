@@ -33,7 +33,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     // Convert string IDs to ObjectIds
     const objectIds = applicantIds.map((id: string) => new ObjectId(id))
 
-    // Find all selected candidates from both collections
+    // Find all selected candidates from database
     const candidatesFromCandidates = await db
       .collection("candidates")
       .find({ _id: { $in: objectIds } })
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       .project({}) // Empty projection to ensure all fields are returned
       .toArray()
 
-    // Combine candidates from both collections
+    // Combine candidates from database
     const allCandidates = [
       ...candidatesFromCandidates.map((c: any) => ({ ...c, source: "candidates" })),
       ...candidatesFromStudents.map((s: any) => ({ ...s, source: "students" })),

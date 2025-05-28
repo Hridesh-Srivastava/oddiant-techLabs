@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { toast } from "sonner"
 
 interface WithAuthProps {
@@ -13,6 +13,7 @@ interface WithAuthProps {
 export default function withAuth<P extends object>(Component: React.ComponentType<P>, requiredUserType?: string) {
   return function WithAuth(props: P & WithAuthProps) {
     const router = useRouter()
+    const pathname = usePathname()
     const [isAuthorized, setIsAuthorized] = useState(false)
     const [user, setUser] = useState<any>(null)
     const [isLoading, setIsLoading] = useState(true)
@@ -45,8 +46,15 @@ export default function withAuth<P extends object>(Component: React.ComponentTyp
         } catch (error) {
           console.error("Authentication error:", error)
 
-          // Redirect to appropriate login page
-          if (requiredUserType === "employee" || requiredUserType === "admin") {
+          // Check if current route is in employee portal area
+          const isEmployeeRoute =
+            pathname.includes("/employee") ||
+            pathname.includes("/admin") ||
+            requiredUserType === "employee" ||
+            requiredUserType === "admin"
+
+          // Redirect to appropriate login page based on route
+          if (isEmployeeRoute) {
             router.push("/auth/employee/login")
           } else {
             router.push("/auth/login")
@@ -59,7 +67,7 @@ export default function withAuth<P extends object>(Component: React.ComponentTyp
       }
 
       checkAuth()
-    }, [router])
+    }, [router, pathname])
 
     if (isLoading) {
       return (

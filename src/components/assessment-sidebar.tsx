@@ -41,7 +41,7 @@ export function AssessmentSidebar() {
       <div className="p-4 border-b border-border">
         <h2 className="text-xl font-bold flex items-center">
           <FileText className="mr-2 h-5 w-5" />
-          Assessment Portal
+          Assessment Dashboard
         </h2>
       </div>
       <nav className="p-2">

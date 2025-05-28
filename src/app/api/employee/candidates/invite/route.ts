@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
                 <p>Hello Candidate,</p>
                 <p>You have been invited to apply for the <strong>${job.jobTitle}</strong> position at <strong>${employee.companyName}</strong> by ${employee.firstName} ${employee.lastName} of ${employee.companyName}.</p>
                 <div style="text-align: center; margin: 25px 0;">
-                  <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/login?token=${token}" 
+                  <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/jobs/${jobId}" 
                      style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
                     Complete Your Application
                   </a>
