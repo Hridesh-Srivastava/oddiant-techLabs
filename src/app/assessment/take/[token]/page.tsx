@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
+import { AdvancedCodeEditor } from "@/components/advanced-code-editor"
 
 interface InvitationData {
   _id: string
@@ -40,6 +41,7 @@ interface TestData {
     shuffleQuestions: boolean
     preventTabSwitching: boolean
     allowCalculator: boolean
+    allowCodeEditor: boolean
     autoSubmit: boolean
   }
   sections: SectionData[]
@@ -60,6 +62,9 @@ interface QuestionData {
   options?: string[]
   correctAnswer?: string | string[]
   points: number
+  codeLanguage?: string
+  codeTemplate?: string
+  testCases?: any[]
 }
 
 export default function TakeTestPage() {
@@ -85,9 +90,11 @@ export default function TakeTestPage() {
   } | null>(null)
   const [startTime, setStartTime] = useState<Date | null>(null)
 
-  // Tab switching detection
+  // Tab switching detection with improved logic
   const [showTabWarning, setShowTabWarning] = useState(false)
   const [tabSwitchCount, setTabSwitchCount] = useState(0)
+  const [testTerminated, setTestTerminated] = useState(false)
+  const [lastTabSwitchTime, setLastTabSwitchTime] = useState(0)
 
   // Scientific Calculator
   const [showCalculator, setShowCalculator] = useState(false)
@@ -95,7 +102,7 @@ export default function TakeTestPage() {
   const [calculatorMemory, setCalculatorMemory] = useState<number | null>(null)
   const [calculatorOperation, setCalculatorOperation] = useState<string | null>(null)
   const [calculatorClearNext, setCalculatorClearNext] = useState(false)
-  const [calculatorDegreeMode, setCalculatorDegreeMode] = useState(true) // true for degrees, false for radians
+  const [calculatorDegreeMode, setCalculatorDegreeMode] = useState(true)
   const [calculatorInverseMode, setCalculatorInverseMode] = useState(false)
 
   // Pre-exam verification states
@@ -144,7 +151,43 @@ export default function TakeTestPage() {
       setVerificationStep("complete")
     }
 
-    // Set up tab switching detection
+    // Enhanced tab switching detection with proper debouncing
+    const handleVisibilityChange = () => {
+      const now = Date.now()
+
+      if (document.hidden && activeTab === "test" && !testTerminated && now - lastTabSwitchTime > 2000) {
+        setLastTabSwitchTime(now)
+        setTabSwitchCount((prev) => {
+          const newCount = prev + 1
+          if (test?.settings.preventTabSwitching) {
+            setShowTabWarning(true)
+            if (newCount >= 4) {
+              handleTestTermination()
+            }
+          }
+          return newCount
+        })
+      }
+    }
+
+    const handleWindowBlur = () => {
+      const now = Date.now()
+
+      if (activeTab === "test" && !testTerminated && now - lastTabSwitchTime > 2000) {
+        setLastTabSwitchTime(now)
+        setTabSwitchCount((prev) => {
+          const newCount = prev + 1
+          if (test?.settings.preventTabSwitching) {
+            setShowTabWarning(true)
+            if (newCount >= 4) {
+              handleTestTermination()
+            }
+          }
+          return newCount
+        })
+      }
+    }
+
     document.addEventListener("visibilitychange", handleVisibilityChange)
     window.addEventListener("blur", handleWindowBlur)
 
@@ -158,7 +201,7 @@ export default function TakeTestPage() {
       document.removeEventListener("visibilitychange", handleVisibilityChange)
       window.removeEventListener("blur", handleWindowBlur)
     }
-  }, [token])
+  }, [token, activeTab, test?.settings.preventTabSwitching, testTerminated, lastTabSwitchTime])
 
   useEffect(() => {
     if (invitation && invitation.status === "Completed") {
@@ -172,11 +215,24 @@ export default function TakeTestPage() {
       // Initialize timer
       setTimeLeft(test.duration * 60)
 
-      // Initialize answers
+      // Shuffle questions if enabled
+      if (test.settings.shuffleQuestions) {
+        const shuffledTest = {
+          ...test,
+          sections: test.sections.map((section) => ({
+            ...section,
+            questions: shuffleArray([...section.questions]),
+          })),
+        }
+        setTest(shuffledTest)
+      }
+
+      // Initialize answers with unique keys
       const initialAnswers: Record<string, string | string[]> = {}
       test.sections.forEach((section) => {
         section.questions.forEach((question) => {
-          initialAnswers[question.id] = question.type === "Multiple Choice" ? "" : []
+          const questionKey = `${section.id}-${question.id}`
+          initialAnswers[questionKey] = question.type === "Multiple Choice" ? "" : ""
         })
       })
       setAnswers(initialAnswers)
@@ -189,7 +245,7 @@ export default function TakeTestPage() {
   }, [test, verificationComplete])
 
   useEffect(() => {
-    if (timeLeft > 0 && activeTab === "test" && !testCompleted) {
+    if (timeLeft > 0 && activeTab === "test" && !testCompleted && !testTerminated) {
       const timer = setTimeout(() => {
         setTimeLeft(timeLeft - 1)
       }, 1000)
@@ -201,7 +257,15 @@ export default function TakeTestPage() {
 
       return () => clearTimeout(timer)
     }
-  }, [timeLeft, activeTab, testCompleted, test?.settings.autoSubmit])
+  }, [timeLeft, activeTab, testCompleted, test?.settings.autoSubmit, testTerminated])
+
+  const handleTestTermination = () => {
+    setTestTerminated(true)
+    toast.error("Test terminated due to excessive tab switching violations!")
+    setTimeout(() => {
+      handleSubmitTest()
+    }, 2000)
+  }
 
   const startWebcam = async () => {
     try {
@@ -254,50 +318,6 @@ export default function TakeTestPage() {
         setSystemChecks((prev) => ({
           ...prev,
           cameraAccess: false,
-        }))
-      }
-    }
-  }
-
-  const handleVisibilityChange = () => {
-    if (test?.settings.preventTabSwitching && activeTab === "test" && !testCompleted) {
-      if (document.visibilityState === "hidden" && visibilityRef.current) {
-        visibilityRef.current = false
-        setTabSwitchCount((prev) => prev + 1)
-        setShowTabWarning(true)
-
-        // Update system checks if in system check mode
-        if (showSystemCheck) {
-          setSystemChecks((prev) => ({
-            ...prev,
-            tabFocus: false,
-          }))
-        }
-      } else if (document.visibilityState === "visible") {
-        visibilityRef.current = true
-
-        // Update system checks if in system check mode
-        if (showSystemCheck) {
-          setSystemChecks((prev) => ({
-            ...prev,
-            tabFocus: true,
-          }))
-        }
-      }
-    }
-  }
-
-  const handleWindowBlur = () => {
-    if (test?.settings.preventTabSwitching && activeTab === "test" && !testCompleted && visibilityRef.current) {
-      visibilityRef.current = false
-      setTabSwitchCount((prev) => prev + 1)
-      setShowTabWarning(true)
-
-      // Update system checks if in system check mode
-      if (showSystemCheck) {
-        setSystemChecks((prev) => ({
-          ...prev,
-          tabFocus: false,
         }))
       }
     }
@@ -377,17 +397,7 @@ export default function TakeTestPage() {
       const data = await response.json()
 
       if (data.success) {
-        const testData = { ...data.test }
-
-        // If shuffle questions is enabled, shuffle the questions in each section
-        if (testData.settings.shuffleQuestions) {
-          testData.sections = testData.sections.map((section: SectionData) => ({
-            ...section,
-            questions: shuffleArray([...section.questions]),
-          }))
-        }
-
-        setTest(testData)
+        setTest(data.test)
       } else {
         throw new Error(data.message || "Failed to fetch test")
       }
@@ -445,10 +455,28 @@ export default function TakeTestPage() {
   }
 
   const handleAnswer = (questionId: string, answer: string | string[]) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: answer,
-    }))
+    // Use the current section and question to create a unique key
+    const currentQuestionData = test?.sections[currentSection]?.questions[currentQuestion]
+    if (currentQuestionData) {
+      const questionKey = `${test.sections[currentSection].id}-${currentQuestionData.id}`
+      setAnswers((prev) => ({
+        ...prev,
+        [questionKey]: answer,
+      }))
+    }
+  }
+
+  const getCurrentQuestionKey = () => {
+    const currentQuestionData = test?.sections[currentSection]?.questions[currentQuestion]
+    if (currentQuestionData) {
+      return `${test.sections[currentSection].id}-${currentQuestionData.id}`
+    }
+    return ""
+  }
+
+  const getCurrentAnswer = () => {
+    const questionKey = getCurrentQuestionKey()
+    return answers[questionKey] || ""
   }
 
   const handleNextQuestion = () => {
@@ -488,8 +516,8 @@ export default function TakeTestPage() {
       test.sections.forEach((section) => {
         section.questions.forEach((question) => {
           totalPoints += question.points
-
-          const userAnswer = answers[question.id]
+          const questionKey = `${section.id}-${question.id}`
+          const userAnswer = answers[questionKey]
           let isCorrect = false
 
           if (question.type === "Multiple Choice" && userAnswer === question.correctAnswer) {
@@ -514,15 +542,16 @@ export default function TakeTestPage() {
         invitationId: invitation._id,
         testId: test._id,
         testName: test.name,
-        candidateName: invitation.email.split("@")[0], // Simplified for demo
+        candidateName: invitation.email.split("@")[0],
         candidateEmail: invitation.email,
         score,
         status,
         duration: durationInMinutes,
         answers: answersWithDetails,
         tabSwitchCount: tabSwitchCount,
-        resultsDeclared: false, // Default to false - results not declared yet
-        isPreview: isPreviewMode, // Flag to indicate if this is a preview result
+        terminated: testTerminated,
+        resultsDeclared: false,
+        isPreview: isPreviewMode,
       }
 
       // Submit result - use different endpoint for preview
@@ -579,12 +608,10 @@ export default function TakeTestPage() {
     test.sections.forEach((section) => {
       totalQuestions += section.questions.length
       section.questions.forEach((question) => {
-        if (
-          answers[question.id] &&
-          (typeof answers[question.id] === "string"
-            ? answers[question.id] !== ""
-            : (answers[question.id] as string[]).length > 0)
-        ) {
+        const questionKey = `${section.id}-${question.id}`
+        const answer = answers[questionKey]
+
+        if (answer && (typeof answer === "string" ? answer.trim() !== "" : answer.length > 0)) {
           answeredQuestions++
         }
       })
@@ -942,6 +969,30 @@ export default function TakeTestPage() {
     return newArray
   }
 
+  // Test termination check
+  if (testTerminated) {
+    return (
+      <div className="container mx-auto py-6">
+        <Toaster position="top-center" />
+        <div className="max-w-3xl mx-auto">
+          <Card>
+            <CardContent className="py-10 text-center">
+              <AlertTriangle className="h-16 w-16 mx-auto text-red-500 mb-4" />
+              <h1 className="text-2xl font-bold text-red-600 mb-2">Test Terminated</h1>
+              <p className="text-muted-foreground mb-4">
+                Your test has been terminated due to excessive tab switching violations ({tabSwitchCount}/4).
+              </p>
+              <p className="text-sm text-muted-foreground mb-6">
+                Your current progress has been saved and submitted automatically.
+              </p>
+              <Button onClick={() => router.push("/")}>Return to Home</Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-6">
@@ -1081,35 +1132,37 @@ export default function TakeTestPage() {
           {test.name}
         </h1>
 
-        <div className="mb-6 flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              setVerificationStep("system")
-              setShowSystemCheck(true)
-            }}
-          >
-            Preview System Check
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setVerificationStep("id")
-              setShowIdVerification(true)
-            }}
-          >
-            Preview ID Verification
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setVerificationStep("rules")
-              setShowRules(true)
-            }}
-          >
-            Preview Exam Rules
-          </Button>
-        </div>
+        {isPreviewMode && (
+          <div className="mb-6 flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setVerificationStep("system")
+                setShowSystemCheck(true)
+              }}
+            >
+              Preview System Check
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setVerificationStep("id")
+                setShowIdVerification(true)
+              }}
+            >
+              Preview ID Verification
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setVerificationStep("rules")
+                setShowRules(true)
+              }}
+            >
+              Preview Exam Rules
+            </Button>
+          </div>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
@@ -1170,7 +1223,10 @@ export default function TakeTestPage() {
                     <li>Answer all questions to the best of your ability.</li>
                     <li>Your webcam will remain active during the test for proctoring purposes.</li>
                     {test.settings.preventTabSwitching && (
-                      <li>Switching tabs or leaving the test page is not allowed and will be recorded.</li>
+                      <li className="text-amber-600">
+                        Switching tabs or leaving the test page is not allowed and will be recorded. After 4 violations,
+                        your test will be automatically terminated.
+                      </li>
                     )}
                     {test.settings.autoSubmit && (
                       <li>The test will be automatically submitted when the time expires.</li>
@@ -1178,6 +1234,11 @@ export default function TakeTestPage() {
                     {test.settings.shuffleQuestions && <li>Questions are presented in random order.</li>}
                     {test.settings.allowCalculator && (
                       <li>A scientific calculator tool is available during the test.</li>
+                    )}
+                    {test.settings.allowCodeEditor && (
+                      <li>
+                        An advanced code editor with compile and run functionality is available for coding questions.
+                      </li>
                     )}
                   </ul>
                 </div>
@@ -1207,80 +1268,173 @@ export default function TakeTestPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-mono">{formatTime(timeLeft)}</span>
+                        <span className={`font-mono ${timeLeft < 300 ? "text-red-500" : ""}`}>
+                          {formatTime(timeLeft)}
+                        </span>
+                        {tabSwitchCount > 0 && (
+                          <div className="flex items-center gap-1 text-amber-600">
+                            <AlertTriangle className="h-4 w-4" />
+                            <span className="text-sm">{tabSwitchCount}/4</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
                     {test.sections[currentSection]?.questions[currentQuestion] ? (
                       <div className="space-y-6">
-                        <div>
-                          <h3 className="text-lg font-medium mb-4">
-                            {currentQuestion + 1}. {test.sections[currentSection].questions[currentQuestion].text}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            {test.sections[currentSection].questions[currentQuestion].points} points
-                          </p>
-                        </div>
+                        {/* Coding Question Layout */}
+                        {test.sections[currentSection].questions[currentQuestion].type === "Coding" && (
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Problem Description Panel */}
+                            <div className="space-y-4">
+                              <div className="p-4 border rounded-lg bg-muted/50">
+                                <h3 className="text-lg font-medium mb-4">
+                                  Problem {currentQuestion + 1}:{" "}
+                                  {test.sections[currentSection].questions[currentQuestion].text}
+                                </h3>
+                                <div className="space-y-3">
+                                  <div>
+                                    <h4 className="font-medium text-sm">Description</h4>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      Solve the given problem using{" "}
+                                      {test.sections[currentSection].questions[currentQuestion].codeLanguage}.
+                                    </p>
+                                  </div>
 
-                        {test.sections[currentSection].questions[currentQuestion].type === "Multiple Choice" && (
-                          <div className="space-y-3">
-                            {test.sections[currentSection].questions[currentQuestion].options?.map((option, index) => (
-                              <div key={index} className="flex items-center space-x-2">
-                                <input
-                                  type="radio"
-                                  id={`option-${index}`}
-                                  name={`question-${test.sections[currentSection].questions[currentQuestion].id}`}
-                                  value={option}
-                                  checked={
-                                    answers[test.sections[currentSection].questions[currentQuestion].id] === option
-                                  }
-                                  onChange={() =>
-                                    handleAnswer(test.sections[currentSection].questions[currentQuestion].id, option)
-                                  }
-                                  className="h-4 w-4 text-primary focus:ring-primary border-input"
-                                />
-                                <label htmlFor={`option-${index}`} className="text-sm font-medium">
-                                  {option}
-                                </label>
+                                  <div>
+                                    <h4 className="font-medium text-sm">Points</h4>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {test.sections[currentSection].questions[currentQuestion].points} points
+                                    </p>
+                                  </div>
+
+                                  {test.sections[currentSection].questions[currentQuestion].testCases &&
+                                    test.sections[currentSection].questions[currentQuestion].testCases!.length > 0 && (
+                                      <div>
+                                        <h4 className="font-medium text-sm mb-2">Example Test Cases</h4>
+                                        <div className="space-y-2">
+                                          {test.sections[currentSection].questions[currentQuestion]
+                                            .testCases!.filter((tc: any) => !tc.isHidden)
+                                            .slice(0, 2)
+                                            .map((testCase: any, index: number) => (
+                                              <div key={index} className="p-2 bg-background rounded border text-xs">
+                                                <div className="grid grid-cols-2 gap-2">
+                                                  <div>
+                                                    <span className="font-medium">Input:</span>
+                                                    <pre className="mt-1 text-muted-foreground">
+                                                      {testCase.input || "No input"}
+                                                    </pre>
+                                                  </div>
+                                                  <div>
+                                                    <span className="font-medium">Output:</span>
+                                                    <pre className="mt-1 text-muted-foreground">
+                                                      {testCase.expectedOutput}
+                                                    </pre>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                  <div>
+                                    <h4 className="font-medium text-sm">Constraints</h4>
+                                    <ul className="text-xs text-muted-foreground mt-1 space-y-1">
+                                      <li>• Time limit: 5 seconds</li>
+                                      <li>• Memory limit: 512 MB</li>
+                                      <li>• Use standard input/output</li>
+                                    </ul>
+                                  </div>
+                                </div>
                               </div>
-                            ))}
+                            </div>
+
+                            {/* Code Editor Panel */}
+                            <div className="space-y-4">
+                              {test.settings.allowCodeEditor ? (
+                                <div className="h-[600px] overflow-hidden">
+                                  <AdvancedCodeEditor
+                                    value={
+                                      (getCurrentAnswer() as string) ||
+                                      test.sections[currentSection].questions[currentQuestion].codeTemplate ||
+                                      ""
+                                    }
+                                    onChange={(value) => handleAnswer(getCurrentQuestionKey(), value)}
+                                    language={
+                                      test.sections[currentSection].questions[currentQuestion].codeLanguage ||
+                                      "javascript"
+                                    }
+                                    height="100%"
+                                    showConsole={true}
+                                    testCases={test.sections[currentSection].questions[currentQuestion].testCases || []}
+                                  />
+                                </div>
+                              ) : (
+                                <div className="border rounded-md overflow-hidden">
+                                  <div className="bg-muted p-2 border-b">
+                                    <span className="text-sm font-medium">Code Editor</span>
+                                  </div>
+                                  <textarea
+                                    rows={20}
+                                    placeholder="// Write your code here"
+                                    className="w-full p-2 font-mono text-sm bg-black text-white resize-none"
+                                    value={
+                                      (getCurrentAnswer() as string) ||
+                                      test.sections[currentSection].questions[currentQuestion].codeTemplate ||
+                                      ""
+                                    }
+                                    onChange={(e) => handleAnswer(getCurrentQuestionKey(), e.target.value)}
+                                  ></textarea>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
 
-                        {test.sections[currentSection].questions[currentQuestion].type === "Written Answer" && (
-                          <textarea
-                            rows={5}
-                            placeholder="Type your answer here..."
-                            className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                            value={
-                              (answers[test.sections[currentSection].questions[currentQuestion].id] as string) || ""
-                            }
-                            onChange={(e) =>
-                              handleAnswer(test.sections[currentSection].questions[currentQuestion].id, e.target.value)
-                            }
-                          ></textarea>
-                        )}
+                        {/* Regular Question Layout for Non-Coding Questions */}
+                        {test.sections[currentSection].questions[currentQuestion].type !== "Coding" && (
+                          <div>
+                            <h3 className="text-lg font-medium mb-4">
+                              {currentQuestion + 1}. {test.sections[currentSection].questions[currentQuestion].text}
+                            </h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                              {test.sections[currentSection].questions[currentQuestion].points} points
+                            </p>
 
-                        {test.sections[currentSection].questions[currentQuestion].type === "Coding" && (
-                          <div className="border rounded-md overflow-hidden">
-                            <div className="bg-muted p-2 border-b">
-                              <span className="text-sm font-medium">Code Editor</span>
-                            </div>
-                            <textarea
-                              rows={10}
-                              placeholder="// Write your code here"
-                              className="w-full p-2 font-mono text-sm bg-black text-white"
-                              value={
-                                (answers[test.sections[currentSection].questions[currentQuestion].id] as string) || ""
-                              }
-                              onChange={(e) =>
-                                handleAnswer(
-                                  test.sections[currentSection].questions[currentQuestion].id,
-                                  e.target.value,
-                                )
-                              }
-                            ></textarea>
+                            {test.sections[currentSection].questions[currentQuestion].type === "Multiple Choice" && (
+                              <div className="space-y-3">
+                                {test.sections[currentSection].questions[currentQuestion].options
+                                  ?.filter((option) => option.trim() !== "")
+                                  .map((option, index) => (
+                                    <div key={index} className="flex items-center space-x-2">
+                                      <input
+                                        type="radio"
+                                        id={`option-${index}`}
+                                        name={`question-${getCurrentQuestionKey()}`}
+                                        value={option}
+                                        checked={getCurrentAnswer() === option}
+                                        onChange={() => handleAnswer(getCurrentQuestionKey(), option)}
+                                        className="h-4 w-4 text-primary focus:ring-primary border-input"
+                                      />
+                                      <label htmlFor={`option-${index}`} className="text-sm font-medium">
+                                        {option}
+                                      </label>
+                                    </div>
+                                  ))}
+                              </div>
+                            )}
+
+                            {test.sections[currentSection].questions[currentQuestion].type === "Written Answer" && (
+                              <textarea
+                                rows={5}
+                                placeholder="Type your answer here..."
+                                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                                value={(getCurrentAnswer() as string) || ""}
+                                onChange={(e) => handleAnswer(getCurrentQuestionKey(), e.target.value)}
+                              ></textarea>
+                            )}
                           </div>
                         )}
 
@@ -1310,12 +1464,6 @@ export default function TakeTestPage() {
                         <p className="text-muted-foreground mb-4">
                           This section doesn't have any questions yet. Add questions in the test editor.
                         </p>
-                        <Button
-                          variant="outline"
-                          onClick={() => router.push(`/employee/assessment/tests/${test._id}/edit`)}
-                        >
-                          Edit Test
-                        </Button>
                       </div>
                     )}
                   </CardContent>
@@ -1343,27 +1491,33 @@ export default function TakeTestPage() {
                           <div key={section.id} className="space-y-1">
                             <h5 className="text-xs font-medium text-muted-foreground">{section.title}</h5>
                             <div className="flex flex-wrap gap-1">
-                              {section.questions.map((question, qIndex) => (
-                                <button
-                                  key={question.id}
-                                  onClick={() => {
-                                    setCurrentSection(sIndex)
-                                    setCurrentQuestion(qIndex)
-                                  }}
-                                  className={`w-6 h-6 text-xs flex items-center justify-center rounded-sm ${
-                                    currentSection === sIndex && currentQuestion === qIndex
-                                      ? "bg-primary text-primary-foreground"
-                                      : answers[question.id] &&
-                                          (typeof answers[question.id] === "string"
-                                            ? answers[question.id] !== ""
-                                            : (answers[question.id] as string[]).length > 0)
-                                        ? "bg-muted-foreground/20"
-                                        : "bg-muted"
-                                  }`}
-                                >
-                                  {qIndex + 1}
-                                </button>
-                              ))}
+                              {section.questions.map((question, qIndex) => {
+                                const questionKey = `${section.id}-${question.id}`
+                                const isAnswered =
+                                  answers[questionKey] &&
+                                  (typeof answers[questionKey] === "string"
+                                    ? (answers[questionKey] as string).trim() !== ""
+                                    : (answers[questionKey] as string[]).length > 0)
+
+                                return (
+                                  <button
+                                    key={question.id}
+                                    onClick={() => {
+                                      setCurrentSection(sIndex)
+                                      setCurrentQuestion(qIndex)
+                                    }}
+                                    className={`w-6 h-6 text-xs flex items-center justify-center rounded-sm ${
+                                      currentSection === sIndex && currentQuestion === qIndex
+                                        ? "bg-primary text-primary-foreground"
+                                        : isAnswered
+                                          ? "bg-green-100 text-green-800"
+                                          : "bg-muted"
+                                    }`}
+                                  >
+                                    {qIndex + 1}
+                                  </button>
+                                )
+                              })}
                             </div>
                           </div>
                         ))}
@@ -1810,7 +1964,12 @@ export default function TakeTestPage() {
             </DialogHeader>
             <div className="py-4">
               <p>You have switched tabs or left the test window. This activity is recorded and may affect your test.</p>
-              <p className="mt-2 font-medium">Tab switches detected: {tabSwitchCount}</p>
+              <p className="mt-2 font-medium">Tab switches detected: {tabSwitchCount}/4</p>
+              {tabSwitchCount >= 3 && (
+                <p className="mt-2 text-red-600 font-medium">
+                  Warning: One more violation will result in automatic test termination!
+                </p>
+              )}
             </div>
             <div className="flex justify-end">
               <Button onClick={() => setShowTabWarning(false)}>Continue Test</Button>

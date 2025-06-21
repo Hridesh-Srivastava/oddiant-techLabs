@@ -88,6 +88,11 @@
     width: 10px;
   }
 
+  ::selection {
+  background: #dc1212;
+  color: #fffbfb; 
+}
+
   ::-webkit-scrollbar-track {
     @apply bg-zinc-900;
   }
