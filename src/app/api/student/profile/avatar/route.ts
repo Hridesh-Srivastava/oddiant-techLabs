@@ -47,9 +47,9 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(await avatarFile.arrayBuffer())
 
     // Upload to Cloudinary
-    const uploadResult = await uploadToCloudinary(buffer, {
+    const uploadResult = (await uploadToCloudinary(buffer, {
       folder: "student_avatars",
-    })
+    })) as any
 
     // Connect to database
     const { db } = await connectToDatabase()
