@@ -3,7 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb"
 import { getUserFromRequest } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     // Get user ID from request
     const userId = await getUserFromRequest(request)
@@ -12,7 +12,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
     }
 
-    const candidateId = params.id
+    // Await the params since they're now a Promise in newer Next.js versions
+    const { id: candidateId } = await context.params
 
     // Connect to database
     const { db } = await connectToDatabase()
