@@ -30,14 +30,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       return NextResponse.json({ message: "Employee not found" }, { status: 404 })
     }
 
-    // Create comment object with consistent structure
-    const commentObject = {
-      text: comment,
-      createdAt: new Date(),
-      createdBy: new ObjectId(userId),
-      jobId: jobId ? new ObjectId(jobId) : null,
-    }
-
     // Update candidate with comment
     const result = await db.collection("candidates").updateOne(
       { _id: new ObjectId(candidateId) },
@@ -47,7 +39,12 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
           updatedAt: new Date(),
         },
         $push: {
-          comments: commentObject,
+          comments: {
+            text: comment,
+            createdAt: new Date(),
+            createdBy: new ObjectId(userId),
+            jobId: jobId ? new ObjectId(jobId) : null,
+          } as any,
         },
       },
     )
@@ -65,13 +62,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       })
 
       if (application) {
-        // Create comment object for job application (without jobId since it's redundant)
-        const applicationCommentObject = {
-          text: comment,
-          createdAt: new Date(),
-          createdBy: new ObjectId(userId),
-        }
-
         // Update existing application
         await db.collection("job_applications").updateOne(
           { _id: application._id },
@@ -81,7 +71,11 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
               updatedAt: new Date(),
             },
             $push: {
-              comments: applicationCommentObject,
+              comments: {
+                text: comment,
+                createdAt: new Date(),
+                createdBy: new ObjectId(userId),
+              } as any,
             },
           },
         )
