@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Toaster } from "sonner"
 import { ArrowLeft, Briefcase, Building, Calendar, MapPin, AlertTriangle } from "lucide-react"
+import { use } from "react"
 
 interface Application {
   _id: string
@@ -32,8 +33,10 @@ interface Application {
   }
 }
 
-export default function ApplicationDetailsPage({ params }: { params: { id: string } }) {
+export default function ApplicationDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
+  const resolvedParams = use(params)
+  const applicationId = resolvedParams.id
   const [application, setApplication] = useState<Application | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -44,7 +47,7 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
         setIsLoading(true)
         setError(null)
 
-        const response = await fetch(`/api/student/applications/${params.id}`, {
+        const response = await fetch(`/api/student/applications/${applicationId}`, {
           cache: "no-store",
           headers: {
             "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -78,7 +81,7 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
     }
 
     fetchApplicationDetails()
-  }, [params.id, router])
+  }, [applicationId, router])
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
