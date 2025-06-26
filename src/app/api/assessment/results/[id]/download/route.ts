@@ -67,7 +67,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       console.log("Test not found, creating fallback Excel with basic result data")
 
       try {
-        const fallbackBuffer = await createFallbackAssessmentExcel(result)
+        const fallbackBuffer = await createFallbackAssessmentExcel(result as any)
         const filename = `assessment-result-${result.candidateName || "candidate"}-fallback-${new Date().toISOString().split("T")[0]}.xlsx`
 
         return new NextResponse(fallbackBuffer, {
