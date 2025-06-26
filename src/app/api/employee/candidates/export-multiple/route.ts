@@ -394,7 +394,7 @@ export async function POST(request: NextRequest) {
           .getColumn(column.key)
           .values.filter((value) => value !== undefined && value !== null)
           .map((value) => {
-            const strValue = value.toString() || ""
+            const strValue = (value?.toString() || "")
             // For multiline text, get the longest line
             if (strValue.includes("\n")) {
               return Math.max(...strValue.split("\n").map((line) => line.length))
