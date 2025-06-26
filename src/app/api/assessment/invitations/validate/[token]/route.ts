@@ -1,9 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 
-export async function GET(request: NextRequest, { params }: { params: { token: string } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ token: string }> }) {
   try {
-    const token = params.token
+    // Await the params since they're now a Promise in newer Next.js versions
+    const { token } = await context.params
 
     // Connect to database
     const { db } = await connectToDatabase()
