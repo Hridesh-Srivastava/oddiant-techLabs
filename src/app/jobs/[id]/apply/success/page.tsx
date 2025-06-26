@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button"
 import { CheckCircle, ArrowLeft, Home } from "lucide-react"
 import { use } from "react"
 
-export default function ApplicationSuccessPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
-  // Unwrap params if it's a Promise
-  const resolvedParams = "then" in params ? use(params) : params
+export default function ApplicationSuccessPage({ params }: { params: Promise<{ id: string }> }) {
+  // Unwrap params Promise
+  const resolvedParams = use(params)
   const router = useRouter()
   const jobId = resolvedParams.id
   const [job, setJob] = useState<any>(null)
