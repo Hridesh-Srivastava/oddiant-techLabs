@@ -141,7 +141,7 @@ The Oddiant Techlabs Team`,
       )
 
       // Get readable rejection reason
-      const rejectionReasonMap = {
+      const rejectionReasonMap: Record<string, string> = {
         incomplete_information: "Incomplete Information",
         document_error: "Document Error or Invalid Documents",
         company_verification_failed: "Company Verification Failed",
@@ -151,7 +151,7 @@ The Oddiant Techlabs Team`,
         other: "Other",
       }
 
-      const readableReason = rejectionReasonMap[rejectionReason] || rejectionReason
+      const readableReason = rejectionReasonMap[rejectionReason as string] || rejectionReason
 
       // Send rejection email to employee
       try {
