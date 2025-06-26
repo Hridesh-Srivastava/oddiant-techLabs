@@ -2,8 +2,11 @@ import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
+    // Await the params as they're now Promise-based in Next.js 15
+    const params = await context.params
+    
     const jobId = params.id
     const { searchParams } = new URL(request.url)
     const invitationToken = searchParams.get("invitation")
@@ -73,8 +76,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
+    // Await the params as they're now Promise-based in Next.js 15
+    const params = await context.params
+    
     const jobId = params.id
 
     // Connect to database
