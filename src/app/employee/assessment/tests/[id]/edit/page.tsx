@@ -879,7 +879,6 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
                   setQuestionForm({ ...questionForm, codeTemplate: value })
                 }
                 language={questionForm.codeLanguage || "javascript"}
-                height="300px"
                 showConsole={false}
               />
             </div>
