@@ -82,7 +82,7 @@ export async function PUT(request: NextRequest) {
               date: new Date(),
               note: comment || `Status updated to ${status}`,
             },
-          },
+          } as any,
         },
       )
     }
