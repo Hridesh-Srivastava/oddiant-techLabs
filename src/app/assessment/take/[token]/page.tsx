@@ -2324,7 +2324,7 @@ export default function TakeTestPage() {
                               className={`w-2 h-2 rounded-full ${
                                 webcamStatus === "active"
                                   ? "bg-green-500"
-                                  : webcamStatus === "requesting"
+                                  : webcamStatus === ("requesting" as any)
                                     ? "bg-yellow-500 animate-pulse"
                                     : webcamStatus === "error"
                                       ? "bg-red-500"
@@ -2451,9 +2451,9 @@ export default function TakeTestPage() {
                                   size="sm"
                                   onClick={startWebcam}
                                   className="mt-2 bg-white text-black hover:bg-gray-200"
-                                  disabled={webcamStatus === "requesting"}
+                                  disabled={webcamStatus === ("requesting" as any)}
                                 >
-                                  {webcamStatus === "requesting" ? "Starting..." : "Try Again"}
+                                  {webcamStatus === ("requesting" as any) ? "Starting..." : "Try Again"}
                                 </Button>
                               </>
                             )}
