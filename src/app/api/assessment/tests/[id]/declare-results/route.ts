@@ -203,8 +203,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     )
   } catch (error) {
     console.error("=== Bulk Declaration Error ===")
-    console.error("Error details:", error)
-    console.error("Stack trace:", error.stack)
+    console.error("Error details:", error as Error)
+    console.error("Stack trace:", (error as Error).stack)
     return NextResponse.json(
       {
         success: false,
