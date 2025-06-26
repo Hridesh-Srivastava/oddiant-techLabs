@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     // Find employee to verify
     const employee = await db.collection("employees").findOne({
-      _id: new ObjectId(userId),
+      $or: [{ _id: new ObjectId(userId) }, { _id: userId }],
     })
 
     if (!employee) {
@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
         $or: [
           { employerId: new ObjectId(userId) },
           { companyId: companyId },
+          { employerId: userId },
           { companyId: new ObjectId(companyId) },
         ],
       })
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
     console.log(`Found ${applications.length} applications for employee's jobs`)
 
     // Step 3: Extract all unique applicant IDs from applications
-    const allApplicantIds = new Set()
+    const allApplicantIds = new Set<string>()
 
     applications.forEach((app) => {
       if (app.candidateId) {
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
 
     // Step 4: Convert to ObjectIds for database queries
     const applicantObjectIds = Array.from(allApplicantIds)
-      .map((id) => {
+      .map((id: string) => {
         try {
           return new ObjectId(id)
         } catch (error) {
@@ -112,6 +113,7 @@ export async function GET(request: NextRequest) {
         $or: [
           { employerId: new ObjectId(userId) },
           { companyId: companyId },
+          { employerId: userId },
           { companyId: new ObjectId(companyId) },
         ],
       })
@@ -127,6 +129,7 @@ export async function GET(request: NextRequest) {
         $or: [
           { employerId: new ObjectId(userId) },
           { companyId: companyId },
+          { employerId: userId },
           { companyId: new ObjectId(companyId) },
         ],
       })
