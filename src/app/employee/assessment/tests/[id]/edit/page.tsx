@@ -892,7 +892,7 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
                 size="sm"
                 onClick={() => {
                   const newTestCase = {
-                    id: (questionForm.testCases?.length + 1).toString(),
+                   id: ((questionForm.testCases?.length || 0) + 1).toString(),
                     input: "",
                     expectedOutput: "",
                     isHidden: false,
