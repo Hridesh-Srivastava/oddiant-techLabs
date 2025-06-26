@@ -4,7 +4,7 @@ import { getUserFromRequest } from "@/lib/auth"
 import { generateAssessmentResultExcel, createFallbackAssessmentExcel } from "@/lib/assessment-excel"
 import { ObjectId } from "mongodb"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     console.log("=== Starting Assessment Excel Download Process ===")
 
@@ -16,7 +16,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
     }
 
-    const resultId = params.id
+    // Await the params since they're now a Promise in newer Next.js versions
+    const { id: resultId } = await context.params
     console.log("Download requested for result ID:", resultId)
 
     // Validate ObjectId format
