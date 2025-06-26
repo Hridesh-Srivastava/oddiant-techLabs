@@ -98,7 +98,7 @@ export default function VerifyPage() {
 
       // For employees, redirect to pending approval page
       if (data.pendingApproval) {
-        router.push(`/auth/verify-pending?email=${encodeURIComponent(email)}&userType=${userType}`)
+        router.push(`/auth/verify-pending?email=${encodeURIComponent(email || "")}&userType=${userType}`)
       } else {
         // For students, redirect to login
         router.push(userType === "employee" ? "/auth/employee/login" : "/auth/login")
