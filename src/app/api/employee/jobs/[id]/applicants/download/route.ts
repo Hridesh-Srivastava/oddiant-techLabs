@@ -8,7 +8,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   try {
     // Await the params as they're now Promise-based in Next.js 15
     const params = await context.params
-    
+
     // Get user ID from request
     const userId = await getUserFromRequest(request)
 
@@ -364,7 +364,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         // For students collection, build from currentCity and currentState
         const city = candidate.currentCity || ""
         const state = candidate.currentState || ""
-        
+
         if (city && state) {
           return `${city}, ${state}`
         } else if (city) {
@@ -372,7 +372,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         } else if (state) {
           return state
         }
-        
+
         // Fallback to location field if exists
         return candidate.location || ""
       } else {
@@ -393,64 +393,68 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         onlinePresence: candidate.onlinePresence,
         linkedIn: candidate.linkedIn,
         coverLetter: candidate.coverLetter,
-        additionalInfo: candidate.additionalInfo
+        additionalInfo: candidate.additionalInfo,
       })
 
       // Normalize candidate data based on source
-      const normalizedCandidate = candidate.source === "students" 
-        ? {
-            ...candidate,
-            // Map student-specific field names to candidate field names
-            name: candidate.name || `${candidate.firstName || ""} ${candidate.lastName || ""}`.trim(),
-            currentPosition: candidate.currentPosition || (candidate.experience && candidate.experience[0]?.title),
-            role: candidate.role || (candidate.experience && candidate.experience[0]?.title),
-            workExperience: candidate.workExperience || candidate.experience,
-            yearsOfExperience: candidate.yearsOfExperience || candidate.totalExperience,
-            
-            // FIXED: Properly handle location fields for students
-            location: buildCurrentLocation(candidate),
-            currentCity: candidate.currentCity || "",
-            currentState: candidate.currentState || "",
-            
-            // Handle different field names for preferred cities
-            preferredCities: candidate.preferredCities || candidate.preferenceCities || [],
-            
-            // Handle different field names for date of birth
-            dateOfBirth: candidate.dateOfBirth || candidate.dob,
-            
-            // Handle nested document URLs from students collection
-            resumeUrl: candidate.resumeUrl || getNestedProperty(candidate, "documents.resume.url"),
-            videoResumeUrl: candidate.videoResumeUrl || getNestedProperty(candidate, "documents.videoResume.url"),
-            audioBiodataUrl: candidate.audioBiodataUrl || getNestedProperty(candidate, "documents.audioBiodata.url"),
-            photographUrl: candidate.photographUrl || getNestedProperty(candidate, "documents.photograph.url") || candidate.avatar,
-            
-            // FIXED: Handle online presence from students collection
-            portfolioLink: candidate.portfolioLink || getNestedProperty(candidate, "onlinePresence.portfolio"),
-            socialMediaLink: candidate.socialMediaLink || getNestedProperty(candidate, "onlinePresence.socialMedia"),
-            linkedIn: candidate.linkedIn || getNestedProperty(candidate, "onlinePresence.linkedin"),
-            
-            // FIXED: Handle cover letter and additional info from students collection
-            coverLetter: candidate.coverLetter || "",
-            additionalInfo: candidate.additionalInfo || "",
-            
-            // Handle assets and documents from students collection
-            availableAssets: getAvailableAssetsFromStudent(candidate),
-            identityDocuments: getIdentityDocumentsFromStudent(candidate),
-            
-            // Handle salary and notice period from students collection
-            currentSalary: candidate.currentSalary || (candidate.experience && candidate.experience[0]?.currentSalary),
-            expectedSalary: candidate.expectedSalary || (candidate.experience && candidate.experience[0]?.expectedSalary),
-            noticePeriod: candidate.noticePeriod || (candidate.experience && candidate.experience[0]?.noticePeriod),
-          }
-        : {
-            ...candidate,
-            // For candidates collection, ensure location is properly set
-            location: candidate.location || buildCurrentLocation(candidate),
-            // Ensure other fields are properly mapped for candidates too
-            linkedIn: candidate.linkedIn || candidate.linkedin || "",
-            coverLetter: candidate.coverLetter || "",
-            additionalInfo: candidate.additionalInfo || "",
-          }
+      const normalizedCandidate =
+        candidate.source === "students"
+          ? {
+              ...candidate,
+              // Map student-specific field names to candidate field names
+              name: candidate.name || `${candidate.firstName || ""} ${candidate.lastName || ""}`.trim(),
+              currentPosition: candidate.currentPosition || (candidate.experience && candidate.experience[0]?.title),
+              role: candidate.role || (candidate.experience && candidate.experience[0]?.title),
+              workExperience: candidate.workExperience || candidate.experience,
+              yearsOfExperience: candidate.yearsOfExperience || candidate.totalExperience,
+
+              // FIXED: Properly handle location fields for students
+              location: buildCurrentLocation(candidate),
+              currentCity: candidate.currentCity || "",
+              currentState: candidate.currentState || "",
+
+              // Handle different field names for preferred cities
+              preferredCities: candidate.preferredCities || candidate.preferenceCities || [],
+
+              // Handle different field names for date of birth
+              dateOfBirth: candidate.dateOfBirth || candidate.dob,
+
+              // Handle nested document URLs from students collection
+              resumeUrl: candidate.resumeUrl || getNestedProperty(candidate, "documents.resume.url"),
+              videoResumeUrl: candidate.videoResumeUrl || getNestedProperty(candidate, "documents.videoResume.url"),
+              audioBiodataUrl: candidate.audioBiodataUrl || getNestedProperty(candidate, "documents.audioBiodata.url"),
+              photographUrl:
+                candidate.photographUrl || getNestedProperty(candidate, "documents.photograph.url") || candidate.avatar,
+
+              // FIXED: Handle online presence from students collection
+              portfolioLink: candidate.portfolioLink || getNestedProperty(candidate, "onlinePresence.portfolio"),
+              socialMediaLink: candidate.socialMediaLink || getNestedProperty(candidate, "onlinePresence.socialMedia"),
+              linkedIn: candidate.linkedIn || getNestedProperty(candidate, "onlinePresence.linkedin"),
+
+              // FIXED: Handle cover letter and additional info from students collection
+              coverLetter: candidate.coverLetter || "",
+              additionalInfo: candidate.additionalInfo || "",
+
+              // Handle assets and documents from students collection
+              availableAssets: getAvailableAssetsFromStudent(candidate),
+              identityDocuments: getIdentityDocumentsFromStudent(candidate),
+
+              // Handle salary and notice period from students collection
+              currentSalary:
+                candidate.currentSalary || (candidate.experience && candidate.experience[0]?.currentSalary),
+              expectedSalary:
+                candidate.expectedSalary || (candidate.experience && candidate.experience[0]?.expectedSalary),
+              noticePeriod: candidate.noticePeriod || (candidate.experience && candidate.experience[0]?.noticePeriod),
+            }
+          : {
+              ...candidate,
+              // For candidates collection, ensure location is properly set
+              location: candidate.location || buildCurrentLocation(candidate),
+              // Ensure other fields are properly mapped for candidates too
+              linkedIn: candidate.linkedIn || candidate.linkedin || "",
+              coverLetter: candidate.coverLetter || "",
+              additionalInfo: candidate.additionalInfo || "",
+            }
 
       // Get salary and notice period from top level or work experience
       let currentSalary = normalizedCandidate.currentSalary || ""
@@ -514,7 +518,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         location: normalizedCandidate.location,
         linkedIn: normalizedCandidate.linkedIn,
         coverLetter: normalizedCandidate.coverLetter,
-        additionalInfo: normalizedCandidate.additionalInfo
+        additionalInfo: normalizedCandidate.additionalInfo,
       })
 
       // Add comprehensive row to worksheet
@@ -616,7 +620,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
           .getColumn(column.key)
           .values.filter((value) => value !== undefined && value !== null)
           .map((value) => {
-            const strValue = value.toString() || ""
+            const strValue = value?.toString() || ""
             // For multiline text, get the longest line
             if (strValue.includes("\n")) {
               return Math.max(...strValue.split("\n").map((line) => line.length))
