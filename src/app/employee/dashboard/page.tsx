@@ -136,11 +136,11 @@ interface DashboardStats {
 
 // Define props interface for EmployeeDashboard
 interface EmployeeDashboardProps {
-  userData: Employee | null
+  userData?: Employee | null
 }
 
 // Main component with typed props
-function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
+function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tabParam = searchParams.get("tab")
@@ -162,45 +162,36 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
   }
 
   // Pagination UI component
-  const PaginationControls = ({ 
-    currentPage, 
-    totalItems, 
-    onPageChange 
-  }: { 
-    currentPage: number, 
-    totalItems: number, 
-    onPageChange: (page: number) => void 
+  const PaginationControls = ({
+    currentPage,
+    totalItems,
+    onPageChange,
+  }: {
+    currentPage: number
+    totalItems: number
+    onPageChange: (page: number) => void
   }) => {
     const totalPages = calculateTotalPages(totalItems)
-    
+
     return (
       <div className="flex items-center justify-center space-x-2 mt-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-        >
+        <Button variant="outline" size="sm" onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1}>
           <ChevronLeft className="h-4 w-4 ml-1" />
           Previous
         </Button>
-        
+
         {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
           <Button
             key={pageNum}
             variant="outline"
             size="sm"
             onClick={() => onPageChange(pageNum)}
-            className={`${
-              pageNum === currentPage 
-                ? "bg-blue-500 text-white hover:bg-blue-600" 
-                : "hover:bg-gray-100"
-            }`}
+            className={`${pageNum === currentPage ? "bg-blue-500 text-white hover:bg-blue-600" : "hover:bg-gray-100"}`}
           >
             {pageNum}
           </Button>
         ))}
-        
+
         <Button
           variant="outline"
           size="sm"
@@ -1541,7 +1532,7 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
       return searchFields.some((field) => field.toString().toLowerCase().includes(searchLower))
     })
 
-    console.log(`🎯 Search results: ${filtered.length} matches found`)
+    console.log(`Search results: ${filtered.length} matches found`)
     setAtsFilteredResumes(filtered)
   }, [atsSearchTerm, atsResumes])
 
@@ -2211,60 +2202,60 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
-<TabsList className="grid grid-cols-7 w-full max-w-3xl text-white mx-auto bg-gradient-to-br from-black to-black h-12 items-center">
-  <TabsTrigger 
-    value="overview" 
-    className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
-  >
-    <User size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
-    Overview
-  </TabsTrigger>
-  <TabsTrigger 
-    value="candidates" 
-    className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
-  >
-    <Users size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
-    Candidates
-  </TabsTrigger>
-  <TabsTrigger 
-    value="jobs" 
-    className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
-  >
-    <Briefcase size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
-    Jobs
-  </TabsTrigger>
-  <TabsTrigger 
-    value="interviews" 
-    className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
-  >
-    <Calendar size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
-    Interviews
-  </TabsTrigger>
-  <TabsTrigger 
-    value="ats" 
-    className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
-  >
-    <Search size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
-    ATS
-  </TabsTrigger>
-  <TabsTrigger
-    value="assessments"
-    onClick={handleAssessmentsClick}
-    className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
-  >
-    <span className="inline-flex items-center justify-center rounded-full w-8 h-8 mr-2">
-      <ClipboardCheck size={22} strokeWidth={2.5} />
-    </span>
-    Assessments
-  </TabsTrigger>
-  <TabsTrigger 
-    value="settings" 
-    className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
-  >
-    <Settings size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
-    Settings
-  </TabsTrigger>
-</TabsList>
+          <TabsList className="grid grid-cols-7 w-full max-w-3xl text-white mx-auto bg-gradient-to-br from-black to-black h-12 items-center">
+            <TabsTrigger
+              value="overview"
+              className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
+            >
+              <User size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger
+              value="candidates"
+              className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
+            >
+              <Users size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
+              Candidates
+            </TabsTrigger>
+            <TabsTrigger
+              value="jobs"
+              className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
+            >
+              <Briefcase size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
+              Jobs
+            </TabsTrigger>
+            <TabsTrigger
+              value="interviews"
+              className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
+            >
+              <Calendar size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
+              Interviews
+            </TabsTrigger>
+            <TabsTrigger
+              value="ats"
+              className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
+            >
+              <Search size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
+              ATS
+            </TabsTrigger>
+            <TabsTrigger
+              value="assessments"
+              onClick={handleAssessmentsClick}
+              className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
+            >
+              <span className="inline-flex items-center justify-center rounded-full w-8 h-8 mr-2">
+                <ClipboardCheck size={22} strokeWidth={2.5} />
+              </span>
+              Assessments
+            </TabsTrigger>
+            <TabsTrigger
+              value="settings"
+              className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
+            >
+              <Settings size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
+              Settings
+            </TabsTrigger>
+          </TabsList>
 
           <TabsContent value="overview">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -2406,10 +2397,35 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                               <p className="text-sm text-gray-500 dark:text-gray-400">
                                 {job.department} • {job.jobType} • {job.jobLocation}
                               </p>
+                              <div className="flex mt-2 space-x-4">
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  <strong>{job.applicants}</strong> Applicants
+                                </span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  <strong>{job.interviews}</strong> Interviews
+                                </span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  <strong>{job.daysLeft}</strong> Days Left
+                                </span>
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-sm font-medium">{job.applicants} Applicants</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">{job.daysLeft} days left</p>
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="bg-black text-white"
+                                onClick={() => router.push(`/employee/jobs/${job._id}`)}
+                              >
+                                View
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="bg-black text-white"
+                                onClick={() => router.push(`/employee/jobs/${job._id}/edit`)}
+                              >
+                                Edit
+                              </Button>
                             </div>
                           </div>
                         </div>
@@ -2510,7 +2526,9 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                         <div className="col-span-1 flex items-center">
                           <Checkbox
                             id="select-all"
-                            checked={selectedCandidates.length === filteredCandidates.length && filteredCandidates.length > 0}
+                            checked={
+                              selectedCandidates.length === filteredCandidates.length && filteredCandidates.length > 0
+                            }
                             onCheckedChange={(checked) => {
                               if (checked) {
                                 selectAllCandidates(filteredCandidates.map((c) => c._id))
@@ -3236,10 +3254,10 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                       <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                       <span className="font-medium">Total: {atsResumes.length}</span>
                     </div>
-                <div className="flex items-center gap-2">
-  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-  <span className="font-medium">Total Candidates: {atsResumes.length}</span>
-</div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <span className="font-medium">Total Candidates: {atsResumes.length}</span>
+                    </div>
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
                       <span className="font-medium">Filtered: {atsFilteredResumes.length}</span>
@@ -3377,15 +3395,15 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                 <CardDescription>Manage and view candidate assessments</CardDescription>
               </CardHeader>
               <CardContent>
-<div className="flex items-center space-x-2">
-  <span>Assessment dashboard is loading</span>
-  <span className="flex">
-    <span className="animate-bounce [animation-delay:0s]">.</span>
-    <span className="animate-bounce [animation-delay:0.15s]">.</span>
-    <span className="animate-bounce [animation-delay:0.3s]">.</span>
-    <span className="animate-bounce [animation-delay:0.45s]">.</span>
-  </span>
-</div>
+                <div className="flex items-center space-x-2">
+                  <span>Assessment dashboard is loading</span>
+                  <span className="flex">
+                    <span className="animate-bounce [animation-delay:0s]">.</span>
+                    <span className="animate-bounce [animation-delay:0.15s]">.</span>
+                    <span className="animate-bounce [animation-delay:0.3s]">.</span>
+                    <span className="animate-bounce [animation-delay:0.45s]">.</span>
+                  </span>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -3407,11 +3425,11 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
   )
 }
 
-// Wrap the main component with the CandidateSelectionProvider
-function EmployeeDashboardWrapper({ userData }: EmployeeDashboardProps) {
+// Replace the existing EmployeeDashboardWrapper function with:
+function EmployeeDashboardWrapper(props: any) {
   return (
     <CandidateSelectionProvider>
-      <EmployeeDashboard userData={userData} />
+      <EmployeeDashboard userData={props.userData || null} />
     </CandidateSelectionProvider>
   )
 }
