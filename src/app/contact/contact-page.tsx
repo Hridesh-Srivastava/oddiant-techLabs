@@ -155,20 +155,24 @@ ${formData.message}
     } catch (error) {
       console.error("Error submitting form:", error)
 
-      // More specific error messages
-      if (error.name === "AbortError") {
-        toast.error("Request timed out. Please check your connection and try again.")
-      } else if (error instanceof TypeError && error.message.includes("fetch")) {
-        toast.error("Network error. Please check your connection and try again.")
-        toast.error("Would you like to use your email client instead?", {
-          action: {
-            label: "Use Email",
-            onClick: () => setUseEmailFallback(true),
-          },
-          duration: 10000,
-        })
+      // More specific error messages with proper type checking
+      if (error instanceof Error) {
+        if (error.name === "AbortError") {
+          toast.error("Request timed out. Please check your connection and try again.")
+        } else if (error instanceof TypeError && error.message.includes("fetch")) {
+          toast.error("Network error. Please check your connection and try again.")
+          toast.error("Would you like to use your email client instead?", {
+            action: {
+              label: "Use Email",
+              onClick: () => setUseEmailFallback(true),
+            },
+            duration: 10000,
+          })
+        } else {
+          toast.error(error.message || "Failed to send message. Please try again.")
+        }
       } else {
-        toast.error(error instanceof Error ? error.message : "Failed to send message. Please try again.")
+        toast.error("Failed to send message. Please try again.")
       }
     } finally {
       setIsSubmitting(false)
