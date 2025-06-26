@@ -96,7 +96,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         ],
       },
       {
-        $push: { comments: newComment },
+        $push: { comments: newComment } as any,
         $set: {
           lastComment: comment.trim(),
           lastCommentDate: new Date(),
