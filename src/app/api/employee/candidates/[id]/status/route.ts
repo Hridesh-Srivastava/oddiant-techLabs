@@ -85,7 +85,7 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
                 status: status,
                 date: new Date(),
                 note: comment || `Status updated to ${status}`,
-              },
+              } as any,
             },
           },
         )
