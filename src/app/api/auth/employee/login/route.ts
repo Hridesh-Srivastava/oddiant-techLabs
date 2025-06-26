@@ -21,15 +21,21 @@ export async function POST(request: NextRequest) {
 
       if (!admin) {
         const hashedPassword = await bcrypt.hash("Hridesh123!", 10)
-        const result = await db.collection("admins").insertOne({
+        const adminData = {
           email,
           password: hashedPassword,
           role: "admin",
           name: "Admin",
           createdAt: new Date(),
           updatedAt: new Date(),
-        })
+        }
+        const result = await db.collection("admins").insertOne(adminData)
         admin = await db.collection("admins").findOne({ _id: result.insertedId })
+        
+        // Additional null check for TypeScript
+        if (!admin) {
+          return NextResponse.json({ success: false, message: "Failed to create admin account" }, { status: 500 })
+        }
       }
 
       const isPasswordValid = await bcrypt.compare(password, admin.password)
