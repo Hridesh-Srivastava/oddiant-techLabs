@@ -1,33 +1,11 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
+import { use } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import {
-  ArrowLeft,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  FileText,
-  User,
-  Briefcase,
-  GraduationCap,
-  Clock,
-  Laptop,
-  CreditCard,
-  LinkIcon,
-  Linkedin,
-  FileCheck,
-  MessageSquare,
-  Info,
-  Award,
-  FileSpreadsheet,
-  Loader2,
-  DollarSign,
-  Send,
-} from "lucide-react"
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, FileText, User, Briefcase, GraduationCap, Clock, Laptop, CreditCard, LinkIcon, Linkedin, FileCheck, MessageSquare, Info, Award, FileSpreadsheet, Loader2, DollarSign, Send } from 'lucide-react'
 import { toast, Toaster } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -163,10 +141,12 @@ const safeRender = (value: any): string => {
 export default function CandidateDetailsPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
   const router = useRouter()
-  const candidateId = React.use(params).id
+  // Await the params as they're now Promise-based in Next.js 15
+  const resolvedParams = use(params)
+  const candidateId = resolvedParams.id
   const [candidate, setCandidate] = useState<Candidate | null>(null)
   const [interviews, setInterviews] = useState<Interview[]>([])
   const [isLoading, setIsLoading] = useState(true)
