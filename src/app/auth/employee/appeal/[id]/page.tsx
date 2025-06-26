@@ -69,11 +69,7 @@ const industries = [
 const teamSizes = ["1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5000+"]
 
 // Document types
-const documentTypes = [
-  "GST Certificate",
-  "PAN Card",
-  "Incorporation Certificate",
-]
+const documentTypes = ["GST Certificate", "PAN Card", "Incorporation Certificate"]
 
 // List of locations from India with city first, then state
 const locations = [
@@ -815,8 +811,14 @@ export default function AppealPage() {
         }
       })
 
-      // Add the employee ID
-      formDataToSend.append("employeeId", id.toString())
+      // Add the employee ID with null check
+      if (id) {
+        formDataToSend.append("employeeId", id.toString())
+      } else {
+        toast.error("Employee ID not found")
+        setIsSubmitting(false)
+        return
+      }
 
       // Log the form data being sent (for debugging)
       console.log("Submitting appeal with data:", Object.fromEntries(formDataToSend))
