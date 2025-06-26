@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days expiry
     }
 
-    await db.collection("invitations").insertOne(invitation)
+    const insertResult = await db.collection("invitations").insertOne(invitation)
 
     // Create job application URL with invitation token
     const jobApplicationUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/jobs/${jobId}?invitation=${invitationToken}`
@@ -179,26 +179,26 @@ export async function POST(request: NextRequest) {
         `,
       })
 
-      // Update invitation status to sent
+      // Update invitation status to sent using insertedId
       await db
         .collection("invitations")
-        .updateOne({ _id: invitation._id }, { $set: { status: "sent", sentAt: new Date() } })
+        .updateOne({ _id: insertResult.insertedId }, { $set: { status: "sent", sentAt: new Date() } })
 
       return NextResponse.json(
         {
           success: true,
           message: "Invitation sent successfully",
-          invitationId: invitation._id,
+          invitationId: insertResult.insertedId,
         },
         { status: 200 },
       )
     } catch (emailError) {
       console.error("Error sending invitation email:", emailError)
 
-      // Update invitation status to failed
+      // Update invitation status to failed using insertedId
       await db
         .collection("invitations")
-        .updateOne({ _id: invitation._id }, { $set: { status: "failed", error: emailError.message } })
+        .updateOne({ _id: insertResult.insertedId }, { $set: { status: "failed", error: (emailError as any).message } })
 
       return NextResponse.json({ success: false, message: "Failed to send invitation email" }, { status: 500 })
     }
