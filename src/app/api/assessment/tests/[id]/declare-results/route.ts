@@ -4,7 +4,7 @@ import { getUserFromRequest } from "@/lib/auth"
 import { sendEmail } from "@/lib/email"
 import { ObjectId } from "mongodb"
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     console.log("=== Starting Bulk Results Declaration ===")
 
@@ -16,7 +16,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
     }
 
-    const testId = params.id
+    // Await the params since they're now a Promise in newer Next.js versions
+    const { id: testId } = await context.params
     console.log("Declaring results for test ID:", testId)
 
     // Validate ObjectId format
