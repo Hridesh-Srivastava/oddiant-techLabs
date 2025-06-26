@@ -2,15 +2,9 @@ import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 
-interface Context {
-  params: {
-    id: string
-  }
-}
-
-export async function GET(request: NextRequest, context: Context) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    // Get the ID from params
+    // Await the params since they're now a Promise in newer Next.js versions
     const { id } = await context.params
 
     if (!id) {
