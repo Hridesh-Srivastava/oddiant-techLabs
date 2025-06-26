@@ -34,14 +34,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Find all applications for this specific job - handle all possible applicant ID fields
     const applications = await db
       .collection("job_applications")
-      .find({ 
-        jobId: new ObjectId(jobId)
+      .find({
+        jobId: new ObjectId(jobId),
       })
       .sort({ updatedAt: -1, createdAt: -1 }) // Sort by most recent first
       .toArray()
 
     console.log(`=== FOUND ${applications.length} TOTAL APPLICATIONS FOR JOB ${jobId} ===`)
-    
+
     // Log each application in detail
     applications.forEach((app, index) => {
       console.log(`Application ${index + 1}:`, {
@@ -54,14 +54,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         studentName: app.studentName,
         studentEmail: app.studentEmail,
         updatedAt: app.updatedAt,
-        createdAt: app.createdAt
+        createdAt: app.createdAt,
       })
     })
 
     // Filter applications that have valid applicant IDs
-    const validApplications = applications.filter(app => 
-      app.candidateId || app.studentId || app.applicantId
-    )
+    const validApplications = applications.filter((app) => app.candidateId || app.studentId || app.applicantId)
 
     console.log(`=== FOUND ${validApplications.length} VALID APPLICATIONS ===`)
 
@@ -82,10 +80,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // Group applications by applicant ID and get the most recent one for each applicant
     const latestApplicationsMap = new Map()
-    
-    validApplications.forEach(app => {
+
+    validApplications.forEach((app) => {
       const applicantId = (app.candidateId || app.studentId || app.applicantId)?.toString()
-      
+
       if (applicantId) {
         // If we don't have this applicant yet, or if this application is more recent
         if (!latestApplicationsMap.has(applicantId)) {
@@ -94,13 +92,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             appId: app._id,
             status: app.status,
             lastComment: app.lastComment,
-            updatedAt: app.updatedAt
+            updatedAt: app.updatedAt,
           })
         } else {
           const existingApp = latestApplicationsMap.get(applicantId)
           const existingDate = existingApp.updatedAt || existingApp.createdAt || new Date(0)
           const currentDate = app.updatedAt || app.createdAt || new Date(0)
-          
+
           if (currentDate > existingDate) {
             latestApplicationsMap.set(applicantId, app)
             console.log(`Updating to more recent application for ${applicantId}:`, {
@@ -111,7 +109,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
               newStatus: app.status,
               newComment: app.lastComment,
               oldDate: existingDate,
-              newDate: currentDate
+              newDate: currentDate,
             })
           }
         }
@@ -122,9 +120,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     console.log(`=== USING ${latestApplications.length} LATEST APPLICATIONS ===`)
 
     // Extract all possible applicant IDs from latest applications
-    const allApplicantIds = new Set()
-    
-    latestApplications.forEach(app => {
+    const allApplicantIds = new Set<string>()
+
+    latestApplications.forEach((app) => {
       if (app.candidateId) {
         allApplicantIds.add(app.candidateId.toString())
       }
@@ -142,7 +140,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // Convert to ObjectIds safely
     const candidateObjectIds = applicantIdsArray
-      .map(id => {
+      .map((id: string) => {
         try {
           return new ObjectId(id)
         } catch (error) {
@@ -150,7 +148,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           return null
         }
       })
-      .filter(Boolean)
+      .filter((id): id is ObjectId => id !== null)
 
     // Create a map to store all applicants
     const applicantsMap = new Map()
@@ -167,8 +165,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       // Add candidates to the map
       for (const candidate of candidatesFromCandidatesCollection) {
         const candidateIdStr = candidate._id.toString()
-        console.log(`Processing candidate: ${candidate.name || candidate.firstName + ' ' + candidate.lastName} (ID: ${candidateIdStr})`)
-        
+        console.log(
+          `Processing candidate: ${candidate.name || candidate.firstName + " " + candidate.lastName} (ID: ${candidateIdStr})`,
+        )
+
         // Find the LATEST application for this candidate FOR THIS SPECIFIC JOB
         const application = latestApplications.find((app) => {
           const appCandidateId = (app.candidateId || app.studentId || app.applicantId)?.toString()
@@ -178,8 +178,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
               appId: app._id,
               status: app.status,
               lastComment: app.lastComment,
-              matchedBy: app.candidateId ? 'candidateId' : app.studentId ? 'studentId' : 'applicantId',
-              updatedAt: app.updatedAt
+              matchedBy: app.candidateId ? "candidateId" : app.studentId ? "studentId" : "applicantId",
+              updatedAt: app.updatedAt,
             })
           }
           return match
@@ -233,13 +233,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             coverLetter: application.coverLetter || candidate.coverLetter || "",
             additionalInfo: candidate.additionalInfo || "",
           }
-          
+
           console.log(`  ✓ Adding to map:`, {
             name: applicantData.name,
             status: applicantData.status,
-            lastComment: applicantData.lastComment
+            lastComment: applicantData.lastComment,
           })
-          
+
           applicantsMap.set(candidateIdStr, applicantData)
         } else {
           console.log(`  ✗ No matching application found for candidate ${candidateIdStr}`)
@@ -262,7 +262,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       for (const student of studentsFromStudentsCollection) {
         const studentIdStr = student._id.toString()
         console.log(`Processing student: ${student.firstName} ${student.lastName} (ID: ${studentIdStr})`)
-        
+
         // Find the LATEST application for this student FOR THIS SPECIFIC JOB
         const application = latestApplications.find((app) => {
           const appCandidateId = (app.candidateId || app.studentId || app.applicantId)?.toString()
@@ -272,8 +272,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
               appId: app._id,
               status: app.status,
               lastComment: app.lastComment,
-              matchedBy: app.candidateId ? 'candidateId' : app.studentId ? 'studentId' : 'applicantId',
-              updatedAt: app.updatedAt
+              matchedBy: app.candidateId ? "candidateId" : app.studentId ? "studentId" : "applicantId",
+              updatedAt: app.updatedAt,
             })
           }
           return match
@@ -286,14 +286,20 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             email: student.email || "",
             phone: student.phone || "",
             alternativePhone: student.alternativePhone || "",
-            role: (student.experience && student.experience.length > 0 ? student.experience[0].title : null) || 
-                  student.role || student.currentPosition || "Not specified",
+            role:
+              (student.experience && student.experience.length > 0 ? student.experience[0].title : null) ||
+              student.role ||
+              student.currentPosition ||
+              "Not specified",
             status: application.status || "applied",
             appliedDate: application.appliedDate
               ? new Date(application.appliedDate).toISOString()
               : new Date().toISOString(),
             lastComment: application.lastComment || null,
-            avatar: student.avatar || (student.documents && student.documents.photograph && student.documents.photograph.url) || null,
+            avatar:
+              student.avatar ||
+              (student.documents && student.documents.photograph && student.documents.photograph.url) ||
+              null,
             source: "students",
             // Additional fields with students collection field mapping
             salutation: student.salutation || "",
@@ -318,30 +324,36 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             preferredCities: student.preferredCities || student.preferenceCities || [],
             availableAssets: student.availableAssets || [],
             identityDocuments: student.identityDocuments || [],
-            resumeUrl: student.resumeUrl || 
-                      (student.documents && student.documents.resume && student.documents.resume.url) || "",
-            videoResumeUrl: student.videoResumeUrl || 
-                          (student.documents && student.documents.videoResume && student.documents.videoResume.url) || "",
-            audioBiodataUrl: student.audioBiodataUrl || 
-                           (student.documents && student.documents.audioBiodata && student.documents.audioBiodata.url) || "",
-            photographUrl: student.photographUrl || 
-                         (student.documents && student.documents.photograph && student.documents.photograph.url) || "",
-            portfolioLink: student.portfolioLink || 
-                         (student.onlinePresence && student.onlinePresence.portfolio) || "",
-            socialMediaLink: student.socialMediaLink || 
-                           (student.onlinePresence && student.onlinePresence.socialMedia) || "",
-            linkedIn: student.linkedIn || 
-                     (student.onlinePresence && student.onlinePresence.linkedin) || "",
+            resumeUrl:
+              student.resumeUrl ||
+              (student.documents && student.documents.resume && student.documents.resume.url) ||
+              "",
+            videoResumeUrl:
+              student.videoResumeUrl ||
+              (student.documents && student.documents.videoResume && student.documents.videoResume.url) ||
+              "",
+            audioBiodataUrl:
+              student.audioBiodataUrl ||
+              (student.documents && student.documents.audioBiodata && student.documents.audioBiodata.url) ||
+              "",
+            photographUrl:
+              student.photographUrl ||
+              (student.documents && student.documents.photograph && student.documents.photograph.url) ||
+              "",
+            portfolioLink: student.portfolioLink || (student.onlinePresence && student.onlinePresence.portfolio) || "",
+            socialMediaLink:
+              student.socialMediaLink || (student.onlinePresence && student.onlinePresence.socialMedia) || "",
+            linkedIn: student.linkedIn || (student.onlinePresence && student.onlinePresence.linkedin) || "",
             coverLetter: application.coverLetter || student.coverLetter || "",
             additionalInfo: student.additionalInfo || "",
           }
-          
+
           console.log(`  ✓ Adding to map:`, {
             name: applicantData.name,
             status: applicantData.status,
-            lastComment: applicantData.lastComment
+            lastComment: applicantData.lastComment,
           })
-          
+
           applicantsMap.set(studentIdStr, applicantData)
         } else if (!application) {
           console.log(`  ✗ No matching application found for student ${studentIdStr}`)
@@ -371,7 +383,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           status: application.status,
           lastComment: application.lastComment,
           studentName: application.studentName,
-          studentEmail: application.studentEmail
+          studentEmail: application.studentEmail,
         })
 
         // Try to get basic info from the application itself
@@ -425,13 +437,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           coverLetter: application.coverLetter || "",
           additionalInfo: "",
         }
-        
+
         console.log(`  ✓ Adding placeholder to map:`, {
           name: placeholderData.name,
           status: placeholderData.status,
-          lastComment: placeholderData.lastComment
+          lastComment: placeholderData.lastComment,
         })
-        
+
         applicantsMap.set(applicantId, placeholderData)
       }
     }
@@ -446,7 +458,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         email: app.email,
         status: app.status,
         lastComment: app.lastComment,
-        source: app.source
+        source: app.source,
       })
     })
 
