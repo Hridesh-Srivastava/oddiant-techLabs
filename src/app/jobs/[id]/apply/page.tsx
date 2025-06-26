@@ -17,9 +17,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import SignIn from "./sign-in"
 
-export default function JobApplicationPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
-  // Unwrap params if it's a Promise
-  const resolvedParams = "then" in params ? use(params) : params
+export default function JobApplicationPage({ params }: { params: Promise<{ id: string }> }) {
+  // Unwrap params using React.use()
+  const resolvedParams = use(params)
   const router = useRouter()
   const jobId = resolvedParams.id
   const fileInputRef = useRef<HTMLInputElement>(null)
