@@ -1,17 +1,19 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { use } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft } from 'lucide-react'
 import { toast, Toaster } from "sonner"
 import CandidateForm from "@/components/candidate-form"
-import { use } from "react"
 
-export default function EditCandidatePage({ params }: { params: { id: string } }) {
+export default function EditCandidatePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
-  const candidateId = use(params).id
+  // Await the params as they're now Promise-based in Next.js 15
+  const resolvedParams = use(params)
+  const candidateId = resolvedParams.id
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [candidate, setCandidate] = useState<any>(null)
