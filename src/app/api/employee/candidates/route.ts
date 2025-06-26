@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     // Find employee to verify
     const employee = await db.collection("employees").findOne({
-      $or: [{ _id: new ObjectId(userId) }, { _id: userId }],
+      _id: new ObjectId(userId),
     })
 
     if (!employee) {
@@ -36,7 +36,6 @@ export async function GET(request: NextRequest) {
         $or: [
           { employerId: new ObjectId(userId) },
           { companyId: companyId },
-          { employerId: userId },
           { companyId: new ObjectId(companyId) },
         ],
       })
@@ -82,7 +81,7 @@ export async function GET(request: NextRequest) {
           return null
         }
       })
-      .filter(Boolean)
+      .filter((id): id is ObjectId => id !== null)
 
     // Step 5: Fetch candidates from candidates collection
     const candidatesFromCandidates = await db
@@ -113,7 +112,6 @@ export async function GET(request: NextRequest) {
         $or: [
           { employerId: new ObjectId(userId) },
           { companyId: companyId },
-          { employerId: userId },
           { companyId: new ObjectId(companyId) },
         ],
       })
@@ -129,7 +127,6 @@ export async function GET(request: NextRequest) {
         $or: [
           { employerId: new ObjectId(userId) },
           { companyId: companyId },
-          { employerId: userId },
           { companyId: new ObjectId(companyId) },
         ],
       })
