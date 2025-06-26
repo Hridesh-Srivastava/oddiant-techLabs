@@ -271,7 +271,7 @@ async function createExcelFile(results: any[], testId?: string) {
 
   // Generate Excel buffer
   const buffer = await workbook.xlsx.writeBuffer()
-  console.log("Excel file generated successfully, buffer size:", buffer.length)
+  console.log("Excel file generated successfully, buffer size:", Buffer.byteLength(buffer))
 
   // Return Excel file
   return new NextResponse(buffer, {
