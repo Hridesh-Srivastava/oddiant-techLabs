@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { toast, Toaster } from "sonner"
-import { ArrowLeft, Mail, CheckCircle, XCircle, AlertCircle, Download, Send } from "lucide-react"
+import { ArrowLeft, Mail, CheckCircle, XCircle, AlertCircle, Download, Send, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -23,10 +23,10 @@ interface CandidateData {
   _id: string
   name: string
   email: string
-  phone: string
+  phone?: string
   status: string
   createdAt: string
-  updatedAt: string
+  updatedAt?: string
   testsAssigned: number
   testsCompleted: number
   averageScore: number
@@ -49,6 +49,8 @@ interface InvitationData {
   createdAt: string
   expiresAt: string
   completedAt?: string
+  email: string
+  token: string
 }
 
 interface ResultData {
@@ -60,7 +62,9 @@ interface ResultData {
   duration: number
   completionDate: string
   resultsDeclared: boolean
-  answers: {
+  candidateEmail: string
+  candidateName: string
+  answers?: {
     questionId: string
     answer: string | string[]
     isCorrect: boolean
@@ -97,17 +101,28 @@ export default function CandidateDetailsPage() {
   const [showVerificationDialog, setShowVerificationDialog] = useState(false)
   const [selectedVerification, setSelectedVerification] = useState<VerificationData | null>(null)
 
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+
   useEffect(() => {
-    fetchCandidateDetails()
-    fetchAvailableTests()
-    fetchInvitations()
-    fetchResults()
-    fetchVerifications()
+    if (candidateId) {
+      fetchCandidateDetails()
+    }
   }, [candidateId])
+
+  useEffect(() => {
+    if (candidate?.email) {
+      fetchAvailableTests()
+      fetchInvitations()
+      fetchResults()
+      fetchVerifications()
+    }
+  }, [candidate?.email])
 
   const fetchCandidateDetails = async () => {
     try {
       setIsLoading(true)
+      console.log("Fetching candidate details for ID:", candidateId)
+
       const response = await fetch(`/api/assessment/candidates/${candidateId}`, {
         method: "GET",
         headers: {
@@ -117,20 +132,32 @@ export default function CandidateDetailsPage() {
         },
       })
 
+      console.log("Response status:", response.status)
+      console.log("Response ok:", response.ok)
+
       if (!response.ok) {
-        throw new Error("Failed to fetch candidate details")
+        if (response.status === 404) {
+          console.log("Candidate not found (404)")
+          setCandidate(null)
+          return
+        }
+        throw new Error(`HTTP ${response.status}: Failed to fetch candidate details`)
       }
 
       const data = await response.json()
+      console.log("Candidate API response:", data)
 
-      if (data.success) {
+      if (data.success && data.candidate) {
         setCandidate(data.candidate)
+        console.log("Candidate set:", data.candidate)
       } else {
-        throw new Error(data.message || "Failed to fetch candidate details")
+        console.log("API returned success=false or no candidate")
+        setCandidate(null)
       }
     } catch (error) {
       console.error("Error fetching candidate details:", error)
       toast.error("Failed to load candidate details. Please try again.")
+      setCandidate(null)
     } finally {
       setIsLoading(false)
     }
@@ -138,7 +165,8 @@ export default function CandidateDetailsPage() {
 
   const fetchAvailableTests = async () => {
     try {
-      const response = await fetch("/api/assessment/tests", {
+      console.log("Fetching available tests...")
+      const response = await fetch("/api/assessment/tests?status=Active", {
         method: "GET",
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -152,6 +180,7 @@ export default function CandidateDetailsPage() {
       }
 
       const data = await response.json()
+      console.log("Tests API response:", data)
 
       if (data.success) {
         setAvailableTests(data.tests || [])
@@ -166,7 +195,13 @@ export default function CandidateDetailsPage() {
 
   const fetchInvitations = async () => {
     try {
-      const response = await fetch(`/api/assessment/invitations/by-candidate/${candidateId}`, {
+      if (!candidate?.email) {
+        console.log("No candidate email available for fetching invitations")
+        return
+      }
+
+      console.log("Fetching invitations for email:", candidate.email)
+      const response = await fetch("/api/assessment/invitations", {
         method: "GET",
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -180,9 +215,15 @@ export default function CandidateDetailsPage() {
       }
 
       const data = await response.json()
+      console.log("Invitations API response:", data)
 
       if (data.success) {
-        setInvitations(data.invitations || [])
+        // Filter invitations by candidate email
+        const candidateInvitations = (data.invitations || []).filter(
+          (inv: InvitationData) => inv.email === candidate.email,
+        )
+        console.log("Filtered invitations:", candidateInvitations)
+        setInvitations(candidateInvitations)
       } else {
         throw new Error(data.message || "Failed to fetch invitations")
       }
@@ -194,7 +235,13 @@ export default function CandidateDetailsPage() {
 
   const fetchResults = async () => {
     try {
-      const response = await fetch(`/api/assessment/results/by-candidate/${candidateId}`, {
+      if (!candidate?.email) {
+        console.log("No candidate email available for fetching results")
+        return
+      }
+
+      console.log("Fetching results for email:", candidate.email)
+      const response = await fetch("/api/assessment/results", {
         method: "GET",
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -208,9 +255,15 @@ export default function CandidateDetailsPage() {
       }
 
       const data = await response.json()
+      console.log("Results API response:", data)
 
       if (data.success) {
-        setResults(data.results || [])
+        // Filter results by candidate email
+        const candidateResults = (data.results || []).filter(
+          (result: ResultData) => result.candidateEmail === candidate.email,
+        )
+        console.log("Filtered results:", candidateResults)
+        setResults(candidateResults)
       } else {
         throw new Error(data.message || "Failed to fetch results")
       }
@@ -222,7 +275,14 @@ export default function CandidateDetailsPage() {
 
   const fetchVerifications = async () => {
     try {
-      const response = await fetch(`/api/assessment/verifications/by-candidate/${candidateId}`, {
+      if (!candidate?.email) {
+        console.log("No candidate email available for fetching verifications")
+        return
+      }
+
+      console.log("Fetching verifications for email:", candidate.email)
+      const encodedEmail = encodeURIComponent(candidate.email)
+      const response = await fetch(`/api/assessment/verifications/by-email/${encodedEmail}`, {
         method: "GET",
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -232,24 +292,30 @@ export default function CandidateDetailsPage() {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to fetch verifications")
+        console.log("Verifications API failed:", response.status, response.statusText)
+        // Don't throw error for verifications as it's not critical
+        setVerifications([])
+        return
       }
 
       const data = await response.json()
+      console.log("Verifications API response:", data)
 
       if (data.success) {
         setVerifications(data.verifications || [])
       } else {
-        throw new Error(data.message || "Failed to fetch verifications")
+        console.log("Verifications API returned error:", data.message)
+        setVerifications([])
       }
     } catch (error) {
       console.error("Error fetching verifications:", error)
-      toast.error("Failed to load verifications. Please try again.")
+      // Don't show error toast for verifications as it's not critical
+      setVerifications([])
     }
   }
 
   const handleSendInvitation = async () => {
-    if (!selectedTest) {
+    if (!selectedTest || !candidate) {
       toast.error("Please select a test")
       return
     }
@@ -263,9 +329,8 @@ export default function CandidateDetailsPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          candidateId,
           testId: selectedTest,
-          sendEmail: true,
+          emails: [candidate.email],
         }),
       })
 
@@ -280,6 +345,7 @@ export default function CandidateDetailsPage() {
         setShowInviteDialog(false)
         setSelectedTest(null)
         fetchInvitations() // Refresh invitations
+        fetchCandidateDetails() // Refresh candidate stats
       } else {
         throw new Error(data.message || "Failed to send invitation")
       }
@@ -293,6 +359,7 @@ export default function CandidateDetailsPage() {
 
   const handleResendInvitation = async (invitationId: string) => {
     try {
+      setActionLoading(invitationId)
       const response = await fetch(`/api/assessment/invitations/${invitationId}/resend`, {
         method: "POST",
         headers: {
@@ -315,11 +382,14 @@ export default function CandidateDetailsPage() {
     } catch (error) {
       console.error("Error resending invitation:", error)
       toast.error((error as Error).message || "Failed to resend invitation")
+    } finally {
+      setActionLoading(null)
     }
   }
 
   const handleCancelInvitation = async (invitationId: string) => {
     try {
+      setActionLoading(invitationId)
       const response = await fetch(`/api/assessment/invitations/${invitationId}/cancel`, {
         method: "POST",
         headers: {
@@ -336,17 +406,21 @@ export default function CandidateDetailsPage() {
       if (data.success) {
         toast.success("Invitation cancelled successfully")
         fetchInvitations() // Refresh invitations
+        fetchCandidateDetails() // Refresh candidate stats
       } else {
         throw new Error(data.message || "Failed to cancel invitation")
       }
     } catch (error) {
       console.error("Error cancelling invitation:", error)
       toast.error((error as Error).message || "Failed to cancel invitation")
+    } finally {
+      setActionLoading(null)
     }
   }
 
   const handleDeclareResult = async (resultId: string) => {
     try {
+      setActionLoading(resultId)
       const response = await fetch(`/api/assessment/results/${resultId}/declare`, {
         method: "POST",
         headers: {
@@ -363,19 +437,26 @@ export default function CandidateDetailsPage() {
       if (data.success) {
         toast.success("Result declared and email sent to candidate")
         fetchResults() // Refresh results
+        fetchCandidateDetails() // Refresh candidate stats
       } else {
         throw new Error(data.message || "Failed to declare result")
       }
     } catch (error) {
       console.error("Error declaring result:", error)
       toast.error((error as Error).message || "Failed to declare result")
+    } finally {
+      setActionLoading(null)
     }
   }
 
   const handleDownloadResult = async (resultId: string) => {
     try {
+      setActionLoading(resultId)
       const response = await fetch(`/api/assessment/results/${resultId}/download`, {
         method: "GET",
+        headers: {
+          Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        },
       })
 
       if (!response.ok) {
@@ -389,16 +470,30 @@ export default function CandidateDetailsPage() {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `result-${resultId}.pdf`
+
+      // Get filename from response headers or create default
+      const contentDisposition = response.headers.get("content-disposition")
+      let filename = `assessment-result-${resultId}.xlsx`
+
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/)
+        if (filenameMatch) {
+          filename = filenameMatch[1]
+        }
+      }
+
+      a.download = filename
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
 
-      toast.success("Result downloaded successfully")
+      toast.success("Excel file downloaded successfully!")
     } catch (error) {
       console.error("Error downloading result:", error)
       toast.error("Failed to download result. Please try again.")
+    } finally {
+      setActionLoading(null)
     }
   }
 
@@ -420,6 +515,7 @@ export default function CandidateDetailsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case "Pending":
       case "Active":
         return "bg-blue-100 text-blue-800 hover:bg-blue-100"
       case "Completed":
@@ -537,7 +633,7 @@ export default function CandidateDetailsPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">{candidate.name}</h1>
+            <h1 className="text-3xl font-bold text-foreground">{candidate.name}</h1>
             <p className="text-muted-foreground">{candidate.email}</p>
           </div>
         </div>
@@ -613,20 +709,26 @@ export default function CandidateDetailsPage() {
                           <td className="py-3 px-4">{formatDate(invitation.expiresAt)}</td>
                           <td className="py-3 px-4">
                             <div className="flex gap-2">
-                              {invitation.status === "Active" && (
+                              {invitation.status === "Pending" && (
                                 <>
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleResendInvitation(invitation._id)}
+                                    disabled={actionLoading === invitation._id}
                                   >
-                                    <Send className="h-4 w-4 mr-2" />
+                                    {actionLoading === invitation._id ? (
+                                      <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <Send className="h-4 w-4 mr-2" />
+                                    )}
                                     Resend
                                   </Button>
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleCancelInvitation(invitation._id)}
+                                    disabled={actionLoading === invitation._id}
                                   >
                                     <XCircle className="h-4 w-4 mr-2" />
                                     Cancel
@@ -638,6 +740,24 @@ export default function CandidateDetailsPage() {
                                   <Link href={`/employee/assessment/results?invitation=${invitation._id}`}>
                                     View Result
                                   </Link>
+                                </Button>
+                              )}
+                              {invitation.status === "Cancelled" && (
+                                <span className="text-sm text-muted-foreground">Cancelled</span>
+                              )}
+                              {invitation.status === "Expired" && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleResendInvitation(invitation._id)}
+                                  disabled={actionLoading === invitation._id}
+                                >
+                                  {actionLoading === invitation._id ? (
+                                    <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <Send className="h-4 w-4 mr-2" />
+                                  )}
+                                  Resend
                                 </Button>
                               )}
                             </div>
@@ -707,14 +827,33 @@ export default function CandidateDetailsPage() {
                                 <Link href={`/employee/assessment/results/${result._id}`}>View</Link>
                               </Button>
                               {!result.resultsDeclared && (
-                                <Button variant="outline" size="sm" onClick={() => handleDeclareResult(result._id)}>
-                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeclareResult(result._id)}
+                                  disabled={actionLoading === result._id}
+                                >
+                                  {actionLoading === result._id ? (
+                                    <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                  )}
                                   Declare
                                 </Button>
                               )}
-                              <Button variant="outline" size="sm" onClick={() => handleDownloadResult(result._id)}>
-                                <Download className="h-4 w-4 mr-2" />
-                                Download
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDownloadResult(result._id)}
+                                disabled={actionLoading === result._id}
+                                className="bg-green-50 hover:bg-green-100 text-green-700"
+                              >
+                                {actionLoading === result._id ? (
+                                  <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Download className="h-4 w-4 mr-2" />
+                                )}
+                                Excel
                               </Button>
                             </div>
                           </td>
@@ -841,7 +980,7 @@ export default function CandidateDetailsPage() {
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-muted-foreground">No tests available. Create a test first.</p>
+                    <p className="text-sm text-muted-foreground">No active tests available. Create a test first.</p>
                   )}
                 </div>
               </div>
@@ -854,7 +993,8 @@ export default function CandidateDetailsPage() {
             <Button onClick={handleSendInvitation} disabled={!selectedTest || isSendingInvitation}>
               {isSendingInvitation ? (
                 <>
-                  <span className="animate-spin mr-2">⟳</span> Sending...
+                  <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
+                  Sending...
                 </>
               ) : (
                 <>
@@ -869,38 +1009,69 @@ export default function CandidateDetailsPage() {
 
       {/* Verification Images Dialog */}
       <Dialog open={showVerificationDialog} onOpenChange={setShowVerificationDialog}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Verification Images</DialogTitle>
             <DialogDescription>ID and face verification images submitted by {candidate.name}.</DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {selectedVerification?.idCardImageUrl && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium">ID Card</h3>
-                  <div className="border rounded-md overflow-hidden">
+              {/* ID Card Section */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">ID Card</h3>
+                <div className="border rounded-md overflow-hidden bg-gray-50 min-h-[300px] flex items-center justify-center">
+                  {selectedVerification?.idCardImageUrl ? (
                     <img
                       src={selectedVerification.idCardImageUrl || "/placeholder.svg"}
                       alt="ID Card"
-                      className="w-full h-auto object-contain"
+                      className="w-full h-auto object-contain max-h-[400px]"
+                      onError={(e) => {
+                        e.currentTarget.src = "/placeholder.svg?height=300&width=400"
+                      }}
                     />
-                  </div>
+                  ) : (
+                    <div className="text-center text-muted-foreground">
+                      <XCircle className="h-12 w-12 mx-auto mb-2" />
+                      <p>No ID card image submitted</p>
+                    </div>
+                  )}
                 </div>
-              )}
-              {selectedVerification?.faceImageUrl && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium">Face</h3>
-                  <div className="border rounded-md overflow-hidden">
+              </div>
+
+              {/* Face Section */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Face Photo</h3>
+                <div className="border rounded-md overflow-hidden bg-gray-50 min-h-[300px] flex items-center justify-center">
+                  {selectedVerification?.faceImageUrl ? (
                     <img
                       src={selectedVerification.faceImageUrl || "/placeholder.svg"}
-                      alt="Face"
-                      className="w-full h-auto object-contain"
+                      alt="Face Photo"
+                      className="w-full h-auto object-contain max-h-[400px]"
+                      onError={(e) => {
+                        e.currentTarget.src = "/placeholder.svg?height=300&width=400"
+                      }}
                     />
-                  </div>
+                  ) : (
+                    <div className="text-center text-muted-foreground">
+                      <XCircle className="h-12 w-12 mx-auto mb-2" />
+                      <p>No face photo submitted</p>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
+
+            {/* Debug Information */}
+            {selectedVerification && (
+              <div className="mt-4 p-3 bg-gray-100 rounded-md text-sm">
+                <p>
+                  <strong>Debug Info:</strong>
+                </p>
+                <p>ID Card URL: {selectedVerification.idCardImageUrl || "Not provided"}</p>
+                <p>Face URL: {selectedVerification.faceImageUrl || "Not provided"}</p>
+                <p>Submitted: {formatDate(selectedVerification.createdAt)}</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button onClick={() => setShowVerificationDialog(false)}>Close</Button>

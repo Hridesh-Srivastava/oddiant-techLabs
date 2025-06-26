@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { toast, Toaster } from "sonner"
 import { Clock, CheckCircle, AlertCircle, Calculator, AlertTriangle, X, Camera } from "lucide-react"
@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { AdvancedCodeEditor } from "@/components/advanced-code-editor"
+import { CameraModal } from "@/components/camera-modal"
 
 interface InvitationData {
   _id: string
@@ -37,6 +38,7 @@ interface TestData {
   passingScore: number
   instructions: string
   type: string
+  _shuffled?: boolean // Add this flag
   settings: {
     shuffleQuestions: boolean
     preventTabSwitching: boolean
@@ -65,7 +67,11 @@ interface QuestionData {
   codeLanguage?: string
   codeTemplate?: string
   testCases?: any[]
+  maxWords?: number
 }
+
+// Add a global store for test case results per question
+const questionTestCaseResults: Record<string, any[]> = {}
 
 export default function TakeTestPage() {
   const router = useRouter()
@@ -125,15 +131,832 @@ export default function TakeTestPage() {
   const [showCameraModal, setShowCameraModal] = useState(false)
   const [isPreviewMode, setIsPreviewMode] = useState(false)
 
-  // Refs for visibility tracking
+  // Enhanced webcam states with better error handling
+  const [webcamStatus, setWebcamStatus] = useState<"inactive" | "requesting" | "active" | "error">("inactive")
+  const [webcamError, setWebcamError] = useState<string | null>(null)
+  const [webcamRetryCount, setWebcamRetryCount] = useState(0)
+  const [webcamEnabled, setWebcamEnabled] = useState(true) // New state to control webcam functionality
+
+  // Refs for visibility tracking with better cleanup
   const visibilityRef = useRef(true)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
   const webcamInitializedRef = useRef(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const webcamRetryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const componentMountedRef = useRef(true) // Track component mount status
+
+  // Enhanced webcam management with separate refs for different contexts
+  const mainVideoRef = useRef<HTMLVideoElement | null>(null)
+  const modalVideoRef = useRef<HTMLVideoElement | null>(null)
+  const systemCheckVideoRef = useRef<HTMLVideoElement | null>(null)
+  const modalStreamRef = useRef<MediaStream | null>(null)
+
+  // Cleanup function to stop all webcam streams
+  const cleanupWebcam = useCallback(() => {
+    try {
+      // Stop main stream
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => {
+          track.stop()
+        })
+        mediaStreamRef.current = null
+      }
+
+      // Stop modal stream
+      if (modalStreamRef.current) {
+        modalStreamRef.current.getTracks().forEach((track) => {
+          track.stop()
+        })
+        modalStreamRef.current = null
+      }
+
+      // Clear all video elements
+      if (videoRef.current) {
+        videoRef.current.srcObject = null
+      }
+      if (modalVideoRef.current) {
+        modalVideoRef.current.srcObject = null
+      }
+      if (systemCheckVideoRef.current) {
+        systemCheckVideoRef.current.srcObject = null
+      }
+
+      // Clear retry timeout
+      if (webcamRetryTimeoutRef.current) {
+        clearTimeout(webcamRetryTimeoutRef.current)
+        webcamRetryTimeoutRef.current = null
+      }
+
+      setWebcamStatus("inactive")
+      webcamInitializedRef.current = false
+      setWebcamError(null)
+    } catch (error) {
+      console.error("Error during webcam cleanup:", error)
+    }
+  }, [])
+
+  // Function to handle test case results from code editor with proper isolation
+  const handleTestCaseResults = useCallback(
+    (questionId: string, results: any[]) => {
+      console.log(`Storing test case results for question ${questionId}:`, results)
+      // Store with both question ID and section-question key for better isolation
+      const currentQuestionData = test?.sections[currentSection]?.questions[currentQuestion]
+      if (currentQuestionData && currentQuestionData.id === questionId) {
+        const questionKey = `${test.sections[currentSection].id}-${questionId}`
+        questionTestCaseResults[questionKey] = results
+        questionTestCaseResults[questionId] = results // Keep both for compatibility
+      }
+    },
+    [test, currentSection, currentQuestion],
+  )
+
+  const handleSubmitTest = useCallback(async () => {
+    try {
+      if (!test || !invitation) return
+
+      setIsSubmitting(true)
+
+      // Validate coding questions have been executed
+      const codingQuestionsValidation = test.sections.some((section) => {
+        return section.questions.some((question) => {
+          if (question.type === "Coding") {
+            const questionKey = `${section.id}-${question.id}`
+            const storedResults = questionTestCaseResults[questionKey] || questionTestCaseResults[question.id]
+
+            // Check if user has written code but not executed test cases
+            const userCode = answers[questionKey] as string
+            const hasCode = userCode && userCode.trim() !== "" && userCode.trim() !== question.codeTemplate?.trim()
+
+            if (hasCode && (!storedResults || storedResults.length === 0)) {
+              toast.error(
+                `Please run your code for coding questions to execute test cases before submitting. Check Question: "${question.text.substring(0, 50)}..."`,
+              )
+              return true // Found unexecuted coding question
+            }
+          }
+          return false
+        })
+      })
+
+      if (codingQuestionsValidation) {
+        setIsSubmitting(false)
+        return // Stop submission
+      }
+
+      // Disable webcam functionality when submitting
+      setWebcamEnabled(false)
+      cleanupWebcam()
+
+      // Calculate test duration in minutes
+      const endTime = new Date()
+      const durationInMinutes = startTime ? Math.round((endTime.getTime() - startTime.getTime()) / 60000) : 0
+
+      // Calculate score with proper handling for all question types
+      let totalPoints = 0
+      let earnedPoints = 0
+      const answersWithDetails: any[] = []
+
+      test.sections.forEach((section) => {
+        section.questions.forEach((question) => {
+          totalPoints += question.points
+          const questionKey = `${section.id}-${question.id}`
+          const userAnswer = answers[questionKey]
+          let isCorrect = false
+          let codingTestResults:
+            | { input: string; expectedOutput: string; actualOutput: string; passed: boolean }[]
+            | null = null
+
+          // Enhanced scoring logic for different question types
+          if (question.type === "Multiple Choice") {
+            // More robust MCQ evaluation with detailed logging
+            const userAnswerStr = String(userAnswer || "").trim()
+            const correctAnswerStr = String(question.correctAnswer || "").trim()
+
+            console.log(`=== MCQ Evaluation for Question ${question.id} ===`)
+            console.log(`Question Text: "${question.text}"`)
+            console.log(`User Answer Raw:`, userAnswer)
+            console.log(`User Answer String: "${userAnswerStr}"`)
+            console.log(`Correct Answer Raw:`, question.correctAnswer)
+            console.log(`Correct Answer String: "${correctAnswerStr}"`)
+            console.log(`Options:`, question.options)
+
+            // Check if user provided an answer and it matches the correct answer
+            if (userAnswerStr && userAnswerStr.length > 0 && correctAnswerStr && correctAnswerStr.length > 0) {
+              // Try exact match first
+              if (userAnswerStr === correctAnswerStr) {
+                isCorrect = true
+                earnedPoints += question.points
+                console.log(`✅ EXACT MATCH - ${question.points} points awarded`)
+              } else {
+                // Try case-insensitive match
+                if (userAnswerStr.toLowerCase() === correctAnswerStr.toLowerCase()) {
+                  isCorrect = true
+                  earnedPoints += question.points
+                  console.log(`✅ CASE-INSENSITIVE MATCH - ${question.points} points awarded`)
+                } else {
+                  // Try to find the answer in options and match by index
+                  const userOptionIndex = question.options?.findIndex((opt) => opt.trim() === userAnswerStr)
+                  const correctOptionIndex = question.options?.findIndex((opt) => opt.trim() === correctAnswerStr)
+
+                  if (userOptionIndex !== -1 && correctOptionIndex !== -1 && userOptionIndex === correctOptionIndex) {
+                    isCorrect = true
+                    earnedPoints += question.points
+                    console.log(`✅ OPTION INDEX MATCH - ${question.points} points awarded`)
+                  } else {
+                    console.log(`❌ NO MATCH FOUND - 0 points`)
+                    console.log(`User option index: ${userOptionIndex}, Correct option index: ${correctOptionIndex}`)
+                  }
+                }
+              }
+            } else {
+              console.log(`❌ EMPTY ANSWER - 0 points`)
+              console.log(`User answer empty: ${!userAnswerStr || userAnswerStr.length === 0}`)
+              console.log(`Correct answer empty: ${!correctAnswerStr || correctAnswerStr.length === 0}`)
+            }
+            console.log(`=== End MCQ Evaluation ===`)
+          } else if (question.type === "Coding") {
+            // For coding questions, get stored test case results with proper question isolation
+            const questionKey = `${section.id}-${question.id}`
+            const storedResults = questionTestCaseResults[questionKey] || questionTestCaseResults[question.id]
+
+            if (storedResults && storedResults.length > 0) {
+              // Convert stored results to the expected format
+              codingTestResults = storedResults.map((result) => {
+                if (result.result) {
+                  return {
+                    input: result.result.input || "",
+                    expectedOutput: result.result.expectedOutput || "",
+                    actualOutput: result.result.actualOutput || "",
+                    passed: result.result.passed || false,
+                  }
+                } else {
+                  return {
+                    input: result.input || "",
+                    expectedOutput: result.expectedOutput || "",
+                    actualOutput: result.actualOutput || "",
+                    passed: result.passed || false,
+                  }
+                }
+              })
+
+              // Award points if all test cases pass
+              if (codingTestResults.every((result) => result.passed)) {
+                isCorrect = true
+                earnedPoints += question.points
+              }
+
+              console.log(
+                `Coding Question ${question.id}: Using stored results - ${codingTestResults.length} test cases`,
+              )
+            } else {
+              // Fallback: create placeholder results if no stored results
+              codingTestResults =
+                question.testCases?.map((testCase) => ({
+                  input: testCase.input,
+                  expectedOutput: testCase.expectedOutput,
+                  actualOutput: "Not executed",
+                  passed: false,
+                })) || null
+
+              console.log(`Coding Question ${question.id}: No stored results found, using placeholder`)
+            }
+          } else if (question.type === "Written Answer") {
+            // Written answers are not automatically graded
+            isCorrect = false // Manual evaluation required
+          }
+
+          // Store detailed answer information
+          answersWithDetails.push({
+            questionId: question.id,
+            questionText: question.text,
+            questionType: question.type,
+            answer: userAnswer,
+            correctAnswer: question.correctAnswer,
+            isCorrect,
+            points: isCorrect ? question.points : 0,
+            maxPoints: question.points,
+            codingTestResults: codingTestResults, // Store test case results
+          })
+
+          console.log(
+            `Question ${question.id} (${question.type}): ${isCorrect ? "CORRECT" : "INCORRECT"} - ${
+              isCorrect ? question.points : 0
+            }/${question.points} points`,
+          )
+        })
+      })
+
+      console.log(`Total scoring: ${earnedPoints}/${totalPoints} points`)
+
+      const score = Math.round((earnedPoints / totalPoints) * 100)
+      const status = score >= test.passingScore ? "Passed" : "Failed"
+
+      // Prepare result data
+      const resultData = {
+        invitationId: invitation._id,
+        testId: test._id,
+        testName: test.name,
+        candidateName: invitation.email.split("@")[0],
+        candidateEmail: invitation.email,
+        score,
+        status,
+        duration: durationInMinutes,
+        answers: answersWithDetails,
+        tabSwitchCount: tabSwitchCount,
+        terminated: testTerminated,
+        resultsDeclared: false,
+        isPreview: isPreviewMode,
+      }
+
+      // Submit result - use different endpoint for preview
+      const endpoint = isPreviewMode ? "/api/assessment/preview-results" : "/api/assessment/results"
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(resultData),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to submit test")
+      }
+
+      const data = await response.json()
+
+      if (data.success) {
+        setTestCompleted(true)
+        setTestResult({
+          score: 0, // Don't show actual score yet
+          status: "Pending", // Don't show actual status yet
+          duration: durationInMinutes,
+          resultsDeclared: false,
+        })
+        toast.success("Test submitted successfully")
+      } else {
+        throw new Error(data.message || "Failed to submit test")
+      }
+    } catch (error) {
+      console.error("Error submitting test:", error)
+      toast.error("Failed to submit test. Please try again.")
+      setWebcamEnabled(true) // Re-enable webcam on error
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [test, invitation, startTime, answers, tabSwitchCount, testTerminated, isPreviewMode, cleanupWebcam])
+
+  // Enhanced webcam functions with better error handling and video element checks
+  const isVideoElementAvailable = useCallback(
+    (videoElement: HTMLVideoElement | null): boolean => {
+      return !!(
+        videoElement &&
+        videoElement.parentNode &&
+        document.contains(videoElement) &&
+        componentMountedRef.current &&
+        webcamEnabled &&
+        !testCompleted &&
+        !testTerminated
+      )
+    },
+    [webcamEnabled, testCompleted, testTerminated],
+  )
+
+  const startWebcamForModal = useCallback(
+    async (targetVideoRef: React.RefObject<HTMLVideoElement>) => {
+      if (!webcamEnabled || testCompleted || testTerminated || !componentMountedRef.current) {
+        return
+      }
+
+      try {
+        setWebcamStatus("requesting")
+        setWebcamError(null)
+
+        // Stop any existing modal stream
+        if (modalStreamRef.current) {
+          modalStreamRef.current.getTracks().forEach((track) => track.stop())
+          modalStreamRef.current = null
+        }
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error("Camera access is not supported in this browser")
+        }
+
+        const constraints = {
+          video: {
+            width: { ideal: 640, min: 320 },
+            height: { ideal: 480, min: 240 },
+            facingMode: "user",
+          },
+          audio: false,
+        }
+
+        console.log("Requesting camera access for modal...")
+        const stream = await navigator.mediaDevices.getUserMedia(constraints)
+
+        // Check if component is still mounted and webcam is still enabled
+        if (!componentMountedRef.current || !webcamEnabled || testCompleted) {
+          stream.getTracks().forEach((track) => track.stop())
+          return
+        }
+
+        modalStreamRef.current = stream
+
+        // Wait for video element to be available with timeout
+        let retryCount = 0
+        const maxRetries = 20
+
+        while (!targetVideoRef.current && retryCount < maxRetries && componentMountedRef.current) {
+          await new Promise((resolve) => setTimeout(resolve, 100))
+          retryCount++
+        }
+
+        if (!isVideoElementAvailable(targetVideoRef.current)) {
+          throw new Error("Video element not available or component unmounted")
+        }
+
+        const video = targetVideoRef.current!
+        video.srcObject = stream
+        video.muted = true
+        video.playsInline = true
+        video.autoplay = true
+
+        // Wait for video to load and play with proper error handling
+        await new Promise<void>((resolve, reject) => {
+          if (!componentMountedRef.current || !webcamEnabled) {
+            reject(new Error("Component unmounted or webcam disabled"))
+            return
+          }
+
+          const timeoutId = setTimeout(() => {
+            reject(new Error("Video loading timed out"))
+          }, 15000)
+
+          const onLoadedMetadata = async () => {
+            clearTimeout(timeoutId)
+            try {
+              if (!componentMountedRef.current || !webcamEnabled) {
+                reject(new Error("Component unmounted during video load"))
+                return
+              }
+              await video.play()
+              console.log("Modal webcam started successfully")
+              resolve()
+            } catch (err) {
+              console.error("Error playing video:", err)
+              reject(err)
+            }
+          }
+
+          const onError = (error: any) => {
+            clearTimeout(timeoutId)
+            console.error("Video element error:", error)
+            reject(new Error("Video element error"))
+          }
+
+          video.addEventListener("loadedmetadata", onLoadedMetadata, { once: true })
+          video.addEventListener("error", onError, { once: true })
+
+          // If video is already loaded
+          if (video.readyState >= 1) {
+            onLoadedMetadata()
+          }
+        })
+
+        if (componentMountedRef.current && webcamEnabled) {
+          setWebcamStatus("active")
+          setWebcamRetryCount(0)
+          toast.success("Camera started successfully")
+        }
+      } catch (error) {
+        if (!componentMountedRef.current || !webcamEnabled) {
+          return // Don't show errors if component is unmounted or webcam disabled
+        }
+
+        console.error("Error starting modal webcam:", error)
+
+        let errorMessage = "Failed to access webcam"
+        if (error instanceof Error) {
+          if (error.name === "NotAllowedError") {
+            errorMessage = "Camera permission denied. Please allow camera access and try again."
+          } else if (error.name === "NotFoundError") {
+            errorMessage = "No camera found. Please connect a camera and try again."
+          } else if (error.name === "NotReadableError") {
+            errorMessage = "Camera is already in use by another application."
+          } else if (error.name === "OverconstrainedError") {
+            errorMessage = "Camera constraints could not be satisfied."
+          } else {
+            errorMessage = error.message || "Unknown webcam error"
+          }
+        }
+
+        setWebcamError(errorMessage)
+        setWebcamStatus("error")
+        toast.error(errorMessage)
+
+        // Clean up on error
+        if (modalStreamRef.current) {
+          modalStreamRef.current.getTracks().forEach((track) => track.stop())
+          modalStreamRef.current = null
+        }
+      }
+    },
+    [webcamEnabled, testCompleted, testTerminated, isVideoElementAvailable],
+  )
+
+  const uploadImageToServer = useCallback(
+    async (imageDataUrl: string, type: "face" | "id_card") => {
+      if (!token) {
+        toast.error("No token available for upload")
+        return
+      }
+
+      try {
+        // Convert data URL to blob
+        const response = await fetch(imageDataUrl)
+        const blob = await response.blob()
+
+        // Create form data
+        const formData = new FormData()
+        formData.append("image", blob, `${type}.jpg`)
+        formData.append("token", token)
+        formData.append("type", type)
+        formData.append("isPreview", isPreviewMode.toString())
+
+        // Try multiple upload endpoints
+        const endpoints = [
+          isPreviewMode ? "/api/assessment/preview-verification/upload" : "/api/assessment/verification/upload",
+          "/api/assessment/verification/upload", // Fallback
+          "/api/assessment/preview-verification/upload", // Second fallback
+        ]
+
+        let uploadResponse = null
+        let lastError = null
+
+        for (const endpoint of endpoints) {
+          try {
+            uploadResponse = await fetch(endpoint, {
+              method: "POST",
+              body: formData,
+            })
+
+            if (uploadResponse.ok) {
+              break // Success, exit loop
+            } else {
+              const errorData = await uploadResponse.json().catch(() => ({}))
+              lastError = errorData.message || `HTTP ${uploadResponse.status}`
+              console.log(`Upload failed for ${endpoint}:`, lastError)
+            }
+          } catch (err) {
+            lastError = err instanceof Error ? err.message : "Network error"
+            console.log(`Network error for ${endpoint}:`, lastError)
+          }
+        }
+
+        if (!uploadResponse || !uploadResponse.ok) {
+          // If all endpoints fail, just return success to not block the user
+          console.warn("All upload endpoints failed, but continuing...")
+          toast.warning("Image captured but upload failed. You can continue with the test.")
+          return null
+        }
+
+        const data = await uploadResponse.json()
+
+        if (!data.success) {
+          console.warn("Upload response indicates failure, but continuing...")
+          toast.warning("Image captured but upload failed. You can continue with the test.")
+          return null
+        }
+
+        return data.imageUrl
+      } catch (error) {
+        console.error("Error uploading image:", error)
+        // Don't throw error, just warn and continue
+        toast.warning("Image captured but upload failed. You can continue with the test.")
+        return null
+      }
+    },
+    [token, isPreviewMode],
+  )
+
+  // Updated openCameraModal function
+  const openCameraModal = useCallback(
+    (forFace: boolean) => {
+      if (!webcamEnabled || testCompleted || testTerminated) {
+        return
+      }
+
+      setIsCapturingFace(forFace)
+      setShowCameraModal(true)
+
+      // Start webcam after modal is rendered
+      setTimeout(() => {
+        if (componentMountedRef.current && webcamEnabled) {
+          startWebcamForModal(modalVideoRef)
+        }
+      }, 300)
+    },
+    [startWebcamForModal, webcamEnabled, testCompleted, testTerminated],
+  )
+
+  // Updated captureImage function
+  const captureImage = useCallback(async () => {
+    if (!modalVideoRef.current || !canvasRef.current || !modalStreamRef.current || !webcamEnabled) {
+      toast.error("Camera not initialized properly")
+      return
+    }
+
+    try {
+      const video = modalVideoRef.current
+      const canvas = canvasRef.current
+      const context = canvas.getContext("2d")
+
+      if (!context) {
+        toast.error("Could not get canvas context")
+        return
+      }
+
+      // Ensure video is playing and has dimensions
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        toast.error("Video not ready. Please wait a moment and try again.")
+        return
+      }
+
+      // Set canvas dimensions to match video
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+
+      // Draw video frame to canvas
+      context.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+      // Convert to data URL
+      const imageDataUrl = canvas.toDataURL("image/jpeg", 0.8)
+
+      // Save image based on what we're capturing
+      if (isCapturingFace) {
+        setFaceImage(imageDataUrl)
+      } else {
+        setIdCardImage(imageDataUrl)
+      }
+
+      // Close camera modal
+      setShowCameraModal(false)
+
+      // Stop modal camera
+      if (modalStreamRef.current) {
+        modalStreamRef.current.getTracks().forEach((track) => track.stop())
+        modalStreamRef.current = null
+      }
+
+      // Try to upload to server (but don't fail if it doesn't work)
+      try {
+        await uploadImageToServer(imageDataUrl, isCapturingFace ? "face" : "id_card")
+        toast.success(`${isCapturingFace ? "Face" : "ID Card"} captured and uploaded successfully`)
+      } catch (uploadError) {
+        console.warn("Upload failed but image captured:", uploadError)
+        toast.success(`${isCapturingFace ? "Face" : "ID Card"} captured successfully`)
+      }
+    } catch (error) {
+      console.error("Error capturing image:", error)
+      toast.error("Failed to capture image")
+    }
+  }, [isCapturingFace, uploadImageToServer, webcamEnabled])
+
+  // Update the startWebcam function for main video with better error handling
+  const startWebcam = useCallback(async () => {
+    if (!webcamEnabled || testCompleted || testTerminated || !componentMountedRef.current) {
+      return
+    }
+
+    if (webcamStatus === "requesting" || webcamStatus === "active") {
+      return
+    }
+
+    try {
+      setWebcamStatus("requesting")
+      setWebcamError(null)
+
+      // Stop any existing stream first
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop())
+        mediaStreamRef.current = null
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Camera access is not supported in this browser")
+      }
+
+      const constraints = {
+        video: {
+          width: { ideal: 640, min: 320 },
+          height: { ideal: 480, min: 240 },
+          facingMode: "user",
+        },
+        audio: false,
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+
+      // Check if component is still mounted and webcam is still enabled
+      if (!componentMountedRef.current || !webcamEnabled || testCompleted) {
+        stream.getTracks().forEach((track) => track.stop())
+        return
+      }
+
+      mediaStreamRef.current = stream
+
+      // Determine which video element to use
+      const targetVideo = systemCheckVideoRef.current || videoRef.current
+
+      if (!targetVideo) {
+        // Wait for video element to be available
+        let retryCount = 0
+        const maxRetries = 10
+
+        while (!videoRef.current && retryCount < maxRetries && componentMountedRef.current) {
+          await new Promise((resolve) => setTimeout(resolve, 100))
+          retryCount++
+        }
+
+        if (!isVideoElementAvailable(videoRef.current)) {
+          throw new Error("Video element not available after waiting")
+        }
+      }
+
+      const video = targetVideo || videoRef.current!
+
+      if (!isVideoElementAvailable(video)) {
+        throw new Error("Video element not available")
+      }
+
+      video.srcObject = stream
+      video.muted = true
+      video.playsInline = true
+      video.autoplay = true
+
+      // Wait for video to load and play
+      await new Promise<void>((resolve, reject) => {
+        if (!componentMountedRef.current || !webcamEnabled) {
+          reject(new Error("Component unmounted or webcam disabled"))
+          return
+        }
+
+        const timeoutId = setTimeout(() => {
+          reject(new Error("Video loading timed out"))
+        }, 10000)
+
+        const onLoadedMetadata = async () => {
+          clearTimeout(timeoutId)
+          try {
+            if (!componentMountedRef.current || !webcamEnabled) {
+              reject(new Error("Component unmounted during video load"))
+              return
+            }
+            await video.play()
+            resolve()
+          } catch (err) {
+            reject(err)
+          }
+        }
+
+        const onError = () => {
+          clearTimeout(timeoutId)
+          reject(new Error("Video element error"))
+        }
+
+        video.addEventListener("loadedmetadata", onLoadedMetadata, { once: true })
+        video.addEventListener("error", onError, { once: true })
+
+        // If video is already loaded
+        if (video.readyState >= 1) {
+          onLoadedMetadata()
+        }
+      })
+
+      if (componentMountedRef.current && webcamEnabled) {
+        setWebcamStatus("active")
+        webcamInitializedRef.current = true
+        setWebcamRetryCount(0)
+
+        // Update system checks if in system check mode
+        if (showSystemCheck) {
+          setSystemChecks((prev) => ({
+            ...prev,
+            cameraAccess: true,
+          }))
+        }
+
+        toast.success("Webcam started successfully")
+      }
+    } catch (error) {
+      if (!componentMountedRef.current || !webcamEnabled) {
+        return // Don't show errors if component is unmounted or webcam disabled
+      }
+
+      console.error("Error starting webcam:", error)
+
+      let errorMessage = "Failed to access webcam"
+      if (error instanceof Error) {
+        if (error.name === "NotAllowedError") {
+          errorMessage = "Camera permission denied. Please allow camera access and try again."
+        } else if (error.name === "NotFoundError") {
+          errorMessage = "No camera found. Please connect a camera and try again."
+        } else if (error.name === "NotReadableError") {
+          errorMessage = "Camera is already in use by another application."
+        } else if (error.name === "OverconstrainedError") {
+          errorMessage = "Camera constraints could not be satisfied."
+        } else {
+          errorMessage = error.message || "Unknown webcam error"
+        }
+      }
+
+      setWebcamError(errorMessage)
+      setWebcamStatus("error")
+      setWebcamRetryCount((prev) => prev + 1)
+
+      // Update system checks if in system check mode
+      if (showSystemCheck) {
+        setSystemChecks((prev) => ({
+          ...prev,
+          cameraAccess: false,
+        }))
+      }
+
+      toast.error(errorMessage)
+
+      // Clean up on error
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop())
+        mediaStreamRef.current = null
+      }
+
+      // Auto-retry with exponential backoff (max 3 retries) only if webcam is still enabled
+      if (webcamRetryCount < 3 && webcamEnabled && !testCompleted && !testTerminated) {
+        const retryDelay = Math.min(1000 * Math.pow(2, webcamRetryCount), 5000)
+        webcamRetryTimeoutRef.current = setTimeout(() => {
+          if (componentMountedRef.current && webcamEnabled) {
+            console.log(`Retrying webcam start (attempt ${webcamRetryCount + 1})`)
+            startWebcam()
+          }
+        }, retryDelay)
+      }
+    }
+  }, [
+    webcamStatus,
+    webcamRetryCount,
+    showSystemCheck,
+    webcamEnabled,
+    testCompleted,
+    testTerminated,
+    isVideoElementAvailable,
+  ])
 
   useEffect(() => {
+    // Set component as mounted
+    componentMountedRef.current = true
+
     // Check if this is a preview mode (employee testing the system)
     const isPreview = window.location.pathname.includes("/preview/") || window.location.search.includes("preview=true")
     setIsPreviewMode(isPreview)
@@ -192,42 +1015,33 @@ export default function TakeTestPage() {
     window.addEventListener("blur", handleWindowBlur)
 
     return () => {
-      // Stop camera if active
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((track) => track.stop())
-      }
+      // Mark component as unmounted
+      componentMountedRef.current = false
+
+      // Stop all camera streams
+      cleanupWebcam()
 
       // Remove event listeners
       document.removeEventListener("visibilitychange", handleVisibilityChange)
       window.removeEventListener("blur", handleWindowBlur)
     }
-  }, [token, activeTab, test?.settings.preventTabSwitching, testTerminated, lastTabSwitchTime])
+  }, [token, activeTab, test?.settings.preventTabSwitching, testTerminated, lastTabSwitchTime, cleanupWebcam])
 
   useEffect(() => {
     if (invitation && invitation.status === "Completed") {
       setTestCompleted(true)
+      setWebcamEnabled(false) // Disable webcam when test is completed
+      cleanupWebcam()
       fetchResult()
     }
-  }, [invitation])
+  }, [invitation, cleanupWebcam])
 
   useEffect(() => {
     if (test) {
-      // Initialize timer
+      // Only initialize timer once when test is first loaded
       setTimeLeft(test.duration * 60)
 
-      // Shuffle questions if enabled
-      if (test.settings.shuffleQuestions) {
-        const shuffledTest = {
-          ...test,
-          sections: test.sections.map((section) => ({
-            ...section,
-            questions: shuffleArray([...section.questions]),
-          })),
-        }
-        setTest(shuffledTest)
-      }
-
-      // Initialize answers with unique keys
+      // Initialize answers with unique keys - only once
       const initialAnswers: Record<string, string | string[]> = {}
       test.sections.forEach((section) => {
         section.questions.forEach((question) => {
@@ -236,99 +1050,85 @@ export default function TakeTestPage() {
         })
       })
       setAnswers(initialAnswers)
-
-      // Start webcam monitoring if not already started and verification is complete
-      if (!webcamInitializedRef.current && verificationComplete) {
-        startWebcam()
-      }
     }
-  }, [test, verificationComplete])
+  }, [test?._id])
 
   useEffect(() => {
-    if (timeLeft > 0 && activeTab === "test" && !testCompleted && !testTerminated) {
-      const timer = setTimeout(() => {
-        setTimeLeft(timeLeft - 1)
-      }, 1000)
-
-      // Auto submit when time expires if enabled
-      if (timeLeft === 1 && test?.settings.autoSubmit) {
-        handleSubmitTest()
+    if (test && test.settings.shuffleQuestions && !test._shuffled) {
+      // Only shuffle once when test is first loaded and mark it as shuffled
+      const shuffledTest = {
+        ...test,
+        _shuffled: true, // Add a flag to prevent re-shuffling
+        sections: test.sections.map((section) => ({
+          ...section,
+          questions: shuffleArray([...section.questions]),
+        })),
       }
-
-      return () => clearTimeout(timer)
+      setTest(shuffledTest)
     }
-  }, [timeLeft, activeTab, testCompleted, test?.settings.autoSubmit, testTerminated])
+  }, [test?.settings.shuffleQuestions, test?._id])
+
+  // Enhanced webcam initialization with proper dependency management and completion checks
+  useEffect(() => {
+    if (
+      test?._id &&
+      verificationComplete &&
+      !webcamInitializedRef.current &&
+      activeTab === "test" &&
+      webcamEnabled &&
+      !testCompleted &&
+      !testTerminated &&
+      componentMountedRef.current
+    ) {
+      startWebcam()
+    }
+  }, [test?._id, verificationComplete, activeTab, startWebcam, webcamEnabled, testCompleted, testTerminated])
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout
+
+    if (timeLeft > 0 && activeTab === "test" && !testCompleted && !testTerminated) {
+      timer = setTimeout(() => {
+        setTimeLeft((prev) => prev - 1)
+      }, 1000)
+    } else if (timeLeft === 0 && activeTab === "test" && test?.settings.autoSubmit && !testTerminated) {
+      handleSubmitTest()
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer)
+    }
+  }, [timeLeft, activeTab, testCompleted, testTerminated, test?.settings.autoSubmit, handleSubmitTest])
+
+  // Disable webcam when test is completed or terminated
+  useEffect(() => {
+    if (testCompleted || testTerminated) {
+      setWebcamEnabled(false)
+      cleanupWebcam()
+    }
+  }, [testCompleted, testTerminated, cleanupWebcam])
 
   const handleTestTermination = () => {
     setTestTerminated(true)
+    setWebcamEnabled(false)
+    cleanupWebcam()
     toast.error("Test terminated due to excessive tab switching violations!")
     setTimeout(() => {
       handleSubmitTest()
     }, 2000)
   }
 
-  const startWebcam = async () => {
-    try {
-      if (!videoRef.current) return
-
-      // Stop any existing stream
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((track) => track.stop())
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: "user",
-        },
-        audio: false,
-      })
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        mediaStreamRef.current = stream
-
-        // Ensure video plays
-        videoRef.current.onloadedmetadata = () => {
-          if (videoRef.current) {
-            videoRef.current.play().catch((err) => {
-              console.error("Error playing video:", err)
-              toast.error("Failed to start webcam. Please check your camera permissions.")
-            })
-          }
-        }
-
-        webcamInitializedRef.current = true
-
-        // Update system checks if in system check mode
-        if (showSystemCheck) {
-          setSystemChecks((prev) => ({
-            ...prev,
-            cameraAccess: true,
-          }))
-        }
-      }
-    } catch (error) {
-      console.error("Error starting webcam:", error)
-      toast.error("Failed to access webcam. Please ensure camera permissions are granted.")
-
-      // Update system checks if in system check mode
-      if (showSystemCheck) {
-        setSystemChecks((prev) => ({
-          ...prev,
-          cameraAccess: false,
-        }))
-      }
-    }
-  }
-
   const fetchInvitation = async () => {
     try {
       setIsLoading(true)
 
+      // Check if this is a preview mode (employee testing the system)
+      const isPreview =
+        window.location.pathname.includes("/preview/") || window.location.search.includes("preview=true")
+      setIsPreviewMode(isPreview)
+
       // If in preview mode, create a mock invitation
-      if (isPreviewMode) {
+      if (isPreview) {
         const mockInvitation = {
           _id: "preview-invitation-id",
           email: "preview@oddiant.com",
@@ -346,6 +1146,7 @@ export default function TakeTestPage() {
         return
       }
 
+      // For real invitations, validate the token
       const response = await fetch(`/api/assessment/invitations/validate/${token}`, {
         method: "GET",
         headers: {
@@ -356,7 +1157,25 @@ export default function TakeTestPage() {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to validate invitation")
+        // If validation fails, try to fetch test directly using token as testId
+        console.log("Invitation validation failed, trying direct test access...")
+        await fetchTest(token)
+
+        // Create a mock invitation for direct test access
+        const mockInvitation = {
+          _id: `direct-${token}`,
+          email: "direct-access@test.com",
+          testId: token,
+          testName: "Direct Test Access",
+          companyName: "Oddiant Techlabs",
+          token: token,
+          status: "Active",
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        }
+
+        setInvitation(mockInvitation)
+        setIsLoading(false)
+        return
       }
 
       const data = await response.json()
@@ -369,11 +1188,48 @@ export default function TakeTestPage() {
           await fetchTest(data.invitation.testId)
         }
       } else {
-        throw new Error(data.message || "Invalid or expired invitation")
+        // Fallback to direct test access
+        console.log("Invitation data invalid, trying direct test access...")
+        await fetchTest(token)
+
+        const mockInvitation = {
+          _id: `direct-${token}`,
+          email: "direct-access@test.com",
+          testId: token,
+          testName: "Direct Test Access",
+          companyName: "Oddiant Techlabs",
+          token: token,
+          status: "Active",
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        }
+
+        setInvitation(mockInvitation)
       }
     } catch (error) {
       console.error("Error validating invitation:", error)
-      toast.error("This invitation link is invalid or has expired.")
+
+      // Final fallback - try direct test access
+      try {
+        console.log("Final fallback: trying direct test access...")
+        await fetchTest(token)
+
+        const mockInvitation = {
+          _id: `direct-${token}`,
+          email: "direct-access@test.com",
+          testId: token,
+          testName: "Direct Test Access",
+          companyName: "Oddiant Techlabs",
+          token: token,
+          status: "Active",
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        }
+
+        setInvitation(mockInvitation)
+        toast.success("Test loaded successfully")
+      } catch (testError) {
+        console.error("Failed to load test:", testError)
+        toast.error("This invitation link is invalid or has expired.")
+      }
     } finally {
       setIsLoading(false)
     }
@@ -448,8 +1304,8 @@ export default function TakeTestPage() {
     setActiveTab("test")
     setStartTime(new Date())
 
-    // Ensure webcam is started
-    if (!webcamInitializedRef.current) {
+    // Ensure webcam is started only if enabled
+    if (!webcamInitializedRef.current && webcamEnabled) {
       startWebcam()
     }
   }
@@ -479,6 +1335,11 @@ export default function TakeTestPage() {
     return answers[questionKey] || ""
   }
 
+  const getCurrentQuestionId = () => {
+    const currentQuestionData = test?.sections[currentSection]?.questions[currentQuestion]
+    return currentQuestionData?.id || ""
+  }
+
   const handleNextQuestion = () => {
     const currentSectionQuestions = test?.sections[currentSection]?.questions || []
     if (currentQuestion < currentSectionQuestions.length - 1) {
@@ -495,99 +1356,6 @@ export default function TakeTestPage() {
     } else if (currentSection > 0) {
       setCurrentSection(currentSection - 1)
       setCurrentQuestion((test?.sections[currentSection - 1].questions.length || 1) - 1)
-    }
-  }
-
-  const handleSubmitTest = async () => {
-    try {
-      if (!test || !invitation) return
-
-      setIsSubmitting(true)
-
-      // Calculate test duration in minutes
-      const endTime = new Date()
-      const durationInMinutes = startTime ? Math.round((endTime.getTime() - startTime.getTime()) / 60000) : 0
-
-      // Calculate score
-      let totalPoints = 0
-      let earnedPoints = 0
-      const answersWithDetails: any[] = []
-
-      test.sections.forEach((section) => {
-        section.questions.forEach((question) => {
-          totalPoints += question.points
-          const questionKey = `${section.id}-${question.id}`
-          const userAnswer = answers[questionKey]
-          let isCorrect = false
-
-          if (question.type === "Multiple Choice" && userAnswer === question.correctAnswer) {
-            isCorrect = true
-            earnedPoints += question.points
-          }
-
-          answersWithDetails.push({
-            questionId: question.id,
-            answer: userAnswer,
-            isCorrect,
-            points: isCorrect ? question.points : 0,
-          })
-        })
-      })
-
-      const score = Math.round((earnedPoints / totalPoints) * 100)
-      const status = score >= test.passingScore ? "Passed" : "Failed"
-
-      // Prepare result data
-      const resultData = {
-        invitationId: invitation._id,
-        testId: test._id,
-        testName: test.name,
-        candidateName: invitation.email.split("@")[0],
-        candidateEmail: invitation.email,
-        score,
-        status,
-        duration: durationInMinutes,
-        answers: answersWithDetails,
-        tabSwitchCount: tabSwitchCount,
-        terminated: testTerminated,
-        resultsDeclared: false,
-        isPreview: isPreviewMode,
-      }
-
-      // Submit result - use different endpoint for preview
-      const endpoint = isPreviewMode ? "/api/assessment/preview-results" : "/api/assessment/results"
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(resultData),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to submit test")
-      }
-
-      const data = await response.json()
-
-      if (data.success) {
-        setTestCompleted(true)
-        setTestResult({
-          score: 0, // Don't show actual score yet
-          status: "Pending", // Don't show actual status yet
-          duration: durationInMinutes,
-          resultsDeclared: false,
-        })
-        toast.success("Test submitted successfully")
-      } else {
-        throw new Error(data.message || "Failed to submit test")
-      }
-    } catch (error) {
-      console.error("Error submitting test:", error)
-      toast.error("Failed to submit test. Please try again.")
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
@@ -637,110 +1405,6 @@ export default function TakeTestPage() {
   }
 
   // ID verification functions
-  const openCameraModal = (forFace: boolean) => {
-    setIsCapturingFace(forFace)
-    setShowCameraModal(true)
-
-    // Small delay to ensure the modal is rendered before starting webcam
-    setTimeout(() => {
-      startWebcam()
-    }, 500)
-  }
-
-  const captureImage = async () => {
-    if (!videoRef.current || !canvasRef.current || !mediaStreamRef.current) {
-      toast.error("Camera not initialized properly")
-      return
-    }
-
-    try {
-      const video = videoRef.current
-      const canvas = canvasRef.current
-      const context = canvas.getContext("2d")
-
-      if (!context) {
-        toast.error("Could not get canvas context")
-        return
-      }
-
-      // Set canvas dimensions to match video
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
-
-      // Draw video frame to canvas
-      context.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-      // Convert to data URL
-      const imageDataUrl = canvas.toDataURL("image/jpeg", 0.8)
-
-      // Save image based on what we're capturing
-      if (isCapturingFace) {
-        setFaceImage(imageDataUrl)
-      } else {
-        setIdCardImage(imageDataUrl)
-      }
-
-      // Close camera modal
-      setShowCameraModal(false)
-
-      // Stop camera
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((track) => track.stop())
-      }
-
-      // Upload to server
-      await uploadImageToServer(imageDataUrl, isCapturingFace ? "face" : "id_card")
-
-      toast.success(`${isCapturingFace ? "Face" : "ID Card"} captured successfully`)
-    } catch (error) {
-      console.error("Error capturing image:", error)
-      toast.error("Failed to capture image")
-    }
-  }
-
-  const uploadImageToServer = async (imageDataUrl: string, type: "face" | "id_card") => {
-    if (!token) return
-
-    try {
-      // Convert data URL to blob
-      const response = await fetch(imageDataUrl)
-      const blob = await response.blob()
-
-      // Create form data
-      const formData = new FormData()
-      formData.append("image", blob, `${type}.jpg`)
-      formData.append("token", token)
-      formData.append("type", type)
-      formData.append("isPreview", isPreviewMode.toString())
-
-      // Upload to server
-      const endpoint = isPreviewMode
-        ? "/api/assessment/preview-verification/upload"
-        : "/api/assessment/verification/upload"
-
-      const uploadResponse = await fetch(endpoint, {
-        method: "POST",
-        body: formData,
-      })
-
-      if (!uploadResponse.ok) {
-        const errorData = await uploadResponse.json()
-        console.error("Upload error response:", errorData)
-        throw new Error(errorData.message || "Failed to upload image")
-      }
-
-      const data = await uploadResponse.json()
-
-      if (!data.success) {
-        throw new Error(data.message || "Upload failed")
-      }
-
-      return data.imageUrl
-    } catch (error) {
-      console.error("Error uploading image:", error)
-      throw error
-    }
-  }
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -790,8 +1454,13 @@ export default function TakeTestPage() {
   }
 
   const completeIdVerification = () => {
-    if (!studentId || !idCardImage || !faceImage) {
-      toast.error("Please complete all ID verification steps")
+    if (!studentId) {
+      toast.error("Please enter your student ID")
+      return
+    }
+
+    if (!idCardImage && !faceImage) {
+      toast.error("Please capture at least your face or upload an ID card")
       return
     }
 
@@ -1123,46 +1792,51 @@ export default function TakeTestPage() {
   }
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="min-h-screen bg-background">
       <Toaster position="top-center" />
 
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">
-          {isPreviewMode ? "Test Preview: " : ""}
-          {test.name}
-        </h1>
+      <div className="container mx-auto py-4 px-4 max-w-7xl">
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">
+            {isPreviewMode ? "Test Preview: " : ""}
+            {test.name}
+          </h1>
 
-        {isPreviewMode && (
-          <div className="mb-6 flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setVerificationStep("system")
-                setShowSystemCheck(true)
-              }}
-            >
-              Preview System Check
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setVerificationStep("id")
-                setShowIdVerification(true)
-              }}
-            >
-              Preview ID Verification
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setVerificationStep("rules")
-                setShowRules(true)
-              }}
-            >
-              Preview Exam Rules
-            </Button>
-          </div>
-        )}
+          {isPreviewMode && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setVerificationStep("system")
+                  setShowSystemCheck(true)
+                }}
+              >
+                Preview System Check
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setVerificationStep("id")
+                  setShowIdVerification(true)
+                }}
+              >
+                Preview ID Verification
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setVerificationStep("rules")
+                  setShowRules(true)
+                }}
+              >
+                Preview Exam Rules
+              </Button>
+            </div>
+          )}
+        </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
@@ -1254,23 +1928,28 @@ export default function TakeTestPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="test">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-3">
-                <Card>
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
+          <TabsContent value="test" className="space-y-0">
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 lg:gap-6">
+              {/* Main Content Area */}
+              <div className="xl:col-span-3 order-2 xl:order-1">
+                <Card className="h-full">
+                  <CardHeader className="pb-4">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                       <div>
-                        <CardTitle>Section: {test.sections[currentSection]?.title}</CardTitle>
-                        <CardDescription>
+                        <CardTitle className="text-lg sm:text-xl">
+                          Section: {test.sections[currentSection]?.title}
+                        </CardTitle>
+                        <CardDescription className="text-sm">
                           Question {currentQuestion + 1} of {test.sections[currentSection]?.questions.length || 0}
                         </CardDescription>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className={`font-mono ${timeLeft < 300 ? "text-red-500" : ""}`}>
-                          {formatTime(timeLeft)}
-                        </span>
+                      <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span className={`font-mono text-sm sm:text-base ${timeLeft < 300 ? "text-red-500" : ""}`}>
+                            {formatTime(timeLeft)}
+                          </span>
+                        </div>
                         {tabSwitchCount > 0 && (
                           <div className="flex items-center gap-1 text-amber-600">
                             <AlertTriangle className="h-4 w-4" />
@@ -1280,55 +1959,62 @@ export default function TakeTestPage() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
+
+                  <CardContent className="space-y-6">
                     {test.sections[currentSection]?.questions[currentQuestion] ? (
                       <div className="space-y-6">
-                        {/* Coding Question Layout */}
+                        {/* Coding Question Layout - Enhanced with Better Heights */}
                         {test.sections[currentSection].questions[currentQuestion].type === "Coding" && (
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            {/* Problem Description Panel */}
-                            <div className="space-y-4">
-                              <div className="p-4 border rounded-lg bg-muted/50">
-                                <h3 className="text-lg font-medium mb-4">
-                                  Problem {currentQuestion + 1}:{" "}
-                                  {test.sections[currentSection].questions[currentQuestion].text}
-                                </h3>
-                                <div className="space-y-3">
-                                  <div>
-                                    <h4 className="font-medium text-sm">Description</h4>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                      Solve the given problem using{" "}
-                                      {test.sections[currentSection].questions[currentQuestion].codeLanguage}.
-                                    </p>
+                          <div className="space-y-6">
+                            {/* Problem Description - Improved Layout */}
+                            <div className="w-full">
+                              <Card className="bg-muted/50">
+                                <CardContent className="p-4 sm:p-6">
+                                  <h3 className="text-lg sm:text-xl font-medium mb-4">
+                                    Problem {currentQuestion + 1}:{" "}
+                                    {test.sections[currentSection].questions[currentQuestion].text}
+                                  </h3>
+
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                                    <div>
+                                      <h4 className="font-medium text-sm mb-1">Language</h4>
+                                      <p className="text-sm text-muted-foreground">
+                                        {test.sections[currentSection].questions[currentQuestion].codeLanguage}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <h4 className="font-medium text-sm mb-1">Points</h4>
+                                      <p className="text-sm text-muted-foreground">
+                                        {test.sections[currentSection].questions[currentQuestion].points} points
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <h4 className="font-medium text-sm mb-1">Time Limit</h4>
+                                      <p className="text-sm text-muted-foreground">5 seconds</p>
+                                    </div>
                                   </div>
 
-                                  <div>
-                                    <h4 className="font-medium text-sm">Points</h4>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                      {test.sections[currentSection].questions[currentQuestion].points} points
-                                    </p>
-                                  </div>
-
+                                  {/* Test Cases - Enhanced Display */}
                                   {test.sections[currentSection].questions[currentQuestion].testCases &&
                                     test.sections[currentSection].questions[currentQuestion].testCases!.length > 0 && (
-                                      <div>
-                                        <h4 className="font-medium text-sm mb-2">Example Test Cases</h4>
-                                        <div className="space-y-2">
+                                      <div className="mt-4">
+                                        <h4 className="font-medium text-sm mb-3">Example Test Cases</h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                           {test.sections[currentSection].questions[currentQuestion]
                                             .testCases!.filter((tc: any) => !tc.isHidden)
                                             .slice(0, 2)
                                             .map((testCase: any, index: number) => (
-                                              <div key={index} className="p-2 bg-background rounded border text-xs">
-                                                <div className="grid grid-cols-2 gap-2">
+                                              <div key={index} className="p-3 bg-background rounded border">
+                                                <div className="space-y-2">
                                                   <div>
-                                                    <span className="font-medium">Input:</span>
-                                                    <pre className="mt-1 text-muted-foreground">
+                                                    <span className="font-medium text-xs">Input:</span>
+                                                    <pre className="mt-1 text-xs text-muted-foreground bg-muted p-2 rounded overflow-x-auto max-h-20">
                                                       {testCase.input || "No input"}
                                                     </pre>
                                                   </div>
                                                   <div>
-                                                    <span className="font-medium">Output:</span>
-                                                    <pre className="mt-1 text-muted-foreground">
+                                                    <span className="font-medium text-xs">Expected Output:</span>
+                                                    <pre className="mt-1 text-xs text-muted-foreground bg-muted p-2 rounded overflow-x-auto max-h-20">
                                                       {testCase.expectedOutput}
                                                     </pre>
                                                   </div>
@@ -1338,23 +2024,19 @@ export default function TakeTestPage() {
                                         </div>
                                       </div>
                                     )}
-
-                                  <div>
-                                    <h4 className="font-medium text-sm">Constraints</h4>
-                                    <ul className="text-xs text-muted-foreground mt-1 space-y-1">
-                                      <li>• Time limit: 5 seconds</li>
-                                      <li>• Memory limit: 512 MB</li>
-                                      <li>• Use standard input/output</li>
-                                    </ul>
-                                  </div>
-                                </div>
-                              </div>
+                                </CardContent>
+                              </Card>
                             </div>
 
-                            {/* Code Editor Panel */}
-                            <div className="space-y-4">
+                            {/* Code Editor - Enhanced with Better Heights and Scrolling */}
+                            <div className="w-full">
                               {test.settings.allowCodeEditor ? (
-                                <div className="h-[600px] overflow-hidden">
+                                <div
+                                  className="border rounded-lg overflow-hidden"
+                                  style={{
+                                    height: "700px", // Fixed height for better consistency
+                                  }}
+                                >
                                   <AdvancedCodeEditor
                                     value={
                                       (getCurrentAnswer() as string) ||
@@ -1366,85 +2048,130 @@ export default function TakeTestPage() {
                                       test.sections[currentSection].questions[currentQuestion].codeLanguage ||
                                       "javascript"
                                     }
-                                    height="100%"
                                     showConsole={true}
                                     testCases={test.sections[currentSection].questions[currentQuestion].testCases || []}
+                                    className="h-full"
+                                    questionId={getCurrentQuestionId()}
+                                    onTestCaseResults={handleTestCaseResults}
                                   />
                                 </div>
                               ) : (
-                                <div className="border rounded-md overflow-hidden">
-                                  <div className="bg-muted p-2 border-b">
-                                    <span className="text-sm font-medium">Code Editor</span>
-                                  </div>
+                                <Card>
+                                  <CardHeader className="pb-2">
+                                    <CardTitle className="text-base">Code Editor</CardTitle>
+                                  </CardHeader>
+                                  <CardContent>
+                                    <textarea
+                                      rows={25} // Increased rows for better visibility
+                                      placeholder="// Write your code here"
+                                      className="w-full p-3 font-mono text-sm bg-slate-900 text-slate-100 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                                      value={
+                                        (getCurrentAnswer() as string) ||
+                                        test.sections[currentSection].questions[currentQuestion].codeTemplate ||
+                                        ""
+                                      }
+                                      onChange={(e) => handleAnswer(getCurrentQuestionKey(), e.target.value)}
+                                    />
+                                  </CardContent>
+                                </Card>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Regular Questions - Improved Layout */}
+                        {test.sections[currentSection].questions[currentQuestion].type !== "Coding" && (
+                          <div className="space-y-6">
+                            <div>
+                              <h3 className="text-lg sm:text-xl font-medium mb-4">
+                                {currentQuestion + 1}. {test.sections[currentSection].questions[currentQuestion].text}
+                              </h3>
+                              <p className="text-sm text-muted-foreground mb-6">
+                                {test.sections[currentSection].questions[currentQuestion].points} points
+                              </p>
+
+                              {test.sections[currentSection].questions[currentQuestion].type === "Multiple Choice" && (
+                                <div className="space-y-3">
+                                  {test.sections[currentSection].questions[currentQuestion].options
+                                    ?.filter((option) => option.trim() !== "")
+                                    .map((option, index) => (
+                                      <div
+                                        key={index}
+                                        className="flex items-start space-x-3 p-3 border rounded-md hover:bg-muted/50 transition-colors"
+                                      >
+                                        <input
+                                          type="radio"
+                                          id={`option-${index}`}
+                                          name={`question-${getCurrentQuestionKey()}`}
+                                          value={option}
+                                          checked={getCurrentAnswer() === option}
+                                          onChange={() => handleAnswer(getCurrentQuestionKey(), option)}
+                                          className="h-4 w-4 mt-0.5 text-primary focus:ring-primary border-input"
+                                        />
+                                        <label
+                                          htmlFor={`option-${index}`}
+                                          className="text-sm font-medium flex-1 cursor-pointer"
+                                        >
+                                          {option}
+                                        </label>
+                                      </div>
+                                    ))}
+                                </div>
+                              )}
+
+                              {test.sections[currentSection].questions[currentQuestion].type === "Written Answer" && (
+                                <div className="space-y-2">
                                   <textarea
-                                    rows={20}
-                                    placeholder="// Write your code here"
-                                    className="w-full p-2 font-mono text-sm bg-black text-white resize-none"
-                                    value={
-                                      (getCurrentAnswer() as string) ||
-                                      test.sections[currentSection].questions[currentQuestion].codeTemplate ||
-                                      ""
-                                    }
-                                    onChange={(e) => handleAnswer(getCurrentQuestionKey(), e.target.value)}
-                                  ></textarea>
+                                    rows={window.innerWidth >= 768 ? 8 : 6}
+                                    placeholder="Type your answer here..."
+                                    className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                                    value={(getCurrentAnswer() as string) || ""}
+                                    onChange={(e) => {
+                                      const words = e.target.value
+                                        .trim()
+                                        .split(/\s+/)
+                                        .filter((word) => word.length > 0)
+                                      const maxWords =
+                                        test.sections[currentSection].questions[currentQuestion].maxWords || 500
+
+                                      if (words.length <= maxWords) {
+                                        handleAnswer(getCurrentQuestionKey(), e.target.value)
+                                      } else {
+                                        toast.error(`Maximum ${maxWords} words allowed`)
+                                      }
+                                    }}
+                                  />
+                                  <div className="flex justify-between text-sm text-muted-foreground">
+                                    <span>
+                                      Words:{" "}
+                                      {
+                                        ((getCurrentAnswer() as string) || "")
+                                          .trim()
+                                          .split(/\s+/)
+                                          .filter((word) => word.length > 0).length
+                                      }{" "}
+                                      / {test.sections[currentSection].questions[currentQuestion].maxWords || 500}
+                                    </span>
+                                    <span>
+                                      Max: {test.sections[currentSection].questions[currentQuestion].maxWords || 500}{" "}
+                                      words
+                                    </span>
+                                  </div>
                                 </div>
                               )}
                             </div>
                           </div>
                         )}
 
-                        {/* Regular Question Layout for Non-Coding Questions */}
-                        {test.sections[currentSection].questions[currentQuestion].type !== "Coding" && (
-                          <div>
-                            <h3 className="text-lg font-medium mb-4">
-                              {currentQuestion + 1}. {test.sections[currentSection].questions[currentQuestion].text}
-                            </h3>
-                            <p className="text-sm text-muted-foreground mb-4">
-                              {test.sections[currentSection].questions[currentQuestion].points} points
-                            </p>
-
-                            {test.sections[currentSection].questions[currentQuestion].type === "Multiple Choice" && (
-                              <div className="space-y-3">
-                                {test.sections[currentSection].questions[currentQuestion].options
-                                  ?.filter((option) => option.trim() !== "")
-                                  .map((option, index) => (
-                                    <div key={index} className="flex items-center space-x-2">
-                                      <input
-                                        type="radio"
-                                        id={`option-${index}`}
-                                        name={`question-${getCurrentQuestionKey()}`}
-                                        value={option}
-                                        checked={getCurrentAnswer() === option}
-                                        onChange={() => handleAnswer(getCurrentQuestionKey(), option)}
-                                        className="h-4 w-4 text-primary focus:ring-primary border-input"
-                                      />
-                                      <label htmlFor={`option-${index}`} className="text-sm font-medium">
-                                        {option}
-                                      </label>
-                                    </div>
-                                  ))}
-                              </div>
-                            )}
-
-                            {test.sections[currentSection].questions[currentQuestion].type === "Written Answer" && (
-                              <textarea
-                                rows={5}
-                                placeholder="Type your answer here..."
-                                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                                value={(getCurrentAnswer() as string) || ""}
-                                onChange={(e) => handleAnswer(getCurrentQuestionKey(), e.target.value)}
-                              ></textarea>
-                            )}
-                          </div>
-                        )}
-
-                        <div className="flex justify-between pt-4">
+                        {/* Navigation Buttons */}
+                        <div className="flex flex-col sm:flex-row justify-between gap-4 pt-6 border-t">
                           <Button
                             variant="outline"
                             onClick={handlePrevQuestion}
                             disabled={currentSection === 0 && currentQuestion === 0}
+                            className="w-full sm:w-auto"
                           >
-                            Previous
+                            Previous Question
                           </Button>
                           <Button
                             onClick={handleNextQuestion}
@@ -1452,104 +2179,197 @@ export default function TakeTestPage() {
                               currentSection === test.sections.length - 1 &&
                               currentQuestion === test.sections[currentSection].questions.length - 1
                             }
+                            className="w-full sm:w-auto"
                           >
-                            Next
+                            Next Question
                           </Button>
                         </div>
                       </div>
                     ) : (
-                      <div className="text-center py-8">
+                      <div className="text-center py-12">
                         <AlertCircle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
                         <h3 className="text-lg font-medium mb-2">No Questions Found</h3>
-                        <p className="text-muted-foreground mb-4">
-                          This section doesn't have any questions yet. Add questions in the test editor.
-                        </p>
+                        <p className="text-muted-foreground">This section doesn't have any questions yet.</p>
                       </div>
                     )}
                   </CardContent>
                 </Card>
               </div>
 
-              <div>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Progress</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
+              {/* Enhanced Sidebar with Better Webcam Management */}
+              <div className="xl:col-span-1 order-1 xl:order-2">
+                <div className="sticky top-4 space-y-4">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">Progress</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
                       <div>
-                        <div className="flex justify-between mb-1 text-sm">
+                        <div className="flex justify-between mb-2 text-sm">
                           <span>Completion</span>
-                          <span>{calculateProgress()}%</span>
+                          <span className="font-medium">{calculateProgress()}%</span>
                         </div>
                         <Progress value={calculateProgress()} className="h-2" />
                       </div>
 
-                      <div className="space-y-2">
+                      {/* Question Navigator */}
+                      <div className="space-y-3">
                         <h4 className="text-sm font-medium">Question Navigator</h4>
-                        {test.sections.map((section, sIndex) => (
-                          <div key={section.id} className="space-y-1">
-                            <h5 className="text-xs font-medium text-muted-foreground">{section.title}</h5>
-                            <div className="flex flex-wrap gap-1">
-                              {section.questions.map((question, qIndex) => {
-                                const questionKey = `${section.id}-${question.id}`
-                                const isAnswered =
-                                  answers[questionKey] &&
-                                  (typeof answers[questionKey] === "string"
-                                    ? (answers[questionKey] as string).trim() !== ""
-                                    : (answers[questionKey] as string[]).length > 0)
+                        <div className="max-h-40 overflow-y-auto">
+                          {test.sections.map((section, sIndex) => (
+                            <div key={section.id} className="space-y-2 mb-3">
+                              <h5 className="text-xs font-medium text-muted-foreground truncate">{section.title}</h5>
+                              <div className="grid grid-cols-5 sm:grid-cols-6 lg:grid-cols-5 gap-1">
+                                {section.questions.map((question, qIndex) => {
+                                  const questionKey = `${section.id}-${question.id}`
+                                  const isAnswered =
+                                    answers[questionKey] &&
+                                    (typeof answers[questionKey] === "string"
+                                      ? (answers[questionKey] as string).trim() !== ""
+                                      : (answers[questionKey] as string[]).length > 0)
 
-                                return (
-                                  <button
-                                    key={question.id}
-                                    onClick={() => {
-                                      setCurrentSection(sIndex)
-                                      setCurrentQuestion(qIndex)
-                                    }}
-                                    className={`w-6 h-6 text-xs flex items-center justify-center rounded-sm ${
-                                      currentSection === sIndex && currentQuestion === qIndex
-                                        ? "bg-primary text-primary-foreground"
-                                        : isAnswered
-                                          ? "bg-green-100 text-green-800"
-                                          : "bg-muted"
-                                    }`}
-                                  >
-                                    {qIndex + 1}
-                                  </button>
-                                )
-                              })}
+                                  return (
+                                    <button
+                                      key={question.id}
+                                      onClick={() => {
+                                        setCurrentSection(sIndex)
+                                        setCurrentQuestion(qIndex)
+                                      }}
+                                      className={`w-8 h-8 text-xs flex items-center justify-center rounded-md transition-colors ${
+                                        currentSection === sIndex && currentQuestion === qIndex
+                                          ? "bg-primary text-primary-foreground"
+                                          : isAnswered
+                                            ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                            : "bg-muted hover:bg-muted/80"
+                                      }`}
+                                    >
+                                      {qIndex + 1}
+                                    </button>
+                                  )
+                                })}
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Webcam monitoring */}
-                      <div className="mt-4">
-                        <h4 className="text-sm font-medium mb-2">Webcam Monitoring</h4>
-                        <div className="aspect-video bg-black rounded-md overflow-hidden">
-                          <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                          ))}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Your webcam is active for proctoring purposes
-                        </p>
-                        {!webcamInitializedRef.current && (
-                          <Button variant="outline" size="sm" className="mt-2 w-full" onClick={startWebcam}>
-                            Start Webcam
-                          </Button>
-                        )}
                       </div>
 
+                      {/* Enhanced Webcam Monitoring - Only show if webcam is enabled */}
+                      {webcamEnabled && (
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium">Webcam Monitoring</h4>
+                          <div className="aspect-video bg-black rounded-md overflow-hidden relative">
+                            <video
+                              ref={videoRef}
+                              autoPlay
+                              playsInline
+                              muted
+                              className="w-full h-full object-cover"
+                              style={{ transform: "scaleX(-1)" }}
+                            />
+
+                            {/* Webcam Status Overlay */}
+                            {webcamStatus !== "active" && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/80 text-white text-center p-2">
+                                <div className="space-y-2">
+                                  {webcamStatus === "error" && webcamError ? (
+                                    <>
+                                      <AlertTriangle className="h-6 w-6 text-red-500 mx-auto" />
+                                      <p className="text-xs">{webcamError}</p>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={startWebcam}
+                                        className="bg-white text-black hover:bg-gray-200 text-xs px-2 py-1"
+                                      >
+                                        Retry ({webcamRetryCount}/3)
+                                      </Button>
+                                    </>
+                                  ) : webcamStatus === "requesting" ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white mx-auto"></div>
+                                      <p className="text-xs">Starting webcam...</p>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Camera className="h-6 w-6 text-gray-400 mx-auto" />
+                                      <p className="text-xs">Webcam inactive</p>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={startWebcam}
+                                        className="bg-white text-black hover:bg-gray-200 text-xs px-2 py-1"
+                                      >
+                                        Start Camera
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Webcam Status Indicator */}
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground">
+                              Status:{" "}
+                              {webcamStatus === "active"
+                                ? "Active"
+                                : webcamStatus === "requesting"
+                                  ? "Starting..."
+                                  : webcamStatus === "error"
+                                    ? "Error"
+                                    : "Inactive"}
+                            </p>
+                            <div
+                              className={`w-2 h-2 rounded-full ${
+                                webcamStatus === "active"
+                                  ? "bg-green-500"
+                                  : webcamStatus === "requesting"
+                                    ? "bg-yellow-500 animate-pulse"
+                                    : webcamStatus === "error"
+                                      ? "bg-red-500"
+                                      : "bg-gray-500"
+                              }`}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Calculator */}
                       {test.settings.allowCalculator && (
-                        <div className="mt-6">
-                          <h4 className="text-sm font-medium mb-2">Calculator</h4>
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium">Calculator</h4>
                           <Button variant="outline" className="w-full" onClick={() => setShowCalculator(true)}>
                             <Calculator className="h-4 w-4 mr-2" />
-                            Open Scientific Calculator
+                            Scientific Calculator
                           </Button>
                         </div>
                       )}
 
-                      <div className="pt-6">
+                      {/* Submit Button */}
+                      <div className="pt-4 border-t">
+                        {/* Add validation warning for coding questions */}
+                        {test.sections.some((section) =>
+                          section.questions.some((q) => {
+                            if (q.type === "Coding") {
+                              const questionKey = `${section.id}-${q.id}`
+                              const userCode = answers[questionKey] as string
+                              const hasCode =
+                                userCode && userCode.trim() !== "" && userCode.trim() !== q.codeTemplate?.trim()
+                              const storedResults =
+                                questionTestCaseResults[questionKey] || questionTestCaseResults[q.id]
+                              return hasCode && (!storedResults || storedResults.length === 0)
+                            }
+                            return false
+                          }),
+                        ) && (
+                          <div className="mb-3 p-2 bg-amber-50 border border-amber-200 rounded-md">
+                            <p className="text-xs text-amber-700">
+                              ⚠️ Please run your code for all coding questions before submitting
+                            </p>
+                          </div>
+                        )}
+
                         <Button
                           className="w-full"
                           variant="destructive"
@@ -1558,31 +2378,33 @@ export default function TakeTestPage() {
                         >
                           {isSubmitting ? (
                             <>
-                              <span className="animate-spin mr-2">⟳</span> Submitting...
+                              <span className="animate-spin mr-2">⟳</span>
+                              Submitting...
                             </>
                           ) : (
                             "Submit Test"
                           )}
                         </Button>
                         <p className="text-xs text-muted-foreground text-center mt-2">
-                          You won&apos;t be able to change your answers after submission.
+                          You won't be able to change answers after submission.
                         </p>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             </div>
           </TabsContent>
         </Tabs>
 
+        {/* All existing dialogs remain the same but with enhanced styling */}
         {/* System Check Dialog */}
         <Dialog open={showSystemCheck} onOpenChange={setShowSystemCheck}>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>System Check</DialogTitle>
             </DialogHeader>
-            <div className="py-4 max-h-[80vh] overflow-y-auto">
+            <div className="py-4">
               <Card>
                 <CardHeader>
                   <CardTitle>Pre-Exam Verification</CardTitle>
@@ -1604,20 +2426,37 @@ export default function TakeTestPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="aspect-video bg-black rounded-md overflow-hidden relative">
-                      <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                      {!systemChecks.cameraAccess && (
+                      <video
+                        ref={systemCheckVideoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full h-full object-cover"
+                        style={{ transform: "scaleX(-1)" }}
+                      />
+                      {webcamStatus !== "active" && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
                           <div className="flex flex-col items-center">
-                            <AlertCircle className="h-8 w-8 text-red-500 mb-2" />
-                            <p>Camera access denied</p>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={startWebcam}
-                              className="mt-2 bg-white text-black hover:bg-gray-200"
-                            >
-                              Try Again
-                            </Button>
+                            {webcamStatus === "requesting" ? (
+                              <>
+                                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white mb-2"></div>
+                                <p>Starting camera...</p>
+                              </>
+                            ) : (
+                              <>
+                                <AlertCircle className="h-8 w-8 text-red-500 mb-2" />
+                                <p>{webcamError || "Camera access needed"}</p>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={startWebcam}
+                                  className="mt-2 bg-white text-black hover:bg-gray-200"
+                                  disabled={webcamStatus === "requesting"}
+                                >
+                                  {webcamStatus === "requesting" ? "Starting..." : "Try Again"}
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </div>
                       )}
@@ -1634,8 +2473,8 @@ export default function TakeTestPage() {
                           <span>Camera Access</span>
                         </div>
                         {!systemChecks.cameraAccess && (
-                          <Button size="sm" onClick={startWebcam}>
-                            Allow
+                          <Button size="sm" onClick={startWebcam} disabled={webcamStatus === "requesting"}>
+                            {webcamStatus === "requesting" ? "Starting..." : "Allow"}
                           </Button>
                         )}
                       </div>
@@ -1680,7 +2519,7 @@ export default function TakeTestPage() {
                     </div>
                   </div>
 
-                  <div className="flex justify-between pt-4">
+                  <div className="flex justify-between pt-4 border-t">
                     <Button variant="outline" onClick={() => setShowSystemCheck(false)}>
                       Close Preview
                     </Button>
@@ -1694,11 +2533,11 @@ export default function TakeTestPage() {
 
         {/* ID Verification Dialog */}
         <Dialog open={showIdVerification} onOpenChange={setShowIdVerification}>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>ID Verification</DialogTitle>
             </DialogHeader>
-            <div className="py-4 max-h-[80vh] overflow-y-auto">
+            <div className="py-4">
               <Card>
                 <CardHeader>
                   <CardTitle>Pre-Exam Verification</CardTitle>
@@ -1803,7 +2642,7 @@ export default function TakeTestPage() {
                     </div>
                   </div>
 
-                  <div className="flex justify-between pt-4">
+                  <div className="flex justify-between pt-4 border-t">
                     <Button
                       variant="outline"
                       onClick={() => {
@@ -1823,11 +2662,11 @@ export default function TakeTestPage() {
 
         {/* Exam Rules Dialog */}
         <Dialog open={showRules} onOpenChange={setShowRules}>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Exam Rules</DialogTitle>
             </DialogHeader>
-            <div className="py-4 max-h-[80vh] overflow-y-auto">
+            <div className="py-4">
               <Card>
                 <CardHeader>
                   <CardTitle>Pre-Exam Verification</CardTitle>
@@ -1903,7 +2742,7 @@ export default function TakeTestPage() {
                     </div>
                   </div>
 
-                  <div className="flex justify-between pt-4">
+                  <div className="flex justify-between pt-4 border-t">
                     <Button
                       variant="outline"
                       onClick={() => {
@@ -1924,37 +2763,20 @@ export default function TakeTestPage() {
         </Dialog>
 
         {/* Camera Modal for Capturing Images */}
-        <Dialog open={showCameraModal} onOpenChange={setShowCameraModal}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>{isCapturingFace ? "Capture Your Face" : "Capture ID Card"}</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              <div className="relative aspect-video bg-black rounded-md overflow-hidden mb-4">
-                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                {isCapturingFace && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="border-2 border-dashed border-white rounded-full w-48 h-48 opacity-50"></div>
-                  </div>
-                )}
-              </div>
-              <div className="flex justify-between">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowCameraModal(false)
-                    if (mediaStreamRef.current) {
-                      mediaStreamRef.current.getTracks().forEach((track) => track.stop())
-                    }
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={captureImage}>Capture</Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <CameraModal
+          isOpen={showCameraModal}
+          onClose={() => {
+            setShowCameraModal(false)
+            if (modalStreamRef.current) {
+              modalStreamRef.current.getTracks().forEach((track) => track.stop())
+              modalStreamRef.current = null
+            }
+          }}
+          onCapture={captureImage}
+          isCapturingFace={isCapturingFace}
+          videoRef={modalVideoRef}
+          isUploading={false}
+        />
 
         {/* Tab Switching Warning Dialog */}
         <Dialog open={showTabWarning} onOpenChange={setShowTabWarning}>
@@ -2121,9 +2943,6 @@ export default function TakeTestPage() {
                   <Button variant="outline" onClick={() => handleCalculatorInput(".")}>
                     .
                   </Button>
-                  <Button variant="outline" onClick={() => handleCalculatorOperation("log")}>
-                    logₓy
-                  </Button>
                   <Button variant="outline" onClick={handleCalculatorEquals}>
                     =
                   </Button>
@@ -2132,9 +2951,6 @@ export default function TakeTestPage() {
             </DialogContent>
           </Dialog>
         )}
-
-        {/* Hidden canvas for image capture */}
-        <canvas ref={canvasRef} className="hidden"></canvas>
       </div>
     </div>
   )

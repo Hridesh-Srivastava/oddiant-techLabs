@@ -1,18 +1,31 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter, useParams } from "next/navigation"
-import { toast, Toaster } from "sonner"
-import { ArrowLeft, Plus, Trash2, Save, Eye, Edit } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Separator } from "@/components/ui/separator"
-import { Switch } from "@/components/ui/switch"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { toast, Toaster } from "sonner";
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Save,
+  Eye,
+  Edit,
+  Code,
+  FileText,
+  CheckSquare,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -20,63 +33,104 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
+import { AdvancedCodeEditor } from "@/components/advanced-code-editor";
 
 interface TestData {
-  _id: string
-  name: string
-  description: string
-  duration: number
-  passingScore: number
-  instructions: string
-  type: string
+  _id: string;
+  name: string;
+  description: string;
+  duration: number;
+  passingScore: number;
+  instructions: string;
+  type: string;
   settings: {
-    shuffleQuestions: boolean
-    preventTabSwitching: boolean
-    allowCalculator: boolean
-    autoSubmit: boolean
-  }
-  sections: SectionData[]
-  status: string
-  createdAt: string
-  updatedAt: string
+    shuffleQuestions: boolean;
+    preventTabSwitching: boolean;
+    allowCalculator: boolean;
+    allowCodeEditor: boolean;
+    autoSubmit: boolean;
+  };
+  sections: SectionData[];
+  status: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface SectionData {
-  id: string
-  title: string
-  duration: number
-  questionType: string
-  questions: QuestionData[]
+  id: string;
+  title: string;
+  duration: number;
+  questionType: string;
+  questions: QuestionData[];
 }
 
 interface QuestionData {
-  id: string
-  text: string
-  type: string
-  options?: string[]
-  correctAnswer?: string | string[]
-  points: number
+  id: string;
+  text: string;
+  type: string;
+  options?: string[];
+  correctAnswer?: string | string[];
+  points: number;
+  explanation?: string;
+  // Coding question specific fields
+  codeLanguage?: string;
+  codeTemplate?: string;
+  expectedOutput?: string;
+  testCases?: TestCase[];
+  instructions?: string;
+  // Written answer specific fields
+  maxWords?: number;
+  sampleAnswer?: string;
+}
+
+interface TestCase {
+  input: string;
+  expectedOutput: string;
+  description?: string;
+  isHidden?: boolean;
+  id?: string;
 }
 
 export default function EditTestPage() {
-  const router = useRouter()
-  const params = useParams()
-  const testId = params.id as string
+  const router = useRouter();
+  const params = useParams();
+  const testId = params.id as string;
 
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
-  const [test, setTest] = useState<TestData | null>(null)
-  const [showDeleteSectionDialog, setShowDeleteSectionDialog] = useState(false)
-  const [sectionToDelete, setSectionToDelete] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [test, setTest] = useState<TestData | null>(null);
+  const [showDeleteSectionDialog, setShowDeleteSectionDialog] = useState(false);
+  const [sectionToDelete, setSectionToDelete] = useState<string | null>(null);
+  const [showQuestionDialog, setShowQuestionDialog] = useState(false);
+  const [currentSectionIndex, setCurrentSectionIndex] = useState<number | null>(
+    null
+  );
+  const [editingQuestion, setEditingQuestion] = useState<QuestionData | null>(
+    null
+  );
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState<
+    number | null
+  >(null);
+
+  // Question form state
+  const [questionForm, setQuestionForm] = useState<QuestionData>({
+    id: "",
+    text: "",
+    type: "Multiple Choice",
+    options: ["", "", "", ""],
+    correctAnswer: "",
+    points: 1,
+    explanation: "",
+  });
 
   useEffect(() => {
-    fetchTest()
-  }, [])
+    fetchTest();
+  }, []);
 
   const fetchTest = async () => {
     try {
-      setIsLoading(true)
+      setIsLoading(true);
 
       const response = await fetch(`/api/assessment/tests/${testId}`, {
         method: "GET",
@@ -85,64 +139,106 @@ export default function EditTestPage() {
           Pragma: "no-cache",
           Expires: "0",
         },
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch test")
+        throw new Error("Failed to fetch test");
       }
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.success) {
-        setTest(data.test)
+        // Ensure settings have default values to prevent undefined issues
+        const testData = {
+          ...data.test,
+          settings: {
+            shuffleQuestions: data.test.settings?.shuffleQuestions ?? false,
+            preventTabSwitching:
+              data.test.settings?.preventTabSwitching ?? false,
+            allowCalculator: data.test.settings?.allowCalculator ?? false,
+            allowCodeEditor: data.test.settings?.allowCodeEditor ?? false,
+            autoSubmit: data.test.settings?.autoSubmit ?? false,
+          },
+        };
+        setTest(testData);
+        console.log("Fetched test data:", testData); // Debug log
       } else {
-        throw new Error(data.message || "Failed to fetch test")
+        throw new Error(data.message || "Failed to fetch test");
       }
     } catch (error) {
-      console.error("Error fetching test:", error)
-      toast.error("Failed to load test. Please try again.")
+      console.error("Error fetching test:", error);
+      toast.error("Failed to load test. Please try again.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
-  const handleInputChange = (field: string, value: string | number | boolean) => {
-    if (!test) return
+  const handleInputChange = (
+    field: string,
+    value: string | number | boolean
+  ) => {
+    if (!test) return;
 
     if (field.startsWith("settings.")) {
-      const settingField = field.split(".")[1]
+      const settingField = field.split(".")[1];
       setTest({
         ...test,
         settings: {
           ...test.settings,
           [settingField]: value,
         },
-      })
+      });
     } else {
       setTest({
         ...test,
         [field]: value,
-      })
+      });
     }
-  }
+  };
 
-  const handleSectionChange = (sectionIndex: number, field: string, value: string | number) => {
-    if (!test) return
+  // Enhanced settings change handler with debugging
+  const handleTestSettingsChange = (setting: string, value: boolean) => {
+    if (!test) return;
 
-    const updatedSections = [...test.sections]
+    console.log(`Changing setting ${setting} to ${value}`); // Debug log
+
+    setTest((prev) => {
+      if (!prev) return prev;
+
+      const updatedTest = {
+        ...prev,
+        settings: {
+          ...prev.settings,
+          [setting]: value,
+        },
+      };
+
+      console.log("Updated test state:", updatedTest); // Debug log
+      return updatedTest;
+    });
+  };
+
+  const handleSectionChange = (
+    sectionIndex: number,
+    field: string,
+    value: string | number
+  ) => {
+    if (!test) return;
+
+    const updatedSections = [...test.sections];
     updatedSections[sectionIndex] = {
       ...updatedSections[sectionIndex],
       [field]: value,
-    }
+    };
 
     setTest({
       ...test,
       sections: updatedSections,
-    })
-  }
+    });
+  };
 
   const handleAddSection = () => {
-    if (!test) return
+    if (!test) return;
 
     const newSection: SectionData = {
       id: `section-${Date.now()}`,
@@ -150,102 +246,832 @@ export default function EditTestPage() {
       duration: 15,
       questionType: "Multiple Choice",
       questions: [],
-    }
+    };
 
     setTest({
       ...test,
       sections: [...test.sections, newSection],
-    })
-  }
+    });
+  };
 
   const handleDeleteSection = (sectionId: string) => {
-    setSectionToDelete(sectionId)
-    setShowDeleteSectionDialog(true)
-  }
+    setSectionToDelete(sectionId);
+    setShowDeleteSectionDialog(true);
+  };
 
   const confirmDeleteSection = () => {
-    if (!test || !sectionToDelete) return
+    if (!test || !sectionToDelete) return;
 
-    const updatedSections = test.sections.filter((section) => section.id !== sectionToDelete)
+    const updatedSections = test.sections.filter(
+      (section) => section.id !== sectionToDelete
+    );
 
     setTest({
       ...test,
       sections: updatedSections,
-    })
+    });
 
-    setShowDeleteSectionDialog(false)
-    setSectionToDelete(null)
-  }
+    setShowDeleteSectionDialog(false);
+    setSectionToDelete(null);
+  };
+
+  const handleAddQuestion = (sectionIndex: number) => {
+    setCurrentSectionIndex(sectionIndex);
+    setEditingQuestion(null);
+    setEditingQuestionIndex(null);
+
+    const section = test?.sections[sectionIndex];
+    const questionType = section?.questionType || "Multiple Choice";
+
+    // Initialize question form based on section type
+    if (questionType === "Multiple Choice") {
+      setQuestionForm({
+        id: `question-${Date.now()}`,
+        text: "",
+        type: "Multiple Choice",
+        options: ["", ""],
+        correctAnswer: "",
+        points: 10,
+        explanation: "",
+      });
+    } else if (questionType === "Coding") {
+      setQuestionForm({
+        id: `question-${Date.now()}`,
+        text: "",
+        type: "Coding",
+        points: 20,
+        codeLanguage: "javascript",
+        codeTemplate: `// Write your solution here
+function solution() {
+    // Your code here
+    return "Hello World";
+}`,
+        instructions: "",
+        expectedOutput: "",
+        testCases: [
+          {
+            id: "1",
+            input: "",
+            expectedOutput: "Hello World",
+            isHidden: false,
+          },
+        ],
+      });
+    } else if (questionType === "Written Answer") {
+      setQuestionForm({
+        id: `question-${Date.now()}`,
+        text: "",
+        type: "Written Answer",
+        points: 15,
+        maxWords: 500,
+        sampleAnswer: "",
+        explanation: "",
+      });
+    }
+
+    setShowQuestionDialog(true);
+  };
+
+  const handleEditQuestion = (sectionIndex: number, questionIndex: number) => {
+    const question = test?.sections[sectionIndex]?.questions[questionIndex];
+    if (!question) return;
+
+    setCurrentSectionIndex(sectionIndex);
+    setEditingQuestion(question);
+    setEditingQuestionIndex(questionIndex);
+
+    // Ensure proper structure for different question types
+    const formData = { ...question };
+
+    if (question.type === "Multiple Choice" && !formData.options) {
+      formData.options = ["", ""];
+    }
+
+    // CRITICAL: Ensure correctAnswer is properly set for MCQ when editing
+    if (question.type === "Multiple Choice") {
+      formData.correctAnswer = question.correctAnswer || "";
+      console.log("Editing MCQ with correctAnswer:", formData.correctAnswer);
+    }
+
+    if (question.type === "Coding") {
+      if (!formData.testCases) {
+        formData.testCases = [
+          {
+            id: "1",
+            input: "",
+            expectedOutput: "",
+            isHidden: false,
+          },
+        ];
+      }
+      // Ensure test cases have proper structure
+      formData.testCases = formData.testCases.map((tc, index) => ({
+        ...tc,
+        id: tc.id || (index + 1).toString(),
+        isHidden: tc.isHidden || false,
+      }));
+    }
+
+    setQuestionForm(formData);
+    setShowQuestionDialog(true);
+  };
+
+  const handleDeleteQuestion = (
+    sectionIndex: number,
+    questionIndex: number
+  ) => {
+    if (!test) return;
+
+    const updatedSections = [...test.sections];
+    updatedSections[sectionIndex].questions.splice(questionIndex, 1);
+
+    setTest({
+      ...test,
+      sections: updatedSections,
+    });
+
+    toast.success("Question deleted successfully");
+  };
+
+  const handleSaveQuestion = () => {
+    if (!test || currentSectionIndex === null) return;
+
+    // Validate question
+    if (!questionForm.text.trim()) {
+      toast.error("Question text is required");
+      return;
+    }
+    if (questionForm.type === "Multiple Choice") {
+      const validOptions =
+        questionForm.options?.filter((opt) => opt.trim()) || [];
+      if (validOptions.length < 2) {
+        toast.error(
+          "At least 2 options are required for multiple choice questions"
+        );
+        return;
+      }
+
+      // Enhanced validation for correct answer
+      if (!questionForm.correctAnswer || !questionForm.correctAnswer.trim()) {
+        toast.error(
+          "Please select a correct answer by clicking the radio button"
+        );
+        return;
+      }
+
+      if (!validOptions.includes(questionForm.correctAnswer)) {
+        toast.error(
+          "The selected correct answer is not valid. Please select from the available options."
+        );
+        return;
+      }
+
+      console.log("MCQ Edit Validation passed:");
+      console.log("- Question:", questionForm.text);
+      console.log("- Options:", validOptions);
+      console.log("- Correct Answer:", questionForm.correctAnswer);
+    }
+
+    if (questionForm.type === "Coding") {
+      if (!questionForm.codeLanguage) {
+        toast.error("Programming language is required");
+        return;
+      }
+      if (!questionForm.codeTemplate?.trim()) {
+        toast.error("Code template is required for coding questions");
+        return;
+      }
+      if (!questionForm.testCases || questionForm.testCases.length === 0) {
+        toast.error("At least one test case is required");
+        return;
+      }
+      // Validate test cases
+      for (const testCase of questionForm.testCases) {
+        if (!testCase.input.trim() && !testCase.expectedOutput.trim()) {
+          toast.error("Test cases must have input or expected output");
+          return;
+        }
+      }
+    }
+
+    const updatedSections = [...test.sections];
+
+    if (editingQuestionIndex !== null) {
+      // Update existing question
+      const updatedQuestion = {
+        ...questionForm,
+        options:
+          questionForm.type === "Multiple Choice"
+            ? questionForm.options?.filter((opt) => opt.trim() !== "")
+            : questionForm.options,
+        // CRITICAL: Ensure correctAnswer is properly preserved
+        correctAnswer:
+          questionForm.type === "Multiple Choice"
+            ? questionForm.correctAnswer
+            : questionForm.correctAnswer || "",
+      };
+
+      console.log(
+        "Updating question with correctAnswer:",
+        updatedQuestion.correctAnswer
+      );
+      updatedSections[currentSectionIndex].questions[editingQuestionIndex] =
+        updatedQuestion;
+      toast.success("Question updated successfully");
+    } else {
+      // Add new question
+      const questionToAdd = {
+        ...questionForm,
+        options:
+          questionForm.type === "Multiple Choice"
+            ? questionForm.options?.filter((opt) => opt.trim() !== "")
+            : questionForm.options,
+        // CRITICAL: Ensure correctAnswer is properly set
+        correctAnswer:
+          questionForm.type === "Multiple Choice"
+            ? questionForm.correctAnswer
+            : questionForm.correctAnswer || "",
+      };
+
+      console.log(
+        "Adding question with correctAnswer:",
+        questionToAdd.correctAnswer
+      );
+      updatedSections[currentSectionIndex].questions.push(questionToAdd);
+      toast.success("Question added successfully");
+    }
+
+    setTest({
+      ...test,
+      sections: updatedSections,
+    });
+
+    setShowQuestionDialog(false);
+    setCurrentSectionIndex(null);
+    setEditingQuestion(null);
+    setEditingQuestionIndex(null);
+  };
 
   const handleSaveTest = async () => {
     try {
-      if (!test) return
+      if (!test) return;
 
-      setIsSaving(true)
+      setIsSaving(true);
 
       // Validate test data
       if (!test.name) {
-        toast.error("Test name is required")
-        setIsSaving(false)
-        return
+        toast.error("Test name is required");
+        setIsSaving(false);
+        return;
       }
 
       if (test.duration <= 0) {
-        toast.error("Test duration must be greater than 0")
-        setIsSaving(false)
-        return
+        toast.error("Test duration must be greater than 0");
+        setIsSaving(false);
+        return;
       }
 
       if (test.passingScore < 0 || test.passingScore > 100) {
-        toast.error("Passing score must be between 0 and 100")
-        setIsSaving(false)
-        return
+        toast.error("Passing score must be between 0 and 100");
+        setIsSaving(false);
+        return;
       }
 
       // Validate sections
       for (const section of test.sections) {
         if (!section.title) {
-          toast.error("Section title is required")
-          setIsSaving(false)
-          return
+          toast.error("Section title is required");
+          setIsSaving(false);
+          return;
         }
 
         if (section.duration <= 0) {
-          toast.error(`Duration for section "${section.title}" must be greater than 0`)
-          setIsSaving(false)
-          return
+          toast.error(
+            `Duration for section "${section.title}" must be greater than 0`
+          );
+          setIsSaving(false);
+          return;
         }
       }
+
+      // Prepare the data to be sent - ensure settings are properly structured
+      const testDataToSave = {
+        ...test,
+        settings: {
+          shuffleQuestions: Boolean(test.settings.shuffleQuestions),
+          preventTabSwitching: Boolean(test.settings.preventTabSwitching),
+          allowCalculator: Boolean(test.settings.allowCalculator),
+          allowCodeEditor: Boolean(test.settings.allowCodeEditor),
+          autoSubmit: Boolean(test.settings.autoSubmit),
+        },
+      };
+
+      console.log("Saving test data:", testDataToSave); // Debug log
 
       const response = await fetch(`/api/assessment/tests/${testId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(test),
-      })
+        body: JSON.stringify(testDataToSave),
+      });
 
-      const data = await response.json()
+      const data = await response.json();
+      console.log("Save response:", data); // Debug log
 
       if (response.ok && data.success) {
-        toast.success("Test updated successfully")
-        router.push(`/employee/assessment/tests/${testId}`)
+        toast.success("Test updated successfully");
+
+        // Force a refresh of the test data to ensure we have the latest from the database
+        await fetchTest();
+
+        // Navigate back to the test overview
+        router.push(`/employee/assessment/tests/${testId}`);
       } else {
-        throw new Error(data.message || "Failed to update test")
+        throw new Error(data.message || "Failed to update test");
       }
     } catch (error) {
-      console.error("Error saving test:", error)
-      toast.error((error as Error).message || "Failed to save test. Please try again.")
+      console.error("Error saving test:", error);
+      toast.error(
+        (error as Error).message || "Failed to save test. Please try again."
+      );
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
+
+  const renderQuestionForm = () => {
+    if (questionForm.type === "Multiple Choice") {
+      return (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="question-text">Question Text *</Label>
+            <Textarea
+              id="question-text"
+              value={questionForm.text}
+              onChange={(e) =>
+                setQuestionForm({ ...questionForm, text: e.target.value })
+              }
+              placeholder="Enter your question"
+              rows={3}
+            />
+          </div>
+
+          <div>
+            <Label>Options *</Label>
+            <div className="space-y-2">
+              {questionForm.options?.map((option, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    value={option}
+                    onChange={(e) => {
+                      const newOptions = [...(questionForm.options || [])];
+                      const oldValue = newOptions[index];
+                      newOptions[index] = e.target.value;
+
+                      if (
+                        questionForm.correctAnswer === oldValue &&
+                        e.target.value !== oldValue
+                      ) {
+                        setQuestionForm({
+                          ...questionForm,
+                          options: newOptions,
+                          correctAnswer: "",
+                        });
+                      } else {
+                        setQuestionForm({
+                          ...questionForm,
+                          options: newOptions,
+                        });
+                      }
+                    }}
+                    placeholder={`Option ${index + 1}`}
+                  />
+                  <input
+                    type="radio"
+                    name="correctAnswer"
+                    checked={
+                      questionForm.correctAnswer === option &&
+                      option.trim() !== ""
+                    }
+                    onChange={() =>
+                      option.trim() &&
+                      setQuestionForm({
+                        ...questionForm,
+                        correctAnswer: option,
+                      })
+                    }
+                    className="mt-3"
+                    disabled={option.trim() === ""}
+                  />
+                  {questionForm.options && questionForm.options.length > 2 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive"
+                      onClick={() => {
+                        if (
+                          questionForm.options &&
+                          questionForm.options.length <= 2
+                        ) {
+                          toast.error("At least 2 options are required");
+                          return;
+                        }
+                        const newOptions =
+                          questionForm.options?.filter((_, i) => i !== index) ||
+                          [];
+                        const correctAnswer =
+                          questionForm.correctAnswer === option
+                            ? ""
+                            : questionForm.correctAnswer;
+                        setQuestionForm({
+                          ...questionForm,
+                          options: newOptions,
+                          correctAnswer,
+                        });
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const newOptions = [...(questionForm.options || []), ""];
+                  setQuestionForm({ ...questionForm, options: newOptions });
+                }}
+              >
+                + Add Option
+              </Button>
+              <p className="text-sm text-muted-foreground mt-1">
+                Select the radio button next to the correct answer
+              </p>
+              {questionForm.correctAnswer && (
+                <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                  <p className="text-xs text-green-700">
+                    Correct answer selected: "
+                    <strong>{questionForm.correctAnswer}</strong>"
+                  </p>
+                </div>
+              )}
+              {!questionForm.correctAnswer &&
+                questionForm.options?.some((opt) => opt.trim()) && (
+                  <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-xs text-yellow-700">
+                      Please select the correct answer by clicking a radio
+                      button
+                    </p>
+                  </div>
+                )}
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Select the radio button next to the correct answer
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="question-points">Points</Label>
+              <Input
+                id="question-points"
+                type="number"
+                min="1"
+                value={questionForm.points}
+                onChange={(e) =>
+                  setQuestionForm({
+                    ...questionForm,
+                    points: Number.parseInt(e.target.value) || 1,
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="question-explanation">Explanation (Optional)</Label>
+            <Textarea
+              id="question-explanation"
+              value={questionForm.explanation || ""}
+              onChange={(e) =>
+                setQuestionForm({
+                  ...questionForm,
+                  explanation: e.target.value,
+                })
+              }
+              placeholder="Explain why this is the correct answer"
+              rows={2}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    if (questionForm.type === "Coding") {
+      return (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="question-text">Problem Statement *</Label>
+            <Textarea
+              id="question-text"
+              value={questionForm.text}
+              onChange={(e) =>
+                setQuestionForm({ ...questionForm, text: e.target.value })
+              }
+              placeholder="Describe the coding problem"
+              rows={4}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="coding-instructions">Instructions *</Label>
+            <Textarea
+              id="coding-instructions"
+              value={questionForm.instructions || ""}
+              onChange={(e) =>
+                setQuestionForm({
+                  ...questionForm,
+                  instructions: e.target.value,
+                })
+              }
+              placeholder="Provide specific instructions for the coding task"
+              rows={3}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="code-language">Programming Language *</Label>
+              <select
+                id="code-language"
+                value={questionForm.codeLanguage || "javascript"}
+                onChange={(e) =>
+                  setQuestionForm({
+                    ...questionForm,
+                    codeLanguage: e.target.value,
+                  })
+                }
+                className="w-full p-2 border border-gray-300 rounded-md"
+              >
+                <option value="javascript">JavaScript</option>
+                <option value="python">Python</option>
+                <option value="java">Java</option>
+                <option value="cpp">C++</option>
+                <option value="c">C</option>
+                <option value="php">PHP</option>
+                <option value="rust">Rust</option>
+                <option value="go">Go</option>
+              </select>
+            </div>
+
+            <div>
+              <Label htmlFor="question-points">Points</Label>
+              <Input
+                id="question-points"
+                type="number"
+                min="1"
+                value={questionForm.points}
+                onChange={(e) =>
+                  setQuestionForm({
+                    ...questionForm,
+                    points: Number.parseInt(e.target.value) || 10,
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="code-template">Code Template</Label>
+            <div className="mt-2">
+              <AdvancedCodeEditor
+                value={questionForm.codeTemplate || ""}
+                onChange={(value) =>
+                  setQuestionForm({ ...questionForm, codeTemplate: value })
+                }
+                language={questionForm.codeLanguage || "javascript"}
+                height="300px"
+                showConsole={false}
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex justify-between items-center mb-3">
+              <Label>Test Cases *</Label>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const newTestCase = {
+                    id: (questionForm.testCases?.length + 1).toString(),
+                    input: "",
+                    expectedOutput: "",
+                    isHidden: false,
+                  };
+                  const newTestCases = [
+                    ...(questionForm.testCases || []),
+                    newTestCase,
+                  ];
+                  setQuestionForm({ ...questionForm, testCases: newTestCases });
+                }}
+              >
+                + Add Test Case
+              </Button>
+            </div>
+            <div className="space-y-3">
+              {questionForm.testCases?.map((testCase, index) => (
+                <div key={index} className="border p-4 rounded-md bg-white">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-sm font-medium">
+                      Test Case {index + 1}
+                    </span>
+                    {questionForm.testCases &&
+                      questionForm.testCases.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive"
+                          onClick={() => {
+                            const newTestCases =
+                              questionForm.testCases?.filter(
+                                (_, i) => i !== index
+                              ) || [];
+                            setQuestionForm({
+                              ...questionForm,
+                              testCases: newTestCases,
+                            });
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <Label htmlFor={`input-${index}`}>Input</Label>
+                      <Textarea
+                        id={`input-${index}`}
+                        value={testCase.input}
+                        onChange={(e) => {
+                          const newTestCases = [
+                            ...(questionForm.testCases || []),
+                          ];
+                          newTestCases[index].input = e.target.value;
+                          setQuestionForm({
+                            ...questionForm,
+                            testCases: newTestCases,
+                          });
+                        }}
+                        placeholder="Test input"
+                        rows={2}
+                        className="text-sm font-mono"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`output-${index}`}>Expected Output</Label>
+                      <Textarea
+                        id={`output-${index}`}
+                        value={testCase.expectedOutput}
+                        onChange={(e) => {
+                          const newTestCases = [
+                            ...(questionForm.testCases || []),
+                          ];
+                          newTestCases[index].expectedOutput = e.target.value;
+                          setQuestionForm({
+                            ...questionForm,
+                            testCases: newTestCases,
+                          });
+                        }}
+                        placeholder="Expected output"
+                        rows={2}
+                        className="text-sm font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor={`description-${index}`}>
+                      Description (Optional)
+                    </Label>
+                    <Input
+                      id={`description-${index}`}
+                      value={testCase.description || ""}
+                      onChange={(e) => {
+                        const newTestCases = [
+                          ...(questionForm.testCases || []),
+                        ];
+                        newTestCases[index].description = e.target.value;
+                        setQuestionForm({
+                          ...questionForm,
+                          testCases: newTestCases,
+                        });
+                      }}
+                      placeholder="Test case description"
+                      className="text-sm"
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2 mt-2">
+                    <input
+                      type="checkbox"
+                      id={`hidden-${index}`}
+                      checked={testCase.isHidden || false}
+                      onChange={(e) => {
+                        const newTestCases = [
+                          ...(questionForm.testCases || []),
+                        ];
+                        newTestCases[index].isHidden = e.target.checked;
+                        setQuestionForm({
+                          ...questionForm,
+                          testCases: newTestCases,
+                        });
+                      }}
+                      className="rounded"
+                    />
+                    <label
+                      htmlFor={`hidden-${index}`}
+                      className="text-sm text-muted-foreground"
+                    >
+                      Hidden test case
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (questionForm.type === "Written Answer") {
+      return (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="question-text">Question Text *</Label>
+            <Textarea
+              id="question-text"
+              value={questionForm.text}
+              onChange={(e) =>
+                setQuestionForm({ ...questionForm, text: e.target.value })
+              }
+              placeholder="Enter your question"
+              rows={3}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="max-words">Maximum Words</Label>
+              <Input
+                id="max-words"
+                type="number"
+                min="50"
+                value={questionForm.maxWords || 500}
+                onChange={(e) =>
+                  setQuestionForm({
+                    ...questionForm,
+                    maxWords: Number.parseInt(e.target.value) || 500,
+                  })
+                }
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="question-points">Points</Label>
+              <Input
+                id="question-points"
+                type="number"
+                min="1"
+                value={questionForm.points}
+                onChange={(e) =>
+                  setQuestionForm({
+                    ...questionForm,
+                    points: Number.parseInt(e.target.value) || 5,
+                  })
+                }
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
 
   if (isLoading) {
     return (
       <div className="container mx-auto py-6">
         <div className="flex items-center mb-6">
-          <Button variant="ghost" onClick={() => router.back()} className="mr-4">
+          <Button
+            variant="ghost"
+            onClick={() => router.back()}
+            className="mr-4"
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
@@ -279,14 +1105,18 @@ export default function EditTestPage() {
           </Card>
         </div>
       </div>
-    )
+    );
   }
 
   if (!test) {
     return (
       <div className="container mx-auto py-6">
         <div className="flex items-center mb-6">
-          <Button variant="ghost" onClick={() => router.back()} className="mr-4">
+          <Button
+            variant="ghost"
+            onClick={() => router.back()}
+            className="mr-4"
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
@@ -294,15 +1124,19 @@ export default function EditTestPage() {
         </div>
         <Card>
           <CardContent className="py-10 text-center">
-            <h2 className="text-xl font-medium mb-2">The requested test could not be found</h2>
+            <h2 className="text-xl font-medium mb-2">
+              The requested test could not be found
+            </h2>
             <p className="text-muted-foreground mb-6">
               The test may have been deleted or you may not have access to it.
             </p>
-            <Button onClick={() => router.push("/employee/assessment/tests")}>Go to Tests</Button>
+            <Button onClick={() => router.push("/employee/assessment/tests")}>
+              Go to Tests
+            </Button>
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -311,14 +1145,23 @@ export default function EditTestPage() {
 
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center">
-          <Button variant="ghost" onClick={() => router.back()} className="mr-4">
+          <Button
+            variant="ghost"
+            onClick={() => router.back()}
+            className="mr-4"
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
           <h1 className="text-3xl font-bold">Edit Test</h1>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => router.push(`/employee/assessment/tests/${testId}/preview`)}>
+          <Button
+            variant="outline"
+            onClick={() =>
+              router.push(`/employee/assessment/tests/${testId}/preview`)
+            }
+          >
             <Eye className="h-4 w-4 mr-2" />
             Preview
           </Button>
@@ -329,278 +1172,494 @@ export default function EditTestPage() {
         </div>
       </div>
 
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Test Details</CardTitle>
-            <CardDescription>Basic information about the test</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="test-name">Test Name</Label>
-                <Input
-                  id="test-name"
-                  value={test.name}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                  placeholder="Enter test name"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="test-description">Description</Label>
-                <Textarea
-                  id="test-description"
-                  value={test.description}
-                  onChange={(e) => handleInputChange("description", e.target.value)}
-                  placeholder="Enter test description"
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Test Details</CardTitle>
+              <CardDescription>
+                Basic information about the test
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
                 <div>
-                  <Label htmlFor="test-type">Test Type</Label>
-                  <Select value={test.type} onValueChange={(value) => handleInputChange("type", value)}>
-                    <SelectTrigger id="test-type">
-                      <SelectValue placeholder="Select test type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Assessment">Assessment</SelectItem>
-                      <SelectItem value="Quiz">Quiz</SelectItem>
-                      <SelectItem value="Exam">Exam</SelectItem>
-                      <SelectItem value="Survey">Survey</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="test-duration">Total Duration (minutes)</Label>
+                  <Label htmlFor="test-name">Test Name</Label>
                   <Input
-                    id="test-duration"
-                    type="number"
-                    min="1"
-                    value={test.duration}
-                    onChange={(e) => handleInputChange("duration", Number.parseInt(e.target.value) || 0)}
+                    id="test-name"
+                    value={test.name}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
+                    placeholder="Enter test name"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="test-passing-score">Passing Score (%)</Label>
-                  <Input
-                    id="test-passing-score"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={test.passingScore}
-                    onChange={(e) => handleInputChange("passingScore", Number.parseInt(e.target.value) || 0)}
+                  <Label htmlFor="test-description">Description</Label>
+                  <Textarea
+                    id="test-description"
+                    value={test.description}
+                    onChange={(e) =>
+                      handleInputChange("description", e.target.value)
+                    }
+                    placeholder="Enter test description"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="test-type">Test Type</Label>
+                    <select
+                      id="test-type"
+                      value={test.type}
+                      onChange={(e) =>
+                        handleInputChange("type", e.target.value)
+                      }
+                      className="w-full p-2 border border-gray-300 rounded-md"
+                    >
+                      <option value="Assessment">Assessment</option>
+                      <option value="Quiz">Quiz</option>
+                      <option value="Exam">Exam</option>
+                      <option value="Survey">Survey</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="test-duration">
+                      Total Duration (minutes)
+                    </Label>
+                    <Input
+                      id="test-duration"
+                      type="number"
+                      min="1"
+                      value={test.duration}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "duration",
+                          Number.parseInt(e.target.value) || 0
+                        )
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="test-passing-score">
+                      Passing Score (%)
+                    </Label>
+                    <Input
+                      id="test-passing-score"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={test.passingScore}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "passingScore",
+                          Number.parseInt(e.target.value) || 0
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="test-instructions">Test Instructions</Label>
+                  <Textarea
+                    id="test-instructions"
+                    value={test.instructions}
+                    onChange={(e) =>
+                      handleInputChange("instructions", e.target.value)
+                    }
+                    placeholder="Enter instructions for test takers"
+                    rows={4}
                   />
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <Label htmlFor="test-instructions">Test Instructions</Label>
-                <Textarea
-                  id="test-instructions"
-                  value={test.instructions}
-                  onChange={(e) => handleInputChange("instructions", e.target.value)}
-                  placeholder="Enter instructions for test takers"
-                  rows={4}
-                />
+                <CardTitle>Test Sections</CardTitle>
+                <CardDescription>
+                  Organize your test into sections
+                </CardDescription>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Test Settings</CardTitle>
-            <CardDescription>Configure how the test behaves</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Shuffle Questions</h3>
-                  <p className="text-sm text-muted-foreground">Randomize question order for each candidate</p>
-                </div>
-                <Switch
-                  checked={test.settings.shuffleQuestions}
-                  onCheckedChange={(checked) => handleInputChange("settings.shuffleQuestions", checked)}
-                />
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Prevent Tab Switching</h3>
-                  <p className="text-sm text-muted-foreground">Alert when candidate tries to switch tabs</p>
-                </div>
-                <Switch
-                  checked={test.settings.preventTabSwitching}
-                  onCheckedChange={(checked) => handleInputChange("settings.preventTabSwitching", checked)}
-                />
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Allow Calculator</h3>
-                  <p className="text-sm text-muted-foreground">Provide calculator tool for candidates</p>
-                </div>
-                <Switch
-                  checked={test.settings.allowCalculator}
-                  onCheckedChange={(checked) => handleInputChange("settings.allowCalculator", checked)}
-                />
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Auto Submit</h3>
-                  <p className="text-sm text-muted-foreground">Submit test when time expires</p>
-                </div>
-                <Switch
-                  checked={test.settings.autoSubmit}
-                  onCheckedChange={(checked) => handleInputChange("settings.autoSubmit", checked)}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Test Sections</CardTitle>
-              <CardDescription>Organize your test into sections</CardDescription>
-            </div>
-            <Button onClick={handleAddSection}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Section
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {test.sections.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">No sections added yet. Add a section to get started.</p>
-                  <Button onClick={handleAddSection}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Section
-                  </Button>
-                </div>
-              ) : (
-                test.sections.map((section, index) => (
-                  <div key={section.id} className="border rounded-md p-4">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-medium">Section {index + 1}</h3>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => handleDeleteSection(section.id)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </Button>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor={`section-title-${index}`}>Section Title</Label>
-                        <Input
-                          id={`section-title-${index}`}
-                          value={section.title}
-                          onChange={(e) => handleSectionChange(index, "title", e.target.value)}
-                          placeholder="Enter section title"
-                        />
+              <Button onClick={handleAddSection}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Section
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {test.sections.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-4">
+                      No sections added yet. Add a section to get started.
+                    </p>
+                    <Button onClick={handleAddSection}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Section
+                    </Button>
+                  </div>
+                ) : (
+                  test.sections.map((section, index) => (
+                    <div key={section.id} className="border rounded-md p-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-medium">Section {index + 1}</h3>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteSection(section.id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </Button>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-4">
                         <div>
-                          <Label htmlFor={`section-duration-${index}`}>Duration (minutes)</Label>
+                          <Label htmlFor={`section-title-${index}`}>
+                            Section Title
+                          </Label>
                           <Input
-                            id={`section-duration-${index}`}
-                            type="number"
-                            min="1"
-                            value={section.duration}
+                            id={`section-title-${index}`}
+                            value={section.title}
                             onChange={(e) =>
-                              handleSectionChange(index, "duration", Number.parseInt(e.target.value) || 0)
+                              handleSectionChange(
+                                index,
+                                "title",
+                                e.target.value
+                              )
                             }
+                            placeholder="Enter section title"
                           />
                         </div>
 
-                        <div>
-                          <Label htmlFor={`section-type-${index}`}>Question Type</Label>
-                          <Select
-                            value={section.questionType}
-                            onValueChange={(value) => handleSectionChange(index, "questionType", value)}
-                          >
-                            <SelectTrigger id={`section-type-${index}`}>
-                              <SelectValue placeholder="Select question type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Multiple Choice">Multiple Choice</SelectItem>
-                              <SelectItem value="Written Answer">Written Answer</SelectItem>
-                              <SelectItem value="Coding">Coding</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor={`section-duration-${index}`}>
+                              Duration (minutes)
+                            </Label>
+                            <Input
+                              id={`section-duration-${index}`}
+                              type="number"
+                              min="1"
+                              value={section.duration}
+                              onChange={(e) =>
+                                handleSectionChange(
+                                  index,
+                                  "duration",
+                                  Number.parseInt(e.target.value) || 0
+                                )
+                              }
+                            />
+                          </div>
 
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <span className="text-sm font-medium">Questions: </span>
-                          <span className="text-sm text-muted-foreground">
-                            {section.questions.length} questions in this section
-                          </span>
+                          <div>
+                            <Label htmlFor={`section-type-${index}`}>
+                              Question Type
+                            </Label>
+                            <select
+                              id={`section-type-${index}`}
+                              value={section.questionType}
+                              onChange={(e) =>
+                                handleSectionChange(
+                                  index,
+                                  "questionType",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full p-2 border border-gray-300 rounded-md"
+                            >
+                              <option value="Multiple Choice">
+                                Multiple Choice
+                              </option>
+                              <option value="Written Answer">
+                                Written Answer
+                              </option>
+                              <option value="Coding">Coding</option>
+                            </select>
+                          </div>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            router.push(`/employee/assessment/tests/${testId}/sections/${section.id}/edit`)
-                          }
-                        >
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit Questions
-                        </Button>
+
+                        <div className="border-t pt-4">
+                          <div className="flex justify-between items-center mb-3">
+                            <div>
+                              <span className="text-sm font-medium">
+                                Questions:{" "}
+                              </span>
+                              <span className="text-sm text-muted-foreground">
+                                {section.questions.length} questions in this
+                                section
+                              </span>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleAddQuestion(index)}
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Question
+                            </Button>
+                          </div>
+
+                          {section.questions.length > 0 && (
+                            <div className="space-y-2">
+                              {section.questions.map((question, qIndex) => (
+                                <div
+                                  key={question.id}
+                                  className="flex items-center justify-between p-3 bg-muted rounded-md"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    {question.type === "Multiple Choice" && (
+                                      <CheckSquare className="h-4 w-4" />
+                                    )}
+                                    {question.type === "Coding" && (
+                                      <Code className="h-4 w-4" />
+                                    )}
+                                    {question.type === "Written Answer" && (
+                                      <FileText className="h-4 w-4" />
+                                    )}
+                                    <div>
+                                      <p className="text-sm font-medium">
+                                        Q{qIndex + 1}:{" "}
+                                        {question.text.length > 50
+                                          ? `${question.text.substring(
+                                              0,
+                                              50
+                                            )}...`
+                                          : question.text}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {question.type} • {question.points}{" "}
+                                        points
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        handleEditQuestion(index, qIndex)
+                                      }
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-destructive hover:text-destructive"
+                                      onClick={() =>
+                                        handleDeleteQuestion(index, qIndex)
+                                      }
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => router.back()}>
-            Cancel
-          </Button>
-          <Button onClick={handleSaveTest} disabled={isSaving}>
-            <Save className="h-4 w-4 mr-2" />
-            {isSaving ? "Saving..." : "Save Changes"}
-          </Button>
+        {/* Sidebar */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Test Settings</CardTitle>
+              <CardDescription>Configure how the test behaves</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <label
+                      htmlFor="shuffle-questions"
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      Shuffle Questions
+                    </label>
+                    <p className="text-xs text-gray-500">
+                      Randomize question order for each candidate
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      id="shuffle-questions"
+                      checked={test.settings.shuffleQuestions}
+                      onChange={(e) =>
+                        handleTestSettingsChange(
+                          "shuffleQuestions",
+                          e.target.checked
+                        )
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <label
+                      htmlFor="prevent-tab-switching"
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      Prevent Tab Switching
+                    </label>
+                    <p className="text-xs text-gray-500">
+                      Alert when candidate tries to switch tabs
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      id="prevent-tab-switching"
+                      checked={test.settings.preventTabSwitching}
+                      onChange={(e) =>
+                        handleTestSettingsChange(
+                          "preventTabSwitching",
+                          e.target.checked
+                        )
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <label
+                      htmlFor="allow-calculator"
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      Allow Calculator
+                    </label>
+                    <p className="text-xs text-gray-500">
+                      Provide a calculator tool for candidates
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      id="allow-calculator"
+                      checked={test.settings.allowCalculator}
+                      onChange={(e) =>
+                        handleTestSettingsChange(
+                          "allowCalculator",
+                          e.target.checked
+                        )
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <label
+                      htmlFor="allow-code-editor"
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      Allow Code Editor
+                    </label>
+                    <p className="text-xs text-gray-500">
+                      Enable advanced code editor for coding questions
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      id="allow-code-editor"
+                      checked={test.settings.allowCodeEditor}
+                      onChange={(e) =>
+                        handleTestSettingsChange(
+                          "allowCodeEditor",
+                          e.target.checked
+                        )
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <label
+                      htmlFor="auto-submit"
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      Auto Submit
+                    </label>
+                    <p className="text-xs text-gray-500">
+                      Submit test when time expires
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      id="auto-submit"
+                      checked={test.settings.autoSubmit}
+                      onChange={(e) =>
+                        handleTestSettingsChange("autoSubmit", e.target.checked)
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                  </label>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
+      <div className="flex justify-end gap-2 mt-6">
+        <Button variant="outline" onClick={() => router.back()}>
+          Cancel
+        </Button>
+        <Button onClick={handleSaveTest} disabled={isSaving}>
+          <Save className="h-4 w-4 mr-2" />
+          {isSaving ? "Saving..." : "Save Changes"}
+        </Button>
+      </div>
+
       {/* Delete Section Dialog */}
-      <Dialog open={showDeleteSectionDialog} onOpenChange={setShowDeleteSectionDialog}>
+      <Dialog
+        open={showDeleteSectionDialog}
+        onOpenChange={setShowDeleteSectionDialog}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Section</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this section? This will also delete all questions in this section. This
-              action cannot be undone.
+              Are you sure you want to delete this section? This will also
+              delete all questions in this section. This action cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteSectionDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteSectionDialog(false)}
+            >
               Cancel
             </Button>
             <Button variant="destructive" onClick={confirmDeleteSection}>
@@ -609,6 +1668,39 @@ export default function EditTestPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Question Dialog */}
+      <Dialog open={showQuestionDialog} onOpenChange={setShowQuestionDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingQuestion ? "Edit Question" : "Add Question"}
+            </DialogTitle>
+            <DialogDescription>
+              {questionForm.type === "Multiple Choice" &&
+                "Create a multiple choice question with options"}
+              {questionForm.type === "Coding" &&
+                "Create a coding problem with test cases"}
+              {questionForm.type === "Written Answer" &&
+                "Create a written answer question"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">{renderQuestionForm()}</div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowQuestionDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveQuestion}>
+              {editingQuestion ? "Update Question" : "Add Question"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
-  )
+  );
 }

@@ -30,45 +30,19 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
   }
-
-  .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-  }
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+  
   body {
-    @apply bg-black text-foreground;
+    @apply bg-gray-50 text-gray-900;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-bold;
+    @apply font-bold text-gray-900;
   }
 
   h1 {
@@ -83,26 +57,148 @@
     @apply text-2xl md:text-3xl;
   }
 
-  /* Custom scroll bar */
+  /* Custom scroll bar - light theme */
   ::-webkit-scrollbar {
     width: 10px;
   }
 
   ::selection {
-  background: #dc1212;
-  color: #fffbfb; 
-}
+    background: #dc1212;
+    color: #fffbfb; 
+  }
 
   ::-webkit-scrollbar-track {
-    @apply bg-zinc-900;
+    @apply bg-gray-100;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-zinc-700 rounded-full;
+    @apply bg-gray-400 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-zinc-600;
+    @apply bg-gray-500;
+  }
+
+  /* Footer specific styles */
+  .footer-text {
+    @apply text-gray-300 !important;
+  }
+  
+  .footer-heading {
+    @apply text-white font-semibold !important;
+  }
+
+  .footer-link {
+    @apply text-gray-300 hover:text-white transition-colors !important;
+  }
+
+  /* Dashboard specific styles */
+  .dashboard-header {
+    @apply bg-black text-white !important;
+  }
+  
+  .dashboard-content {
+    @apply bg-gray-50 text-gray-900 !important;
+  }
+
+  .dashboard-title {
+    @apply text-white !important;
+  }
+
+  .dashboard-welcome {
+    @apply text-gray-300 !important;
+  }
+
+  /* Tab specific styles - Force active tab to stay black */
+  .tabs-list [data-state="active"] {
+    background-color: black !important;
+    color: rgb(196 181 253) !important; /* purple-400 */
+  }
+
+  .tabs-list [data-state="active"]:hover {
+    background-color: rgb(31 41 55) !important; /* gray-800 */
+  }
+
+  .tabs-list [data-state="inactive"] {
+    @apply text-white !important;
+  }
+
+  .tabs-list [data-state="inactive"]:hover {
+    @apply bg-gray-800 !important;
+  }
+
+  /* Card specific styles */
+  .card-white {
+    @apply bg-white text-gray-900 border-gray-200 !important;
+  }
+
+  .card-dark {
+    @apply bg-black text-white border-gray-700 !important;
+  }
+
+  /* Button specific styles */
+  .btn-primary {
+    @apply bg-blue-500 text-white hover:bg-blue-600 !important;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-500 text-white hover:bg-gray-600 !important;
+  }
+
+  .btn-outline {
+    @apply border-gray-300 text-gray-700 hover:bg-gray-50 !important;
+  }
+
+  /* Input specific styles */
+  .input-light {
+    @apply bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 !important;
+  }
+
+  .input-dark {
+    @apply bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 !important;
+  }
+
+  /* Text color fixes */
+  .text-primary {
+    @apply text-gray-900 !important;
+  }
+
+  .text-secondary {
+    @apply text-gray-600 !important;
+  }
+
+  .text-muted {
+    @apply text-gray-500 !important;
+  }
+
+  .text-white-force {
+    @apply text-white !important;
+  }
+
+  .text-black-force {
+    @apply text-black !important;
+  }
+
+  /* Background fixes */
+  .bg-light {
+    @apply bg-gray-50 !important;
+  }
+
+  .bg-white-force {
+    @apply bg-white !important;
+  }
+
+  .bg-black-force {
+    @apply bg-black !important;
+  }
+
+  /* Navigation specific */
+  .nav-dark {
+    @apply bg-black text-white !important;
+  }
+
+  .nav-light {
+    @apply bg-white text-gray-900 border-b border-gray-200 !important;
   }
 
   /* Animation classes */
@@ -133,16 +229,148 @@
       opacity: 1;
     }
   }
+
+  /* Specific component overrides */
+  
+  /* Shadcn Card component override */
+  .card {
+    @apply bg-white text-gray-900 border-gray-200 !important;
+  }
+
+  /* Shadcn Button component override */
+  .button-primary {
+    @apply bg-blue-500 text-white hover:bg-blue-600 !important;
+  }
+
+  /* Shadcn Input component override */
+  .input {
+    @apply bg-white border-gray-300 text-gray-900 !important;
+  }
+
+  /* Badge component override */
+  .badge {
+    @apply text-gray-900 !important;
+  }
+
+  /* Avatar component override */
+  .avatar {
+    @apply border-gray-300 !important;
+  }
+
+  /* Table component override */
+  .table {
+    @apply bg-white !important;
+  }
+
+  .table-header {
+    @apply bg-gray-50 text-gray-900 !important;
+  }
+
+  .table-row {
+    @apply bg-white text-gray-900 border-gray-200 !important;
+  }
+
+  .table-row:nth-child(even) {
+    @apply bg-gray-50 !important;
+  }
+
+  /* Modal/Dialog override */
+  .dialog-content {
+    @apply bg-white text-gray-900 !important;
+  }
+
+  /* Dropdown override */
+  .dropdown-content {
+    @apply bg-white text-gray-900 border-gray-200 !important;
+  }
+
+  /* Tooltip override */
+  .tooltip {
+    @apply bg-black text-white !important;
+  }
+
+  /* Specific fixes for problematic elements */
+  
+  /* Force footer to be dark */
+  footer {
+    @apply bg-black text-white !important;
+  }
+
+  footer h1, footer h2, footer h3, footer h4, footer h5, footer h6 {
+    @apply text-white !important;
+  }
+
+  footer p {
+    @apply text-gray-300 !important;
+  }
+
+  footer a {
+    @apply text-gray-300 hover:text-white !important;
+  }
+
+  /* Force dashboard header to be dark */
+  .dashboard-header h1 {
+    @apply text-white !important;
+  }
+
+  .dashboard-header span {
+    @apply text-gray-300 !important;
+  }
+
+  /* Force main content to be light */
+  main {
+    @apply bg-gray-50 text-gray-900 !important;
+  }
+
+  /* Ensure proper contrast for all text elements */
+  .contrast-fix {
+    @apply text-gray-900 !important;
+  }
+
+  .contrast-fix-white {
+    @apply text-white !important;
+  }
+
+  .contrast-fix-muted {
+    @apply text-gray-600 !important;
+  }
 }
 
-
-
-@layer base {
-  * {
-    @apply border-border;
+/* Additional utility classes */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
   }
-  body {
-    @apply bg-background text-foreground;
+
+  .force-light-theme {
+    @apply bg-white text-gray-900 !important;
+  }
+
+  .force-dark-theme {
+    @apply bg-black text-white !important;
+  }
+
+  .no-dark-mode * {
+    color: inherit !important;
+    background-color: inherit !important;
   }
 }
 
+/* Component-specific overrides */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background;
+  }
+
+  .btn-default {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+
+  .btn-outline {
+    @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground;
+  }
+
+  .card-component {
+    @apply rounded-lg border bg-card text-card-foreground shadow-sm;
+  }
+}

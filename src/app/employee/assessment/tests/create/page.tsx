@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { toast, Toaster } from "sonner"
 import { Pencil, Plus, Trash2, ArrowLeft, Save } from "lucide-react"
 import { AssessmentLayout } from "@/components/assessment-layout"
+import { AdvancedCodeEditor } from "@/components/advanced-code-editor"
 
 export default function CreateTestPage() {
   const router = useRouter()
@@ -24,6 +25,7 @@ export default function CreateTestPage() {
     shuffleQuestions: true,
     preventTabSwitching: true,
     allowCalculator: false,
+    allowCodeEditor: false,
     autoSubmit: true,
   })
 
@@ -43,9 +45,13 @@ export default function CreateTestPage() {
   const [newQuestion, setNewQuestion] = useState({
     text: "",
     type: "Multiple Choice",
-    options: ["", "", "", ""],
+    options: ["", ""],
     correctAnswer: "",
     points: 10,
+    codeLanguage: "javascript",
+    codeTemplate: "",
+    testCases: [],
+    maxWords: 500,
   })
 
   const handleTestDetailsChange = (
@@ -94,17 +100,60 @@ export default function CreateTestPage() {
   }
 
   const handleAddQuestion = (sectionId: string) => {
+    const section = sections.find((s) => s.id === sectionId)
     setShowAddQuestionForm(sectionId)
-    setNewQuestion({
-      text: "",
-      type: "Multiple Choice",
-      options: ["", "", "", ""],
-      correctAnswer: "",
-      points: 10,
-    })
+
+    if (section?.questionType === "Multiple Choice") {
+      setNewQuestion({
+        text: "",
+        type: "Multiple Choice",
+        options: ["", ""],
+        correctAnswer: "", // Initialize as empty string
+        points: 10,
+        codeLanguage: "javascript",
+        codeTemplate: "",
+        testCases: [],
+        maxWords: 500,
+      })
+    } else if (section?.questionType === "Coding") {
+      setNewQuestion({
+        text: "",
+        type: "Coding",
+        options: [],
+        correctAnswer: "",
+        points: 20,
+        codeLanguage: "javascript",
+        codeTemplate: `// Write your solution here
+function solution() {
+    // Your code here
+    return "Hello World";
+}`,
+        testCases: [
+          {
+            id: "1",
+            input: "",
+            expectedOutput: "Hello World",
+            isHidden: false,
+          },
+        ],
+        maxWords: 500,
+      })
+    } else {
+      setNewQuestion({
+        text: "",
+        type: "Written Answer",
+        options: [],
+        correctAnswer: "",
+        points: 15,
+        codeLanguage: "javascript",
+        codeTemplate: "",
+        testCases: [],
+        maxWords: 500,
+      })
+    }
   }
 
-  const handleQuestionChange = (field: string, value: string | string[]) => {
+  const handleQuestionChange = (field: string, value: string | string[] | any[] | number) => {
     setNewQuestion((prev) => ({
       ...prev,
       [field]: value,
@@ -115,6 +164,16 @@ export default function CreateTestPage() {
     setNewQuestion((prev) => {
       const newOptions = [...prev.options]
       newOptions[index] = value
+
+      // If the current correct answer is being changed and it was the correct answer, clear it
+      if (prev.correctAnswer === prev.options[index] && value !== prev.options[index]) {
+        return {
+          ...prev,
+          options: newOptions,
+          correctAnswer: "", // Clear correct answer if the option text changes
+        }
+      }
+
       return {
         ...prev,
         options: newOptions,
@@ -122,38 +181,131 @@ export default function CreateTestPage() {
     })
   }
 
+  const addOption = () => {
+    setNewQuestion((prev) => ({
+      ...prev,
+      options: [...prev.options, ""],
+    }))
+  }
+
+  const removeOption = (index: number) => {
+    if (newQuestion.options.length <= 2) {
+      toast.error("At least 2 options are required")
+      return
+    }
+
+    setNewQuestion((prev) => {
+      const newOptions = prev.options.filter((_, i) => i !== index)
+      const correctAnswer = prev.correctAnswer === prev.options[index] ? "" : prev.correctAnswer
+      return {
+        ...prev,
+        options: newOptions,
+        correctAnswer,
+      }
+    })
+  }
+
+  const addTestCase = () => {
+    const newTestCase = {
+      id: (newQuestion.testCases.length + 1).toString(),
+      input: "",
+      expectedOutput: "",
+      isHidden: false,
+    }
+    setNewQuestion((prev) => ({
+      ...prev,
+      testCases: [...prev.testCases, newTestCase],
+    }))
+  }
+
+  const removeTestCase = (index: number) => {
+    setNewQuestion((prev) => ({
+      ...prev,
+      testCases: prev.testCases.filter((_, i) => i !== index),
+    }))
+  }
+
+  const handleTestCaseChange = (index: number, field: string, value: string | boolean) => {
+    setNewQuestion((prev) => ({
+      ...prev,
+      testCases: prev.testCases.map((tc, i) => (i === index ? { ...tc, [field]: value } : tc)),
+    }))
+  }
+
   const handleSaveQuestion = (sectionId: string) => {
-    // Validate question
-    if (!newQuestion.text) {
+    if (!newQuestion.text.trim()) {
       toast.error("Question text is required")
       return
     }
 
-    if (newQuestion.type === "Multiple Choice" && !newQuestion.correctAnswer) {
-      toast.error("Please select a correct answer")
-      return
+    if (newQuestion.type === "Multiple Choice") {
+      const filledOptions = newQuestion.options.filter((opt) => opt.trim() !== "")
+      if (filledOptions.length < 2) {
+        toast.error("At least 2 options are required")
+        return
+      }
+
+      // Enhanced validation for correct answer
+      if (!newQuestion.correctAnswer || !newQuestion.correctAnswer.trim()) {
+        toast.error("Please select a correct answer by clicking the radio button")
+        return
+      }
+
+      if (!filledOptions.includes(newQuestion.correctAnswer)) {
+        toast.error("The selected correct answer is not valid. Please select from the available options.")
+        return
+      }
+
+      console.log("✅ MCQ Validation passed:")
+      console.log("- Question:", newQuestion.text)
+      console.log("- Options:", filledOptions)
+      console.log("- Correct Answer:", newQuestion.correctAnswer)
     }
 
-    // Add question to section
+    if (newQuestion.type === "Coding") {
+      if (!newQuestion.codeTemplate.trim()) {
+        toast.error("Code template is required for coding questions")
+        return
+      }
+      if (newQuestion.testCases.length === 0) {
+        toast.error("At least one test case is required for coding questions")
+        return
+      }
+    }
+
+    if (newQuestion.type === "Written Answer") {
+      if (!newQuestion.maxWords || newQuestion.maxWords < 50) {
+        toast.error("Maximum words must be at least 50")
+        return
+      }
+    }
+
     setSections((prev) =>
       prev.map((section) => {
         if (section.id === sectionId) {
+          const questionToAdd = {
+            id: `question-${section.questions.length + 1}`,
+            ...newQuestion,
+            options:
+              newQuestion.type === "Multiple Choice"
+                ? newQuestion.options.filter((opt) => opt.trim() !== "")
+                : newQuestion.options,
+            // CRITICAL: Ensure correctAnswer is always properly set
+            correctAnswer:
+              newQuestion.type === "Multiple Choice" ? newQuestion.correctAnswer : newQuestion.correctAnswer || "",
+          }
+
+          console.log("💾 Saving question with correctAnswer:", questionToAdd.correctAnswer)
+
           return {
             ...section,
-            questions: [
-              ...section.questions,
-              {
-                id: `question-${section.questions.length + 1}`,
-                ...newQuestion,
-              },
-            ],
+            questions: [...section.questions, questionToAdd],
           }
         }
         return section
       }),
     )
 
-    // Reset form
     setShowAddQuestionForm(null)
     toast.success("Question added successfully")
   }
@@ -162,8 +314,7 @@ export default function CreateTestPage() {
     try {
       setIsSaving(true)
 
-      // Validate form
-      if (!testDetails.name) {
+      if (!testDetails.name.trim()) {
         toast.error("Test name is required")
         setIsSaving(false)
         return
@@ -175,7 +326,6 @@ export default function CreateTestPage() {
         return
       }
 
-      // Check if any section has questions
       const hasQuestions = sections.some((section) => section.questions.length > 0)
       if (!hasQuestions) {
         toast.error("At least one question is required")
@@ -183,10 +333,21 @@ export default function CreateTestPage() {
         return
       }
 
-      // Calculate total duration from sections
+      // Validate all MCQ questions have correct answers
+      for (const section of sections) {
+        for (const question of section.questions) {
+          if (question.type === "Multiple Choice") {
+            if (!question.correctAnswer || !question.options?.includes(question.correctAnswer)) {
+              toast.error(`Question "${question.text}" is missing a valid correct answer`)
+              setIsSaving(false)
+              return
+            }
+          }
+        }
+      }
+
       const totalDuration = sections.reduce((sum, section) => sum + section.duration, 0)
 
-      // Prepare test data
       const testData = {
         name: testDetails.name,
         description: testDetails.description,
@@ -196,10 +357,11 @@ export default function CreateTestPage() {
         type: testDetails.type,
         settings: testSettings,
         sections: sections,
-        status: "Draft", // Default to draft
+        status: "Draft",
       }
 
-      // Send to API
+      console.log("Sending test data to API:", JSON.stringify(testData, null, 2))
+
       const response = await fetch("/api/assessment/tests", {
         method: "POST",
         headers: {
@@ -226,8 +388,7 @@ export default function CreateTestPage() {
   }
 
   const handlePreviewTest = () => {
-    // Validate form first
-    if (!testDetails.name) {
+    if (!testDetails.name.trim()) {
       toast.error("Test name is required")
       return
     }
@@ -237,7 +398,6 @@ export default function CreateTestPage() {
       return
     }
 
-    // Store test data in localStorage for preview
     localStorage.setItem(
       "testPreview",
       JSON.stringify({
@@ -247,7 +407,6 @@ export default function CreateTestPage() {
       }),
     )
 
-    // Open preview in new tab
     window.open("/employee/assessment/tests/preview", "_blank")
   }
 
@@ -264,7 +423,6 @@ export default function CreateTestPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Test Details */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <h2 className="text-lg font-medium mb-4">Test Details</h2>
@@ -475,7 +633,6 @@ export default function CreateTestPage() {
                       </div>
                     </div>
 
-                    {/* Questions List */}
                     {section.questions.length > 0 && (
                       <div className="mt-4">
                         <h4 className="text-sm font-medium text-gray-700 mb-2">
@@ -489,6 +646,13 @@ export default function CreateTestPage() {
                               </p>
                               <p className="text-sm text-gray-500 mt-1">
                                 {question.type} • {question.points} points
+                                {question.type === "Multiple Choice" && ` • ${question.options?.length || 0} options`}
+                                {question.type === "Multiple Choice" &&
+                                  question.correctAnswer &&
+                                  ` • Correct: "${question.correctAnswer}"`}
+                                {question.type === "Coding" &&
+                                  ` • ${question.codeLanguage} • ${question.testCases?.length || 0} test cases`}
+                                {question.type === "Written Answer" && ` • Max ${question.maxWords || 500} words`}
                               </p>
                             </div>
                           ))}
@@ -496,7 +660,6 @@ export default function CreateTestPage() {
                       </div>
                     )}
 
-                    {/* Add Question Form */}
                     {showAddQuestionForm === section.id ? (
                       <div className="mt-4 p-4 border rounded-md bg-gray-50">
                         <h4 className="text-sm font-medium text-gray-700 mb-3">Add New Question</h4>
@@ -527,15 +690,26 @@ export default function CreateTestPage() {
 
                           {newQuestion.type === "Multiple Choice" && (
                             <div className="space-y-3">
-                              <label className="block text-sm font-medium text-gray-700">Options</label>
+                              <div className="flex justify-between items-center">
+                                <label className="block text-sm font-medium text-gray-700">Options</label>
+                                <button onClick={addOption} className="text-sm text-blue-600 hover:text-blue-800">
+                                  + Add Option
+                                </button>
+                              </div>
                               {newQuestion.options.map((option, index) => (
                                 <div key={index} className="flex items-center gap-2">
                                   <input
                                     type="radio"
                                     name="correctAnswer"
-                                    checked={newQuestion.correctAnswer === option}
-                                    onChange={() => handleQuestionChange("correctAnswer", option)}
+                                    checked={newQuestion.correctAnswer === option && option.trim() !== ""}
+                                    onChange={() => {
+                                      if (option.trim()) {
+                                        handleQuestionChange("correctAnswer", option)
+                                        console.log("🎯 Setting correct answer to:", option)
+                                      }
+                                    }}
                                     className="h-4 w-4 text-black focus:ring-black border-gray-300"
+                                    disabled={option.trim() === ""}
                                   />
                                   <input
                                     value={option}
@@ -543,9 +717,152 @@ export default function CreateTestPage() {
                                     className="flex-1 px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
                                     placeholder={`Option ${index + 1}`}
                                   />
+                                  {newQuestion.options.length > 2 && (
+                                    <button
+                                      onClick={() => removeOption(index)}
+                                      className="text-red-600 hover:text-red-800"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  )}
                                 </div>
                               ))}
-                              <p className="text-xs text-gray-500">Select the correct answer</p>
+                              <p className="text-xs text-gray-500">
+                                Select the correct answer by clicking the radio button next to the option
+                              </p>
+                              {newQuestion.correctAnswer && (
+                                <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                                  <p className="text-xs text-green-700">
+                                    ✅ Correct answer selected: "<strong>{newQuestion.correctAnswer}</strong>"
+                                  </p>
+                                </div>
+                              )}
+                              {!newQuestion.correctAnswer && newQuestion.options.some((opt) => opt.trim()) && (
+                                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                                  <p className="text-xs text-yellow-700">
+                                    ⚠️ Please select the correct answer by clicking a radio button
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {newQuestion.type === "Written Answer" && (
+                            <div className="space-y-3">
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-gray-700">Maximum Words</label>
+                                <input
+                                  type="number"
+                                  min="50"
+                                  value={newQuestion.maxWords}
+                                  onChange={(e) =>
+                                    handleQuestionChange("maxWords", Number.parseInt(e.target.value) || 500)
+                                  }
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                                  placeholder="e.g. 500"
+                                />
+                                <p className="text-xs text-gray-500">
+                                  Set the maximum number of words allowed for the answer (minimum 50)
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {newQuestion.type === "Coding" && (
+                            <div className="space-y-3">
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-gray-700">Programming Language</label>
+                                <select
+                                  value={newQuestion.codeLanguage}
+                                  onChange={(e) => handleQuestionChange("codeLanguage", e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                                >
+                                  <option value="javascript">JavaScript</option>
+                                  <option value="python">Python</option>
+                                  <option value="java">Java</option>
+                                  <option value="cpp">C++</option>
+                                  <option value="c">C</option>
+                                  <option value="php">PHP</option>
+                                  <option value="rust">Rust</option>
+                                  <option value="go">Go</option>
+                                </select>
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-gray-700">Code Template</label>
+                                <AdvancedCodeEditor
+                                  value={newQuestion.codeTemplate}
+                                  onChange={(value) => handleQuestionChange("codeTemplate", value)}
+                                  language={newQuestion.codeLanguage}
+                                  height="200px"
+                                  showConsole={false}
+                                />
+                              </div>
+
+                              <div className="space-y-3">
+                                <div className="flex justify-between items-center">
+                                  <label className="block text-sm font-medium text-gray-700">Test Cases</label>
+                                  <button onClick={addTestCase} className="text-sm text-blue-600 hover:text-blue-800">
+                                    + Add Test Case
+                                  </button>
+                                </div>
+
+                                {newQuestion.testCases.map((testCase, index) => (
+                                  <div key={index} className="p-3 border rounded-md bg-white">
+                                    <div className="flex justify-between items-center mb-2">
+                                      <span className="text-sm font-medium">Test Case {index + 1}</span>
+                                      {newQuestion.testCases.length > 1 && (
+                                        <button
+                                          onClick={() => removeTestCase(index)}
+                                          className="text-red-600 hover:text-red-800"
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2 mb-2">
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-600">Input</label>
+                                        <textarea
+                                          value={testCase.input}
+                                          onChange={(e) => handleTestCaseChange(index, "input", e.target.value)}
+                                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                                          rows={2}
+                                          placeholder="Test input"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-600">
+                                          Expected Output
+                                        </label>
+                                        <textarea
+                                          value={testCase.expectedOutput}
+                                          onChange={(e) =>
+                                            handleTestCaseChange(index, "expectedOutput", e.target.value)
+                                          }
+                                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                                          rows={2}
+                                          placeholder="Expected output"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center space-x-2">
+                                      <input
+                                        type="checkbox"
+                                        id={`hidden-${index}`}
+                                        checked={testCase.isHidden}
+                                        onChange={(e) => handleTestCaseChange(index, "isHidden", e.target.checked)}
+                                        className="rounded"
+                                      />
+                                      <label htmlFor={`hidden-${index}`} className="text-xs text-gray-600">
+                                        Hidden test case
+                                      </label>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           )}
 
@@ -554,7 +871,7 @@ export default function CreateTestPage() {
                             <input
                               type="number"
                               value={newQuestion.points}
-                              onChange={(e) => handleQuestionChange("points", e.target.value)}
+                              onChange={(e) => handleQuestionChange("points", Number.parseInt(e.target.value) || 1)}
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
                             />
                           </div>
@@ -591,7 +908,6 @@ export default function CreateTestPage() {
           </div>
         </div>
 
-        {/* Right Column - Settings & Actions */}
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <h2 className="text-lg font-medium mb-4">Test Settings</h2>
@@ -647,6 +963,25 @@ export default function CreateTestPage() {
                     id="allow-calculator"
                     checked={testSettings.allowCalculator}
                     onChange={(e) => handleTestSettingsChange("allowCalculator", e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <label htmlFor="allow-code-editor" className="block text-sm font-medium text-gray-700">
+                    Allow Code Editor
+                  </label>
+                  <p className="text-xs text-gray-500">Enable advanced code editor for coding questions</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="allow-code-editor"
+                    checked={testSettings.allowCodeEditor}
+                    onChange={(e) => handleTestSettingsChange("allowCodeEditor", e.target.checked)}
                     className="sr-only peer"
                   />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>

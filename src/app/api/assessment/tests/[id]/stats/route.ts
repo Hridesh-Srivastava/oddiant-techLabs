@@ -3,7 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb"
 import { getUserFromRequest } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Get user ID from request
     const userId = await getUserFromRequest(request)
@@ -12,7 +12,17 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
     }
 
-    const testId = params.id
+    // Properly await params before using
+    const resolvedParams = await params
+    const testId = resolvedParams.id
+
+    if (!testId) {
+      return NextResponse.json({ success: false, message: "Test ID is required" }, { status: 400 })
+    }
+
+    if (!ObjectId.isValid(testId)) {
+      return NextResponse.json({ success: false, message: "Invalid test ID format" }, { status: 400 })
+    }
 
     // Connect to database
     const { db } = await connectToDatabase()

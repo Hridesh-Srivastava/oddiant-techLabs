@@ -12,169 +12,95 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
     }
 
-    const candidateId = params.id
+    let candidateId = params.id
+    console.log("Original candidate ID:", candidateId)
+
+    // Handle candidate-X format by extracting the actual ID
+    if (candidateId.startsWith("candidate-")) {
+      candidateId = candidateId.replace("candidate-", "")
+      console.log("Extracted candidate ID:", candidateId)
+    }
 
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // If candidateId is a MongoDB ObjectId, try to find by _id
+    // Try multiple approaches to find the candidate
     let candidate = null
 
+    // Approach 1: Try as ObjectId if it's a valid ObjectId
     if (ObjectId.isValid(candidateId)) {
-      try {
-        candidate = await db.collection("assessment_candidates").findOne({
-          _id: new ObjectId(candidateId),
-          createdBy: new ObjectId(userId),
-        })
-      } catch (error) {
-        console.error("Error finding candidate by ObjectId:", error)
-      }
+      console.log("Trying ObjectId lookup...")
+      candidate = await db.collection("assessment_candidates").findOne({
+        _id: new ObjectId(candidateId),
+        createdBy: new ObjectId(userId),
+      })
+      console.log("ObjectId lookup result:", candidate ? "Found" : "Not found")
     }
 
-    // If not found by _id, try to find by email or other identifier
+    // Approach 2: Try as string ID
     if (!candidate) {
-      // For candidate IDs like "candidate-0", extract the index
-      const candidatePattern = /candidate-(\d+)/
-      const match = candidateId.match(candidatePattern)
+      console.log("Trying string ID lookup...")
+      candidate = await db.collection("assessment_candidates").findOne({
+        candidateId: candidateId,
+        createdBy: new ObjectId(userId),
+      })
+      console.log("String ID lookup result:", candidate ? "Found" : "Not found")
+    }
 
-      if (match) {
-        const candidateIndex = Number.parseInt(match[1])
-
-        // Get all invitations
-        const invitations = await db
-          .collection("assessment_invitations")
-          .find({
-            createdBy: new ObjectId(userId),
-          })
+    // Approach 3: Try as numeric index (for candidate-1, candidate-2, etc.)
+    if (!candidate) {
+      console.log("Trying numeric index lookup...")
+      const numericId = Number.parseInt(candidateId)
+      if (!isNaN(numericId)) {
+        // Get all candidates for this user and find by index
+        const allCandidates = await db
+          .collection("assessment_candidates")
+          .find({ createdBy: new ObjectId(userId) })
+          .sort({ createdAt: 1 })
           .toArray()
 
-        // Get unique emails
-        const uniqueEmails = [...new Set(invitations.map((inv) => inv.email))]
-        uniqueEmails.sort() // Sort to ensure consistent ordering
+        console.log(`Found ${allCandidates.length} total candidates`)
 
-        // Get the email at the specified index
-        const email = uniqueEmails[candidateIndex]
-
-        if (email) {
-          // Build candidate data from invitations
-          const candidateInvitations = invitations.filter((inv) => inv.email === email)
-
-          // Get results for this candidate
-          const results = await db
-            .collection("assessment_results")
-            .find({
-              candidateEmail: email,
-              createdBy: new ObjectId(userId),
-            })
-            .sort({ completionDate: -1 })
-            .toArray()
-
-          // Get verification data if available
-          const verifications = await db
-            .collection("assessment_verifications")
-            .find({
-              candidateEmail: email,
-            })
-            .toArray()
-
-          // Build candidate object
-          candidate = {
-            _id: `candidate-${candidateIndex}`,
-            name: email.split("@")[0],
-            email: email,
-            testsAssigned: candidateInvitations.length,
-            testsCompleted: candidateInvitations.filter((inv) => inv.status === "Completed").length,
-            results: results,
-            invitations: candidateInvitations,
-            verifications: verifications,
-            createdAt: candidateInvitations[0]?.createdAt || new Date(),
-          }
-
-          // Calculate average score
-          if (results.length > 0) {
-            const totalScore = results.reduce((sum, result) => sum + result.score, 0)
-            candidate.averageScore = Math.round(totalScore / results.length)
-          } else {
-            candidate.averageScore = 0
-          }
-
-          // Determine status
-          if (results.length > 0) {
-            const latestResult = results[0] // Already sorted by completionDate
-
-            if (latestResult.resultsDeclared) {
-              candidate.status = latestResult.status // Passed or Failed
-            } else {
-              candidate.status = "Completed" // Completed but not declared
-            }
-          } else if (candidateInvitations.some((inv) => inv.status === "Pending")) {
-            candidate.status = "Invited"
-          } else {
-            candidate.status = "Unknown"
-          }
-        }
-      } else {
-        // Try to find by email
-        const invitations = await db
-          .collection("assessment_invitations")
-          .find({
-            email: candidateId,
-            createdBy: new ObjectId(userId),
-          })
-          .toArray()
-
-        if (invitations.length > 0) {
-          // Get results for this candidate
-          const results = await db
-            .collection("assessment_results")
-            .find({
-              candidateEmail: candidateId,
-              createdBy: new ObjectId(userId),
-            })
-            .sort({ completionDate: -1 })
-            .toArray()
-
-          // Build candidate object
-          candidate = {
-            _id: candidateId,
-            name: candidateId.split("@")[0],
-            email: candidateId,
-            testsAssigned: invitations.length,
-            testsCompleted: invitations.filter((inv) => inv.status === "Completed").length,
-            results: results,
-            invitations: invitations,
-            createdAt: invitations[0]?.createdAt || new Date(),
-          }
-
-          // Calculate average score
-          if (results.length > 0) {
-            const totalScore = results.reduce((sum, result) => sum + result.score, 0)
-            candidate.averageScore = Math.round(totalScore / results.length)
-          } else {
-            candidate.averageScore = 0
-          }
-
-          // Determine status
-          if (results.length > 0) {
-            const latestResult = results[0] // Already sorted by completionDate
-
-            if (latestResult.resultsDeclared) {
-              candidate.status = latestResult.status // Passed or Failed
-            } else {
-              candidate.status = "Completed" // Completed but not declared
-            }
-          } else if (invitations.some((inv) => inv.status === "Pending")) {
-            candidate.status = "Invited"
-          } else {
-            candidate.status = "Unknown"
-          }
+        if (numericId > 0 && numericId <= allCandidates.length) {
+          candidate = allCandidates[numericId - 1] // Array is 0-indexed, but candidate-1 should be first
+          console.log("Numeric index lookup result:", candidate ? "Found" : "Not found")
         }
       }
     }
 
     if (!candidate) {
+      console.log("No candidate found with any approach")
       return NextResponse.json({ success: false, message: "Candidate not found" }, { status: 404 })
     }
+
+    console.log("Found candidate:", candidate.name, candidate.email)
+
+    // Get invitation count for this candidate
+    const invitationCount = await db.collection("assessment_invitations").countDocuments({
+      email: candidate.email,
+      createdBy: new ObjectId(userId),
+    })
+
+    // Get completed results count
+    const completedResults = await db
+      .collection("assessment_results")
+      .find({
+        candidateEmail: candidate.email,
+      })
+      .toArray()
+
+    // Calculate average score
+    let averageScore = 0
+    if (completedResults.length > 0) {
+      const totalScore = completedResults.reduce((sum, result) => sum + (result.score || 0), 0)
+      averageScore = Math.round(totalScore / completedResults.length)
+    }
+
+    console.log("Candidate stats:", {
+      invitations: invitationCount,
+      completed: completedResults.length,
+      average: averageScore,
+    })
 
     // Add cache control headers to prevent caching
     const headers = new Headers()
@@ -183,7 +109,16 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     headers.append("Expires", "0")
 
     return NextResponse.json(
-      { success: true, candidate },
+      {
+        success: true,
+        candidate: {
+          ...candidate,
+          _id: candidate._id.toString(),
+          testsAssigned: invitationCount,
+          testsCompleted: completedResults.length,
+          averageScore: averageScore,
+        },
+      },
       {
         status: 200,
         headers: headers,

@@ -17,11 +17,16 @@ import {
   Download,
   AlertTriangle,
   Mail,
+  Code,
+  Calculator,
+  Shuffle,
+  Shield,
+  Timer,
+  RotateCcw,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -52,6 +57,7 @@ interface TestData {
     shuffleQuestions: boolean
     preventTabSwitching: boolean
     allowCalculator: boolean
+    allowCodeEditor: boolean
     autoSubmit: boolean
   }
   sections: SectionData[]
@@ -75,6 +81,9 @@ interface QuestionData {
   options?: string[]
   correctAnswer?: string | string[]
   points: number
+  codeLanguage?: string
+  codeTemplate?: string
+  testCases?: any[]
 }
 
 interface CandidateData {
@@ -85,6 +94,21 @@ interface CandidateData {
   score: number
   completionDate?: string
   resultsDeclared?: boolean
+  invitationId?: string
+}
+
+interface ResultData {
+  _id: string
+  testId: string
+  testName: string
+  candidateEmail: string
+  candidateName: string
+  score: number
+  status: string
+  duration: number
+  completionDate: string
+  resultsDeclared: boolean
+  answers?: any[]
 }
 
 export default function TestDetailsPage() {
@@ -95,7 +119,9 @@ export default function TestDetailsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [test, setTest] = useState<TestData | null>(null)
   const [candidates, setCandidates] = useState<CandidateData[]>([])
+  const [results, setResults] = useState<ResultData[]>([])
   const [isLoadingCandidates, setIsLoadingCandidates] = useState(true)
+  const [isLoadingResults, setIsLoadingResults] = useState(true)
   const [activeTab, setActiveTab] = useState("overview")
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -115,6 +141,7 @@ export default function TestDetailsPage() {
   const [selectedResult, setSelectedResult] = useState<string | null>(null)
   const [showDeclareIndividualResultDialog, setShowDeclareIndividualResultDialog] = useState(false)
   const [isDeclaringIndividualResult, setIsDeclaringIndividualResult] = useState(false)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   // Set active tab from URL if present
   useEffect(() => {
@@ -164,12 +191,13 @@ export default function TestDetailsPage() {
     }
   }, [testId])
 
-  const fetchCandidates = useCallback(async () => {
+  const fetchResults = useCallback(async () => {
     try {
-      setIsLoadingCandidates(true)
+      setIsLoadingResults(true)
+      console.log("Fetching results for test ID:", testId)
 
-      // First get all results for this test
-      const resultsResponse = await fetch(`/api/assessment/results?test=${testId}`, {
+      // Fetch all results and filter by testId
+      const response = await fetch("/api/assessment/results", {
         method: "GET",
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -178,20 +206,59 @@ export default function TestDetailsPage() {
         },
       })
 
-      if (!resultsResponse.ok) {
+      if (!response.ok) {
         throw new Error("Failed to fetch results")
       }
 
-      const resultsData = await resultsResponse.json()
+      const data = await response.json()
+      console.log("All results API response:", data)
 
-      // Count pending results
-      if (resultsData.success && resultsData.results) {
-        const pendingResults = resultsData.results.filter((result: any) => !result.resultsDeclared)
+      if (data.success && data.results) {
+        // Filter results for this specific test
+        const testResults = data.results.filter((result: ResultData) => {
+          // Handle both string and ObjectId comparisons
+          const resultTestId = result.testId?.toString()
+          const currentTestId = testId?.toString()
+          return resultTestId === currentTestId
+        })
+
+        console.log(`Found ${testResults.length} results for test ${testId}`)
+        console.log("Filtered test results:", testResults)
+
+        setResults(testResults)
+
+        // Count pending results - using the same logic as the API
+        const pendingResults = testResults.filter((result: ResultData) => {
+          const isUndeclared = !result.resultsDeclared || result.resultsDeclared === false
+          console.log(
+            `Frontend: Result ${result.candidateEmail}: declared=${result.resultsDeclared}, isUndeclared=${isUndeclared}`,
+          )
+          return isUndeclared
+        })
+
         setPendingResultsCount(pendingResults.length)
+        console.log(`Found ${pendingResults.length} pending results (frontend calculation)`)
+      } else {
+        console.log("No results found or API error")
+        setResults([])
+        setPendingResultsCount(0)
       }
+    } catch (error) {
+      console.error("Error fetching results:", error)
+      toast.error("Failed to load results. Please try again.")
+      setResults([])
+      setPendingResultsCount(0)
+    } finally {
+      setIsLoadingResults(false)
+    }
+  }, [testId])
 
-      // Then get all invitations for this test
-      const invitationsResponse = await fetch(`/api/assessment/invitations?testId=${testId}`, {
+  const fetchCandidates = useCallback(async () => {
+    try {
+      setIsLoadingCandidates(true)
+
+      // Get all invitations for this test
+      const invitationsResponse = await fetch(`/api/assessment/invitations`, {
         method: "GET",
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -211,26 +278,47 @@ export default function TestDetailsPage() {
 
       // Process invitations to build candidate data
       if (invitationsData.success && invitationsData.invitations) {
-        for (const invitation of invitationsData.invitations) {
+        // Filter invitations for this test
+        const testInvitations = invitationsData.invitations.filter((inv: any) => {
+          const invTestId = inv.testId?.toString()
+          const currentTestId = testId?.toString()
+          return invTestId === currentTestId
+        })
+
+        console.log(`Found ${testInvitations.length} invitations for test ${testId}`)
+
+        for (const invitation of testInvitations) {
           const email = invitation.email
 
           if (!candidateMap.has(email)) {
-            // Initialize candidate data
+            // Initialize candidate data with proper status mapping
+            let candidateStatus = "Invited"
+
+            // Map invitation status to candidate status
+            if (invitation.status === "Completed") {
+              candidateStatus = "Completed"
+            } else if (invitation.status === "Expired") {
+              candidateStatus = "Expired"
+            } else if (invitation.status === "Cancelled") {
+              candidateStatus = "Cancelled"
+            }
+
             candidateMap.set(email, {
-              _id: `candidate-${candidateMap.size}`,
-              name: email.split("@")[0], // Simple name extraction
+              _id: `invitation-${invitation._id}`,
+              name: invitation.candidateName || email.split("@")[0],
               email,
-              status: "Invited",
+              status: candidateStatus,
               score: 0,
               createdAt: invitation.createdAt,
+              invitationId: invitation._id,
             })
           }
         }
       }
 
       // Update candidate data with results
-      if (resultsData.success && resultsData.results) {
-        for (const result of resultsData.results) {
+      if (results.length > 0) {
+        for (const result of results) {
           const email = result.candidateEmail
 
           if (candidateMap.has(email)) {
@@ -260,8 +348,20 @@ export default function TestDetailsPage() {
         }
       }
 
-      // Convert map to array
-      const candidatesArray = Array.from(candidateMap.values())
+      // Convert map to array and sort by status priority
+      const candidatesArray = Array.from(candidateMap.values()).sort((a, b) => {
+        const statusPriority = {
+          Completed: 1,
+          Passed: 2,
+          Failed: 3,
+          Invited: 4,
+          Expired: 5,
+          Cancelled: 6,
+        }
+        return statusPriority[a.status] - statusPriority[b.status]
+      })
+
+      console.log(`Total candidates for test: ${candidatesArray.length}`)
       setCandidates(candidatesArray)
     } catch (error) {
       console.error("Error fetching candidates:", error)
@@ -269,7 +369,7 @@ export default function TestDetailsPage() {
     } finally {
       setIsLoadingCandidates(false)
     }
-  }, [testId])
+  }, [testId, results])
 
   const fetchTestStats = useCallback(async () => {
     try {
@@ -291,7 +391,21 @@ export default function TestDetailsPage() {
       const data = await response.json()
 
       if (data.success) {
-        setTestStats(data.stats)
+        // Calculate real-time stats based on test configuration and actual data
+        const stats = data.stats
+
+        // Use the test's passing score for pass rate calculation
+        if (test && stats.completedCount > 0) {
+          const passedCount = candidates.filter(
+            (c) =>
+              (c.status === "Completed" || c.status === "Passed" || c.status === "Failed") &&
+              c.score >= test.passingScore,
+          ).length
+
+          stats.passRate = Math.round((passedCount / stats.completedCount) * 100)
+        }
+
+        setTestStats(stats)
       } else {
         throw new Error(data.message || "Failed to fetch test stats")
       }
@@ -301,7 +415,7 @@ export default function TestDetailsPage() {
     } finally {
       setIsLoadingStats(false)
     }
-  }, [testId])
+  }, [testId, test, candidates])
 
   useEffect(() => {
     fetchTest()
@@ -309,10 +423,21 @@ export default function TestDetailsPage() {
 
   useEffect(() => {
     if (test) {
+      fetchResults()
+    }
+  }, [test, fetchResults])
+
+  useEffect(() => {
+    if (test && results.length >= 0) {
       fetchCandidates()
+    }
+  }, [test, results, fetchCandidates])
+
+  useEffect(() => {
+    if (test && candidates.length >= 0) {
       fetchTestStats()
     }
-  }, [test, fetchCandidates, fetchTestStats])
+  }, [test, candidates, fetchTestStats])
 
   const handleDeleteTest = async () => {
     try {
@@ -383,6 +508,27 @@ export default function TestDetailsPage() {
     try {
       setIsDeclaringResults(true)
 
+      console.log("Frontend: Starting bulk declaration...")
+      console.log("Frontend: Pending results count:", pendingResultsCount)
+      console.log("Frontend: Results array:", results)
+
+      // Double-check pending results count before API call
+      const actualPendingResults = results.filter((result) => {
+        const isUndeclared = !result.resultsDeclared || result.resultsDeclared === false
+        console.log(
+          `Frontend check: ${result.candidateEmail} - declared: ${result.resultsDeclared}, isUndeclared: ${isUndeclared}`,
+        )
+        return isUndeclared
+      })
+
+      console.log("Frontend: Actual pending results:", actualPendingResults.length)
+
+      if (actualPendingResults.length === 0) {
+        toast.error("No new results to declare")
+        setShowDeclareResultsDialog(false)
+        return
+      }
+
       const response = await fetch(`/api/assessment/tests/${testId}/declare-results`, {
         method: "POST",
         headers: {
@@ -390,18 +536,22 @@ export default function TestDetailsPage() {
         },
       })
 
+      console.log("Frontend: API response status:", response.status)
+
       if (!response.ok) {
         const errorData = await response.json()
+        console.log("Frontend: API error data:", errorData)
         throw new Error(errorData.message || "Failed to declare results")
       }
 
       const data = await response.json()
+      console.log("Frontend: API success data:", data)
 
       if (data.success) {
         toast.success(data.message || "Results declared successfully")
-        // Refresh candidates and stats
-        fetchCandidates()
-        fetchTestStats()
+        // Refresh results and candidates
+        await fetchResults()
+        await fetchTestStats()
       } else {
         throw new Error(data.message || "Failed to declare results")
       }
@@ -436,9 +586,9 @@ export default function TestDetailsPage() {
 
       if (data.success) {
         toast.success(data.message || "Result declared successfully")
-        // Refresh candidates and stats
-        fetchCandidates()
-        fetchTestStats()
+        // Refresh results and candidates
+        await fetchResults()
+        await fetchTestStats()
       } else {
         throw new Error(data.message || "Failed to declare individual result")
       }
@@ -449,6 +599,39 @@ export default function TestDetailsPage() {
       setIsDeclaringIndividualResult(false)
       setShowDeclareIndividualResultDialog(false)
       setSelectedResult(null)
+    }
+  }
+
+  const handleResendInvitation = async (invitationId: string) => {
+    try {
+      setActionLoading(invitationId)
+
+      const response = await fetch(`/api/assessment/invitations/${invitationId}/resend`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || "Failed to resend invitation")
+      }
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast.success("Invitation resent successfully")
+        // Refresh candidates data
+        await fetchCandidates()
+      } else {
+        throw new Error(data.message || "Failed to resend invitation")
+      }
+    } catch (error) {
+      console.error("Error resending invitation:", error)
+      toast.error((error as Error).message || "Failed to resend invitation. Please try again.")
+    } finally {
+      setActionLoading(null)
     }
   }
 
@@ -774,54 +957,76 @@ export default function TestDetailsPage() {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Test Settings</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    Test Settings
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium">Shuffle Questions</h3>
-                        <p className="text-sm text-muted-foreground">Randomize question order</p>
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Shuffle className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <h3 className="font-medium text-sm">Shuffle Questions</h3>
+                          <p className="text-xs text-muted-foreground">Randomize question order</p>
+                        </div>
                       </div>
-                      <div
-                        className={`w-4 h-4 rounded-full ${test.settings.shuffleQuestions ? "bg-primary" : "border border-input"}`}
-                      ></div>
+                      <Badge variant={test.settings.shuffleQuestions ? "default" : "secondary"}>
+                        {test.settings.shuffleQuestions ? "Enabled" : "Disabled"}
+                      </Badge>
                     </div>
 
-                    <Separator />
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium">Prevent Tab Switching</h3>
-                        <p className="text-sm text-muted-foreground">Alert when switching tabs</p>
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Shield className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <h3 className="font-medium text-sm">Prevent Tab Switching</h3>
+                          <p className="text-xs text-muted-foreground">Alert when switching tabs</p>
+                        </div>
                       </div>
-                      <div
-                        className={`w-4 h-4 rounded-full ${test.settings.preventTabSwitching ? "bg-primary" : "border border-input"}`}
-                      ></div>
+                      <Badge variant={test.settings.preventTabSwitching ? "default" : "secondary"}>
+                        {test.settings.preventTabSwitching ? "Enabled" : "Disabled"}
+                      </Badge>
                     </div>
 
-                    <Separator />
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium">Allow Calculator</h3>
-                        <p className="text-sm text-muted-foreground">Provide calculator tool</p>
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Calculator className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <h3 className="font-medium text-sm">Allow Calculator</h3>
+                          <p className="text-xs text-muted-foreground">Provide calculator tool</p>
+                        </div>
                       </div>
-                      <div
-                        className={`w-4 h-4 rounded-full ${test.settings.allowCalculator ? "bg-primary" : "border border-input"}`}
-                      ></div>
+                      <Badge variant={test.settings.allowCalculator ? "default" : "secondary"}>
+                        {test.settings.allowCalculator ? "Enabled" : "Disabled"}
+                      </Badge>
                     </div>
 
-                    <Separator />
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium">Auto Submit</h3>
-                        <p className="text-sm text-muted-foreground">Submit when time expires</p>
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Code className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <h3 className="font-medium text-sm">Allow Code Editor</h3>
+                          <p className="text-xs text-muted-foreground">Enable coding questions</p>
+                        </div>
                       </div>
-                      <div
-                        className={`w-4 h-4 rounded-full ${test.settings.autoSubmit ? "bg-primary" : "border border-input"}`}
-                      ></div>
+                      <Badge variant={test.settings.allowCodeEditor ? "default" : "secondary"}>
+                        {test.settings.allowCodeEditor ? "Enabled" : "Disabled"}
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Timer className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <h3 className="font-medium text-sm">Auto Submit</h3>
+                          <p className="text-xs text-muted-foreground">Submit when time expires</p>
+                        </div>
+                      </div>
+                      <Badge variant={test.settings.autoSubmit ? "default" : "secondary"}>
+                        {test.settings.autoSubmit ? "Enabled" : "Disabled"}
+                      </Badge>
                     </div>
                   </div>
                 </CardContent>
@@ -847,18 +1052,6 @@ export default function TestDetailsPage() {
                         <div className="border rounded-md p-3 text-center">
                           <h3 className="text-sm font-medium text-muted-foreground">Completion</h3>
                           <p className="text-2xl font-bold mt-1">{testStats.completionRate}%</p>
-                        </div>
-                        <div className="border rounded-md p-3 text-center">
-                          <h3 className="text-sm font-medium text-muted-foreground">Avg. Score</h3>
-                          <p className="text-2xl font-bold mt-1">
-                            {testStats.averageScore > 0 ? `${testStats.averageScore}%` : "N/A"}
-                          </p>
-                        </div>
-                        <div className="border rounded-md p-3 text-center">
-                          <h3 className="text-sm font-medium text-muted-foreground">Pass Rate</h3>
-                          <p className="text-2xl font-bold mt-1">
-                            {testStats.passRate > 0 ? `${testStats.passRate}%` : "N/A"}
-                          </p>
                         </div>
                       </div>
 
@@ -940,8 +1133,6 @@ export default function TestDetailsPage() {
                             <th className="text-left py-3 px-4 font-medium text-muted-foreground">Name</th>
                             <th className="text-left py-3 px-4 font-medium text-muted-foreground">Email</th>
                             <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
-                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">Score</th>
-                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">Completion Date</th>
                             <th className="text-left py-3 px-4 font-medium text-muted-foreground">Actions</th>
                           </tr>
                         </thead>
@@ -956,22 +1147,16 @@ export default function TestDetailsPage() {
                                 </Badge>
                               </td>
                               <td className="py-3 px-4">
-                                {candidate.status === "Completed" ||
-                                candidate.status === "Passed" ||
-                                candidate.status === "Failed"
-                                  ? candidate.resultsDeclared
-                                    ? `${candidate.score}%`
-                                    : "Pending"
-                                  : "-"}
-                              </td>
-                              <td className="py-3 px-4">
-                                {candidate.completionDate ? formatDate(candidate.completionDate) : "-"}
-                              </td>
-                              <td className="py-3 px-4">
                                 <div className="flex gap-2">
+                                  {/* View candidate details */}
                                   <Button variant="outline" size="sm" asChild>
-                                    <Link href={`/employee/assessment/candidates/${candidate._id}`}>View</Link>
+                                    <Link href={`/employee/assessment/candidates?email=${candidate.email}`}>
+                                      <Eye className="h-4 w-4 mr-2" />
+                                      View
+                                    </Link>
                                   </Button>
+
+                                  {/* Declare individual result if completed but not declared */}
                                   {candidate.status === "Completed" && !candidate.resultsDeclared && (
                                     <Button
                                       variant="outline"
@@ -983,6 +1168,23 @@ export default function TestDetailsPage() {
                                     >
                                       <CheckCircle className="h-4 w-4 mr-2" />
                                       Declare
+                                    </Button>
+                                  )}
+
+                                  {/* Resend invitation if invited but not completed */}
+                                  {candidate.status === "Invited" && candidate.invitationId && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleResendInvitation(candidate.invitationId!)}
+                                      disabled={actionLoading === candidate.invitationId}
+                                    >
+                                      {actionLoading === candidate.invitationId ? (
+                                        <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
+                                      ) : (
+                                        <Send className="h-4 w-4 mr-2" />
+                                      )}
+                                      Resend
                                     </Button>
                                   )}
                                 </div>
@@ -1030,7 +1232,7 @@ export default function TestDetailsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {isLoadingCandidates ? (
+              {isLoadingResults ? (
                 <div className="space-y-4">
                   {[...Array(3)].map((_, i) => (
                     <div key={i} className="flex justify-between items-center">
@@ -1045,8 +1247,7 @@ export default function TestDetailsPage() {
                     </div>
                   ))}
                 </div>
-              ) : candidates.filter((c) => c.status === "Completed" || c.status === "Passed" || c.status === "Failed")
-                  .length > 0 ? (
+              ) : results.length > 0 ? (
                 <div className="space-y-1">
                   <div className="border rounded-lg overflow-hidden">
                     <div className="overflow-x-auto">
@@ -1063,55 +1264,51 @@ export default function TestDetailsPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {candidates
-                            .filter((c) => c.status === "Completed" || c.status === "Passed" || c.status === "Failed")
-                            .map((candidate) => (
-                              <tr key={candidate._id} className="border-t hover:bg-muted/30">
-                                <td className="py-3 px-4">{candidate.name}</td>
-                                <td className="py-3 px-4">{candidate.email}</td>
-                                <td className="py-3 px-4">
-                                  {candidate.resultsDeclared ? `${candidate.score}%` : "Pending"}
-                                </td>
-                                <td className="py-3 px-4">
-                                  <Badge
-                                    variant="outline"
-                                    className={
-                                      candidate.resultsDeclared
-                                        ? getCandidateStatusColor(candidate.status)
-                                        : "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
-                                    }
-                                  >
-                                    {candidate.resultsDeclared ? candidate.status : "Pending"}
-                                  </Badge>
-                                </td>
-                                <td className="py-3 px-4">{formatDate(candidate.completionDate || "")}</td>
-                                <td className="py-3 px-4">
-                                  <Badge variant={candidate.resultsDeclared ? "default" : "outline"}>
-                                    {candidate.resultsDeclared ? "Yes" : "No"}
-                                  </Badge>
-                                </td>
-                                <td className="py-3 px-4">
-                                  <div className="flex gap-2">
-                                    <Button variant="outline" size="sm" asChild>
-                                      <Link href={`/employee/assessment/candidates/${candidate._id}`}>View</Link>
+                          {results.map((result) => (
+                            <tr key={result._id} className="border-t hover:bg-muted/30">
+                              <td className="py-3 px-4">{result.candidateName || "N/A"}</td>
+                              <td className="py-3 px-4">{result.candidateEmail}</td>
+                              <td className="py-3 px-4">{result.resultsDeclared ? `${result.score}%` : "Pending"}</td>
+                              <td className="py-3 px-4">
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    result.resultsDeclared
+                                      ? getCandidateStatusColor(result.status)
+                                      : "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
+                                  }
+                                >
+                                  {result.resultsDeclared ? result.status : "Pending"}
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-4">{formatDate(result.completionDate)}</td>
+                              <td className="py-3 px-4">
+                                <Badge variant={result.resultsDeclared ? "default" : "outline"}>
+                                  {result.resultsDeclared ? "Yes" : "No"}
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="flex gap-2">
+                                  <Button variant="outline" size="sm" asChild>
+                                    <Link href={`/employee/assessment/results/${result._id}`}>View</Link>
+                                  </Button>
+                                  {!result.resultsDeclared && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedResult(result._id)
+                                        setShowDeclareIndividualResultDialog(true)
+                                      }}
+                                    >
+                                      <CheckCircle className="h-4 w-4 mr-2" />
+                                      Declare
                                     </Button>
-                                    {!candidate.resultsDeclared && (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                          setSelectedResult(candidate._id)
-                                          setShowDeclareIndividualResultDialog(true)
-                                        }}
-                                      >
-                                        <CheckCircle className="h-4 w-4 mr-2" />
-                                        Declare
-                                      </Button>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>

@@ -2048,7 +2048,7 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
       <header className="bg-black text-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-semibold">Employer Dashboard</h1>
+            <h1 className="text-xl font-semibold text-white">Employer Dashboard</h1>
             <div className="relative w-64 ml-4">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
               <Input
@@ -2211,40 +2211,60 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
-          <TabsList className="grid grid-cols-7 w-full max-w-3xl text-white mx-auto bg-gradient-to-br from-black to-black">
-            <TabsTrigger value="overview" className="flex items-center justify-center">
-              <User className="h-4 w-4 mr-2" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="candidates" className="flex items-center justify-center">
-              <Users className="h-4 w-4 mr-2" />
-              Candidates
-            </TabsTrigger>
-            <TabsTrigger value="jobs" className="flex items-center justify-center">
-              <Briefcase className="h-4 w-4 mr-2" />
-              Jobs
-            </TabsTrigger>
-            <TabsTrigger value="interviews" className="flex items-center justify-center">
-              <Calendar className="h-4 w-4 mr-2" />
-              Interviews
-            </TabsTrigger>
-            <TabsTrigger value="ats" className="flex items-center justify-center">
-              <Search className="h-4 w-4 mr-2" />
-              ATS
-            </TabsTrigger>
-            <TabsTrigger
-              value="assessments"
-              onClick={handleAssessmentsClick}
-              className="flex items-center justify-center"
-            >
-              <ClipboardCheck className="h-4 w-4 mr-2" />
-              Assessments
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center justify-center">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </TabsTrigger>
-          </TabsList>
+<TabsList className="grid grid-cols-7 w-full max-w-3xl text-white mx-auto bg-gradient-to-br from-black to-black h-12 items-center">
+  <TabsTrigger 
+    value="overview" 
+    className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
+  >
+    <User size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
+    Overview
+  </TabsTrigger>
+  <TabsTrigger 
+    value="candidates" 
+    className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
+  >
+    <Users size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
+    Candidates
+  </TabsTrigger>
+  <TabsTrigger 
+    value="jobs" 
+    className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
+  >
+    <Briefcase size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
+    Jobs
+  </TabsTrigger>
+  <TabsTrigger 
+    value="interviews" 
+    className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
+  >
+    <Calendar size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
+    Interviews
+  </TabsTrigger>
+  <TabsTrigger 
+    value="ats" 
+    className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
+  >
+    <Search size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
+    ATS
+  </TabsTrigger>
+  <TabsTrigger
+    value="assessments"
+    onClick={handleAssessmentsClick}
+    className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
+  >
+    <span className="inline-flex items-center justify-center rounded-full w-8 h-8 mr-2">
+      <ClipboardCheck size={22} strokeWidth={2.5} />
+    </span>
+    Assessments
+  </TabsTrigger>
+  <TabsTrigger 
+    value="settings" 
+    className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
+  >
+    <Settings size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
+    Settings
+  </TabsTrigger>
+</TabsList>
 
           <TabsContent value="overview">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -2486,7 +2506,7 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                 {filteredCandidates.length > 0 ? (
                   <>
                     <div className="rounded-md border dark:border-gray-700">
-                      <div className="grid grid-cols-8 bg-gray-50 dark:bg-gray-800 p-3 text-sm font-medium text-gray-500 dark:text-gray-400">
+                      <div className="grid grid-cols-8 bg-gray-50 dark:bg-gray-700 p-3 text-sm font-medium text-gray-500">
                         <div className="col-span-1 flex items-center">
                           <Checkbox
                             id="select-all"
@@ -2500,22 +2520,22 @@ function EmployeeDashboard({ userData }: EmployeeDashboardProps) {
                             }}
                             className="mr-2"
                           />
-                          <Label htmlFor="select-all" className="cursor-pointer text-black font-bold">
+                          <Label htmlFor="select-all" className="cursor-pointer text-white font-bold">
                             Select All
                           </Label>
                         </div>
-                        <div className="col-span-2 text-black font-bold">Candidate</div>
-                        <div className="text-black font-bold">Position</div>
-                        <div className="text-black font-bold">Status</div>
-                        <div className="text-black font-bold">Applied Date</div>
-                        <div className="text-right col-span-2 text-black font-bold">Actions</div>
+                        <div className="col-span-2 text-white font-bold">Candidate</div>
+                        <div className="text-white font-bold">Position</div>
+                        <div className="text-white font-bold">Status</div>
+                        <div className="text-white font-bold">Applied Date</div>
+                        <div className="text-right col-span-2 text-white font-bold">Actions</div>
                       </div>
 
                       {paginateItems(filteredCandidates, currentCandidatesPage).map((candidate, index) => (
                         <div
                           key={candidate._id}
                           className={`grid grid-cols-8 border-t dark:border-gray-700 p-3 items-center ${
-                            index % 2 === 0 ? "bg-gray-200 dark:bg-gray-200" : "bg-white dark:bg-gray-800"
+                            index % 2 === 0 ? "bg-gray-200 dark:bg-gray-200" : "bg-white"
                           }`}
                         >
                           <div className="col-span-1">

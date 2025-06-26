@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { toast, Toaster } from "sonner"
-import { Search, Copy, Send, X, Upload } from "lucide-react"
+import { Search, Copy, Send, X, Upload, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -38,6 +38,10 @@ export default function InvitationsPage() {
   const [filteredInvitations, setFilteredInvitations] = useState<InvitationData[]>([])
   const [searchTerm, setSearchTerm] = useState("")
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 8
+
   // Available tests
   const [availableTests, setAvailableTests] = useState<TestData[]>([])
 
@@ -60,6 +64,11 @@ export default function InvitationsPage() {
   useEffect(() => {
     applyFilters()
   }, [searchTerm, invitations])
+
+  // Reset to first page when search term changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm])
 
   const fetchInvitations = async () => {
     try {
@@ -136,6 +145,20 @@ export default function InvitationsPage() {
     }
 
     setFilteredInvitations(filtered)
+  }
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredInvitations.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentInvitations = filteredInvitations.slice(startIndex, endIndex)
+
+  const handlePreviousPage = () => {
+    setCurrentPage((prev) => Math.max(prev - 1, 1))
+  }
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
   }
 
   const handleSendInvitations = async () => {
@@ -402,56 +425,95 @@ export default function InvitationsPage() {
                     ))}
                   </div>
                 ) : filteredInvitations.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">Email</th>
-                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">Test</th>
-                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">Sent Date</th>
-                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
-                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">Expiry</th>
-                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredInvitations.map((invitation) => (
-                          <tr key={invitation._id} className="border-b hover:bg-muted/50">
-                            <td className="py-3 px-4">{invitation.email}</td>
-                            <td className="py-3 px-4">{invitation.testName}</td>
-                            <td className="py-3 px-4">{formatDate(invitation.createdAt)}</td>
-                            <td className="py-3 px-4">
-                              <Badge
-                                variant="outline"
-                                className={
-                                  invitation.status === "Completed"
-                                    ? "bg-green-100 text-green-800 hover:bg-green-100"
-                                    : invitation.status === "Expired"
-                                      ? "bg-red-100 text-red-800 hover:bg-red-100"
-                                      : "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
-                                }
-                              >
-                                {invitation.status}
-                              </Badge>
-                            </td>
-                            <td className="py-3 px-4">{formatDate(invitation.expiresAt)}</td>
-                            <td className="py-3 px-4">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  // Resend invitation
-                                  toast.info("Resending invitation...")
-                                }}
-                              >
-                                Resend
-                              </Button>
-                            </td>
+                  <>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">Email</th>
+                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">Test</th>
+                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">Sent Date</th>
+                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
+                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">Expiry</th>
+                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">Actions</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {currentInvitations.map((invitation) => (
+                            <tr key={invitation._id} className="border-b hover:bg-muted/50">
+                              <td className="py-3 px-4">{invitation.email}</td>
+                              <td className="py-3 px-4">{invitation.testName}</td>
+                              <td className="py-3 px-4">{formatDate(invitation.createdAt)}</td>
+                              <td className="py-3 px-4">
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    invitation.status === "Completed"
+                                      ? "bg-green-100 text-green-800 hover:bg-green-100"
+                                      : invitation.status === "Expired"
+                                        ? "bg-red-100 text-red-800 hover:bg-red-100"
+                                        : "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
+                                  }
+                                >
+                                  {invitation.status}
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-4">{formatDate(invitation.expiresAt)}</td>
+                              <td className="py-3 px-4">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    // Resend invitation
+                                    toast.info("Resending invitation...")
+                                  }}
+                                >
+                                  Resend
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                        <div className="text-sm text-muted-foreground">
+                          Showing {startIndex + 1} to {Math.min(endIndex, filteredInvitations.length)} of{" "}
+                          {filteredInvitations.length} invitations
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handlePreviousPage}
+                            disabled={currentPage === 1}
+                            className="flex items-center"
+                          >
+                            <ChevronLeft className="h-4 w-4 mr-1" />
+                            Previous
+                          </Button>
+                          <div className="flex items-center space-x-1">
+                            <span className="text-sm text-muted-foreground">
+                              Page {currentPage} of {totalPages}
+                            </span>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleNextPage}
+                            disabled={currentPage === totalPages}
+                            className="flex items-center"
+                          >
+                            Next
+                            <ChevronRight className="h-4 w-4 ml-1" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="text-center py-8">
                     <h3 className="text-lg font-medium mb-2">No invitations found</h3>
@@ -544,86 +606,6 @@ export default function InvitationsPage() {
                       </>
                     )}
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Invitation Links</CardTitle>
-                <p className="text-sm text-muted-foreground">Generate and share test invitation links</p>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="test-link-select" className="block text-sm font-medium">
-                      Select Test
-                    </label>
-                    <div className="flex gap-2">
-                      <select
-                        id="test-link-select"
-                        value={selectedTest}
-                        onChange={(e) => setSelectedTest(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-input"
-                      >
-                        <option value="">Choose a test</option>
-                        {availableTests.map((test) => (
-                          <option key={test._id} value={test._id}>
-                            {test.name}
-                          </option>
-                        ))}
-                      </select>
-                      <Button
-                        variant="outline"
-                        onClick={handleGenerateLink}
-                        disabled={isGeneratingLink || !selectedTest}
-                      >
-                        {isGeneratingLink ? (
-                          <div className="animate-spin h-4 w-4 border-2 border-t-transparent border-current rounded-full"></div>
-                        ) : (
-                          "Generate Link"
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 mt-4">
-                    {testLinks.map((link) => (
-                      <div key={link.id} className="border rounded-lg p-3 space-y-2">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-medium">{link.name}</h4>
-                            <p className="text-xs text-muted-foreground">Expires in {link.expiresIn}</p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                            onClick={() => handleDeleteLink(link.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Input value={link.link} readOnly className="flex-1 text-xs font-mono bg-muted" />
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleCopyLink(link.link)}
-                            className="flex-shrink-0"
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-
-                    {testLinks.length === 0 && (
-                      <div className="text-center py-4">
-                        <p className="text-sm text-muted-foreground">No invitation links generated yet</p>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </CardContent>
             </Card>

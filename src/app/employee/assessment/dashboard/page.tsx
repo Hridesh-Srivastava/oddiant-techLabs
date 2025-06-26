@@ -442,7 +442,7 @@ export default function AssessmentDashboard() {
                           <th className="text-left py-3 px-4 font-medium text-muted-foreground">Score</th>
                           <th className="text-left py-3 px-4 font-medium text-muted-foreground">Completion Date</th>
                           <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
-                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">Actions</th>
+                          {/* <th className="text-left py-3 px-4 font-medium text-muted-foreground">Actions</th> */}
                         </tr>
                       </thead>
                       <tbody>
@@ -461,11 +461,11 @@ export default function AssessmentDashboard() {
                                 {result.status}
                               </span>
                             </td>
-                            <td className="py-3 px-4">
+                            {/* <td className="py-3 px-4">
                               <Button variant="outline" size="sm" asChild>
                                 <Link href={`/employee/assessment/results/${result._id}`}>View Details</Link>
                               </Button>
-                            </td>
+                            </td> */}
                           </tr>
                         ))}
                       </tbody>
