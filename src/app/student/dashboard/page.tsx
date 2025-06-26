@@ -51,7 +51,6 @@ import {
   Info,
   MessageSquare,
   Layers,
-  FileSymlink,
   ChevronLeft,
 } from "lucide-react"
 import { MapPinIcon } from "lucide-react"
@@ -134,7 +133,7 @@ interface StudentData {
   yearsOfExperience?: string
   shiftPreference?: string | string[]
   preferenceCities?: string[]
-  preferredCities?: string[] 
+  preferredCities?: string[]
   profileOutline?: string
   onlinePresence?: {
     portfolio?: string
@@ -182,8 +181,6 @@ interface StudentData {
     bankAccount?: boolean
     idProof?: boolean
   }
-  // availableAssets?: string[]
-  // identityDocuments?: string[]
   settings?: {
     profileVisibility: boolean
     notifications: {
@@ -200,7 +197,6 @@ interface StudentData {
   currentSalary?: string
   expectedSalary?: string
   noticePeriod?: string
-  // Add source field to track which collection the user is from
   source?: string
 
   // Add candidates collection field mappings
@@ -443,7 +439,7 @@ const getTotalExperience = (student: StudentData): string => {
   return "Not specified"
 }
 
-function StudentDashboardPage({ user }: { user: any }) {
+export default function StudentDashboardPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const activeTab = searchParams.get("tab") || "jobs"
@@ -524,52 +520,44 @@ function StudentDashboardPage({ user }: { user: any }) {
         setIsLoading(true)
         setError(null)
 
-        // Use the user data passed from withAuth HOC
-        if (user) {
-          setStudent(user as StudentData)
+        // Fetch user data from API instead of relying on props
+        const response = await fetch("/api/student/profile", {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        })
 
-          // Fetch settings
-          fetchSettings()
-        } else {
-          // Fallback to API call if user data is not available
-          const response = await fetch("/api/student/profile", {
-            cache: "no-store",
-            headers: {
-              "Cache-Control": "no-cache, no-store, must-revalidate",
-              Pragma: "no-cache",
-              Expires: "0",
-            },
-          })
-
-          if (response.status === 401) {
-            router.push("/auth/login")
-            return
-          }
-
-          if (!response.ok) {
-            if (response.status === 404) {
-              setError("Student profile not found. Please complete your registration.")
-            } else {
-              setError("Failed to load profile data. Please try again later.")
-            }
-            return
-          }
-
-          const data = await response.json()
-
-          if (!data.success) {
-            setError(data.message || "Failed to load profile data")
-            return
-          }
-
-          // Log the student data for debugging
-          console.log("Student data:", data.student)
-
-          setStudent(data.student)
-
-          // Fetch settings
-          fetchSettings()
+        if (response.status === 401) {
+          router.push("/auth/login")
+          return
         }
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            setError("Student profile not found. Please complete your registration.")
+          } else {
+            setError("Failed to load profile data. Please try again later.")
+          }
+          return
+        }
+
+        const data = await response.json()
+
+        if (!data.success) {
+          setError(data.message || "Failed to load profile data")
+          return
+        }
+
+        // Log the student data for debugging
+        console.log("Student data:", data.student)
+
+        setStudent(data.student)
+
+        // Fetch settings
+        fetchSettings()
       } catch (error) {
         console.error("Error loading profile data:", error)
         setError("An unexpected error occurred. Please try again later.")
@@ -579,7 +567,7 @@ function StudentDashboardPage({ user }: { user: any }) {
     }
 
     fetchStudentData()
-  }, [router, user])
+  }, [router])
 
   const fetchSettings = async () => {
     try {
@@ -1486,14 +1474,17 @@ function StudentDashboardPage({ user }: { user: any }) {
         <span style="margin-right: 8px;">📄</span>
         <span>Resume</span>
       </div>
-      ${getDocuments(student).resume.url ? 
-        `<a href="${getDocuments(student).resume.url}" style="color: #2563eb; text-decoration: underline;">${getDocuments(student).resume.url}</a>` : 
-        `<span style="color: #b91c1c;">Not uploaded</span>`
+      ${
+        getDocuments(student).resume.url
+          ? `<a href="${getDocuments(student).resume.url}" style="color: #2563eb; text-decoration: underline;">${getDocuments(student).resume.url}</a>`
+          : `<span style="color: #b91c1c;">Not uploaded</span>`
       }
     </div>
 
     <!-- Video Resume -->
-    ${getDocuments(student).videoResume.url ? `
+    ${
+      getDocuments(student).videoResume.url
+        ? `
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <div style="display: flex; align-items: center;">
         <span style="margin-right: 8px;">🎥</span>
@@ -1501,10 +1492,14 @@ function StudentDashboardPage({ user }: { user: any }) {
       </div>
       <a href="${getDocuments(student).videoResume.url}" style="color: #2563eb; text-decoration: underline;">${getDocuments(student).videoResume.url}</a>
     </div>
-    ` : ''}
+    `
+        : ""
+    }
 
     <!-- Audio Biodata -->
-    ${getDocuments(student).audioBiodata.url ? `
+    ${
+      getDocuments(student).audioBiodata.url
+        ? `
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <div style="display: flex; align-items: center;">
         <span style="margin-right: 8px;">🎵</span>
@@ -1512,10 +1507,14 @@ function StudentDashboardPage({ user }: { user: any }) {
       </div>
       <a href="${getDocuments(student).audioBiodata.url}" style="color: #2563eb; text-decoration: underline;">${getDocuments(student).audioBiodata.url}</a>
     </div>
-    ` : ''}
+    `
+        : ""
+    }
 
     <!-- Photograph -->
-    ${getDocuments(student).photograph.url ? `
+    ${
+      getDocuments(student).photograph.url
+        ? `
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <div style="display: flex; align-items: center;">
         <span style="margin-right: 8px;">🖼️</span>
@@ -1523,7 +1522,9 @@ function StudentDashboardPage({ user }: { user: any }) {
       </div>
       <a href="${getDocuments(student).photograph.url}" style="color: #2563eb; text-decoration: underline;">${getDocuments(student).photograph.url}</a>
     </div>
-    ` : ''}
+    `
+        : ""
+    }
 
   </div>
 </div>
@@ -1615,73 +1616,6 @@ function StudentDashboardPage({ user }: { user: any }) {
 
     // If certifications is an array of objects, extract the name property
     return (student.certifications as Array<{ name: string }>).map((cert) => cert.name)
-  }
-
-  // Get available assets as array
-  const getAvailableAssets = (student: StudentData) => {
-    if (student.availableAssets && student.availableAssets.length > 0) {
-      return student.availableAssets
-    }
-
-    if (student.assets) {
-      const assets: string[] = []
-      if (student.assets.bike) assets.push("Bike / Car")
-      if (student.assets.wifi) assets.push("WiFi")
-      if (student.assets.laptop) assets.push("Laptop")
-      return assets
-    }
-
-    return []
-  }
-
-  // Get identity documents as array
-  const getIdentityDocuments = (student: StudentData) => {
-    if (student.identityDocuments && student.identityDocuments.length > 0) {
-      return student.identityDocuments
-    }
-
-    if (student.assets) {
-      const documents: string[] = []
-      if (student.assets.panCard) documents.push("PAN Card")
-      if (student.assets.aadhar) documents.push("Aadhar")
-      if (student.assets.bankAccount) documents.push("Bank Account")
-      if (student.assets.idProof) documents.push("Voter ID / Passport / DL (Any)")
-      return documents
-    }
-
-    return []
-  }
-
-  // Get total experience - FIXED to properly display total experience
-  const getTotalExperienceOriginal = (student: StudentData) => {
-    // First check direct properties
-    if (student.totalExperience) return student.totalExperience
-    if (student.yearsOfExperience) return student.yearsOfExperience
-
-    // Get experience array safely
-    const experienceArray = getExperienceArray(student)
-
-    if (experienceArray.length > 0) {
-      // First check if any experience entry has totalExperience
-      for (const exp of experienceArray) {
-        if (exp.totalExperience) return exp.totalExperience
-      }
-
-      // Then try to calculate from tenure
-      let totalYears = 0
-      experienceArray.forEach((exp) => {
-        if (exp.tenure) {
-          const yearMatch = exp.tenure.match(/(\d+)\s*years?/i)
-          if (yearMatch && yearMatch[1]) {
-            totalYears += Number.parseInt(yearMatch[1], 10)
-          }
-        }
-      })
-
-      if (totalYears > 0) return `${totalYears} years`
-    }
-
-    return "Not specified"
   }
 
   const handleSaveSettings = async () => {
@@ -1879,7 +1813,7 @@ function StudentDashboardPage({ user }: { user: any }) {
     setApplicationDateTo("")
     setShowAdvancedFilters(false)
     setShowRecentApplicationsOnly(false)
-    setCurrentApplicationPage(1)  // Reset to first page when filters are cleared
+    setCurrentApplicationPage(1) // Reset to first page when filters are cleared
   }
 
   const handleSaveAlternativeEmail = async () => {
@@ -2439,7 +2373,7 @@ function StudentDashboardPage({ user }: { user: any }) {
                           onClick={() => paginate(currentPage - 1)}
                           disabled={currentPage === 1}
                         >
-                          <ChevronLeft className="h-4 w-4" /> 
+                          <ChevronLeft className="h-4 w-4" />
                           Previous
                         </Button>
 
@@ -2449,9 +2383,7 @@ function StudentDashboardPage({ user }: { user: any }) {
                             variant={currentPage === number ? "default" : "outline"}
                             size="sm"
                             onClick={() => paginate(number)}
-                            className={`w-8 ${
-                              currentPage === number ? "bg-blue-600 text-white" : "hover:bg-gray-100"
-                            }`}
+                            className={`w-8 ${currentPage === number ? "bg-blue-600 text-white" : "hover:bg-gray-100"}`}
                           >
                             {number}
                           </Button>
@@ -2667,7 +2599,10 @@ function StudentDashboardPage({ user }: { user: any }) {
                 ) : (
                   <div className="space-y-4">
                     {filterRecentApplications(filteredApplications)
-                      .slice((currentApplicationPage - 1) * applicationsPerPage, currentApplicationPage * applicationsPerPage)
+                      .slice(
+                        (currentApplicationPage - 1) * applicationsPerPage,
+                        currentApplicationPage * applicationsPerPage,
+                      )
                       .map((application) => (
                         <Card key={application._id} className="overflow-hidden hover:shadow-md transition-shadow">
                           <CardContent className="p-6">
@@ -2676,7 +2611,9 @@ function StudentDashboardPage({ user }: { user: any }) {
                                 <h3 className="text-lg font-semibold mb-1">
                                   {application.job?.jobTitle || "Unknown Job"}
                                 </h3>
-                                <p className="text-gray-600 mb-2">{application.job?.companyName || "Unknown Company"}</p>
+                                <p className="text-gray-600 mb-2">
+                                  {application.job?.companyName || "Unknown Company"}
+                                </p>
                                 <div className="flex items-center text-sm text-gray-500 mb-2">
                                   <MapPin className="h-4 w-4 mr-1" />
                                   {application.job?.jobLocation || "Unknown Location"}
@@ -2720,7 +2657,7 @@ function StudentDashboardPage({ user }: { user: any }) {
 
                         {Array.from(
                           { length: Math.ceil(filteredApplications.length / applicationsPerPage) },
-                          (_, i) => i + 1
+                          (_, i) => i + 1,
                         ).map((number) => (
                           <Button
                             key={number}
@@ -2739,7 +2676,9 @@ function StudentDashboardPage({ user }: { user: any }) {
                           variant="outline"
                           size="sm"
                           onClick={() => setCurrentApplicationPage(currentApplicationPage + 1)}
-                          disabled={currentApplicationPage === Math.ceil(filteredApplications.length / applicationsPerPage)}
+                          disabled={
+                            currentApplicationPage === Math.ceil(filteredApplications.length / applicationsPerPage)
+                          }
                         >
                           Next
                           <ChevronRight className="h-4 w-4" />
@@ -2772,6 +2711,7 @@ function StudentDashboardPage({ user }: { user: any }) {
                             student.documents?.photograph?.url ||
                             student.photographUrl ||
                             "/placeholder.svg?height=128&width=128" ||
+                            "/placeholder.svg" ||
                             "/placeholder.svg"
                           }
                           alt={getFullName(student)}
@@ -2826,7 +2766,7 @@ function StudentDashboardPage({ user }: { user: any }) {
                       )}
                     </div>
 
-                  <h3 className="text-xl font-semibold text-center">{getFullName(student)}</h3>
+                    <h3 className="text-xl font-semibold text-center">{getFullName(student)}</h3>
                     <p className="text-gray-500 text-center mb-4">{student.email}</p>
                     <Button
                       variant="outline"
@@ -2836,12 +2776,16 @@ function StudentDashboardPage({ user }: { user: any }) {
                       Edit Profile
                     </Button>
                     {(student.documents?.resume?.url || student.resumeUrl) && (
-  <Button variant="outline" className="w-full mb-2" asChild>
-    <a href={student.documents?.resume?.url || student.resumeUrl} target="_blank" rel="noopener noreferrer">
-      View Resume
-    </a>
-  </Button>
-)}
+                      <Button variant="outline" className="w-full mb-2" asChild>
+                        <a
+                          href={student.documents?.resume?.url || student.resumeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          View Resume
+                        </a>
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       className="w-full flex items-center justify-center"
@@ -3026,9 +2970,7 @@ function StudentDashboardPage({ user }: { user: any }) {
                         <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="bg-blue-50 p-3 rounded-md flex flex-col items-center">
                             <span className="text-sm text-gray-500">Total Experience</span>
-                            <span className="text-lg font-semibold text-blue-700">
-                              {getTotalExperienceOriginal(student)}
-                            </span>
+                            <span className="text-lg font-semibold text-blue-700">{getTotalExperience(student)}</span>
                           </div>
 
                           {(student.currentSalary ||
@@ -3177,55 +3119,50 @@ function StudentDashboardPage({ user }: { user: any }) {
                             <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
                               <Briefcase className="h-4 w-4 mr-2" />
                               Work Experience
-                              <Badge className="ml-2 bg-blue-50 text-blue-800">
-                                Total: {getTotalExperienceOriginal(student)}
+                              <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-800">
+                                Total: {getTotalExperience(student)}
                               </Badge>
                             </h4>
                             <div className="space-y-4">
                               {getExperienceArray(student).map((exp, index) => (
                                 <div key={index} className="border rounded-md p-3">
                                   <div className="flex justify-between">
-                                    <h5 className="font-medium">Title: {exp.title || "Not specified"}</h5>
+                                    <h5 className="font-medium">Title: {exp.title}</h5>
                                     {exp.currentlyWorking && (
                                       <Badge className="bg-green-100 text-green-800">Current</Badge>
                                     )}
                                   </div>
-                                  <p className="text-gray-600">Company: {exp.companyName || "Not specified"}</p>
+                                  <p className="text-gray-600">Company: {exp.companyName}</p>
                                   {exp.department && <p>Department: {exp.department}</p>}
-                                  {exp.location && <p className="text-sm text-gray-700">{exp.location}</p>}
-                                  <div className="flex justify-between mt-1">
-                                    {exp.tenure && (
-                                      <p className="text-sm text-gray-700">
-                                        <Clock className="h-3 w-3 inline mr-1" />
-                                        Tenure: {exp.tenure}
-                                      </p>
-                                    )}
-                                  </div>
-                                  {(exp.professionalSummary || exp.summary) && (
-                                    <p className="mt-2 text-sm whitespace-pre-line">
-                                      Professional Summary: {exp.professionalSummary || exp.summary}
+                                  {exp.location && <p className="text-sm text-gray-500">{exp.location}</p>}
+                                  {exp.tenure && (
+                                    <p className="text-sm text-gray-500">
+                                      <Timer className="h-3 w-3 inline mr-1" />
+                                      Tenure: {exp.tenure}
                                     </p>
                                   )}
-                                  <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                                  {(exp.professionalSummary || exp.summary) && (
+                                    <p className="text-sm mt-2 whitespace-pre-line">
+                                      <strong>Professional Summary:</strong> {exp.professionalSummary || exp.summary}
+                                    </p>
+                                  )}
+                                  <div className="flex flex-wrap gap-4 mt-2 text-sm">
                                     {exp.currentSalary && (
                                       <div className="flex items-center">
                                         <DollarSign className="h-3 w-3 mr-1 text-gray-500" />
-                                        <span className="text-gray-500">Current: </span>
-                                        <span className="ml-1">{exp.currentSalary}</span>
+                                        Current: {exp.currentSalary}
                                       </div>
                                     )}
                                     {exp.expectedSalary && (
                                       <div className="flex items-center">
                                         <DollarSign className="h-3 w-3 mr-1 text-gray-500" />
-                                        <span className="text-gray-500">Expected: </span>
-                                        <span className="ml-1">{exp.expectedSalary}</span>
+                                        Expected: {exp.expectedSalary}
                                       </div>
                                     )}
                                     {exp.noticePeriod && (
                                       <div className="flex items-center">
                                         <Timer className="h-3 w-3 mr-1 text-gray-500" />
-                                        <span className="text-gray-500">Notice Period: </span>
-                                        <span className="ml-1">{exp.noticePeriod}</span>
+                                        Notice Period: {exp.noticePeriod}
                                       </div>
                                     )}
                                   </div>
@@ -3236,16 +3173,16 @@ function StudentDashboardPage({ user }: { user: any }) {
                         </>
                       )}
 
-                      {/* Certifications Section */}
-                      {student.certifications && (
-                        <>
-                          <Separator />
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
-                              <Award className="h-4 w-4 mr-2" />
-                              Certifications
-                            </h4>
-                            {Array.isArray(student.certifications) && student.certifications.length > 0 ? (
+                      {student.certifications &&
+                        Array.isArray(student.certifications) &&
+                        student.certifications.length > 0 && (
+                          <>
+                            <Separator />
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
+                                <Award className="h-4 w-4 mr-2" />
+                                Certifications
+                              </h4>
                               <div className="space-y-2">
                                 {getCertificationNames(student).map((cert, index) => (
                                   <div key={index} className="border rounded-md p-3">
@@ -3253,29 +3190,22 @@ function StudentDashboardPage({ user }: { user: any }) {
                                   </div>
                                 ))}
                               </div>
-                            ) : (
-                              <div className="text-gray-500">
-                                No certifications added yet. Add certifications to showcase your skills and
-                                qualifications.
-                              </div>
-                            )}
-                          </div>
-                        </>
-                      )}
+                            </div>
+                          </>
+                        )}
 
-                      {/* Available Assets */}
                       {getAvailableAssets(student).length > 0 && (
                         <>
                           <Separator />
                           <div>
-                            <h4 className="text-sm font-medium text-gray-500 mb-1 flex items-center">
+                            <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
                               <Laptop className="h-4 w-4 mr-2" />
                               Available Assets
                             </h4>
-                            <div className="space-y-1 mt-2">
+                            <div className="space-y-2">
                               {getAvailableAssets(student).map((asset, index) => (
                                 <div key={index} className="flex items-center">
-                                  <FileCheck className="h-4 w-4 mr-2 text-gray-500" />
+                                  <span className="mr-2 text-green-600">✓</span>
                                   <span>{asset.replace(/_/g, " ")}</span>
                                 </div>
                               ))}
@@ -3284,25 +3214,22 @@ function StudentDashboardPage({ user }: { user: any }) {
                         </>
                       )}
 
-                      {/* Identity Documents */}
                       {getIdentityDocuments(student).length > 0 && (
                         <>
                           <Separator />
                           <div>
-                            <h4 className="text-sm font-medium text-gray-500 mb-1 flex items-center">
+                            <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
                               <CreditCard className="h-4 w-4 mr-2" />
                               Identity Documents
                             </h4>
-                            <div className="space-y-2 mt-2">
+                            <div className="space-y-2">
                               {getIdentityDocuments(student).map((doc, index) => (
                                 <div key={index} className="flex justify-between items-center">
                                   <div className="flex items-center">
-                                    <FileSymlink className="h-4 w-4 mr-2 text-gray-500" />
+                                    <FileCheck className="h-4 w-4 mr-2 text-gray-500" />
                                     <span>{doc.replace(/_/g, " ")}</span>
                                   </div>
-                                  <Badge variant="outline" className="bg-green-50 text-green-800">
-                                    Verified
-                                  </Badge>
+                                  <Badge className="bg-green-100 text-green-800">Verified</Badge>
                                 </div>
                               ))}
                             </div>
@@ -3314,7 +3241,7 @@ function StudentDashboardPage({ user }: { user: any }) {
                         <>
                           <Separator />
                           <div>
-                            <h4 className="text-sm font-medium text-gray-500 mb-1 flex items-center">
+                            <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
                               <MessageSquare className="h-4 w-4 mr-2" />
                               Cover Letter
                             </h4>
@@ -3329,7 +3256,7 @@ function StudentDashboardPage({ user }: { user: any }) {
                         <>
                           <Separator />
                           <div>
-                            <h4 className="text-sm font-medium text-gray-500 mb-1 flex items-center">
+                            <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
                               <Info className="h-4 w-4 mr-2" />
                               Additional Information
                             </h4>
@@ -3341,77 +3268,80 @@ function StudentDashboardPage({ user }: { user: any }) {
                       <Separator />
 
                       <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-1 flex items-center">
+                        <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
                           <Layers className="h-4 w-4 mr-2" />
                           Documents
                         </h4>
-                        <div className="space-y-3 mt-2">
-                          {(() => {
-                            const docs = getDocuments(student)
-                            return (
-                              <>
-                                <div className="flex justify-between items-center">
-                                  <div className="flex items-center">
-                                    <FileText className="h-4 w-4 mr-2 text-gray-500" />
-                                    <span>Resume</span>
-                                  </div>
-                                  {docs.resume.url ? (
-                                    <Button variant="outline" size="sm" asChild>
-                                      <a href={docs.resume.url} target="_blank" rel="noopener noreferrer">
-                                        View Resume
-                                      </a>
-                                    </Button>
-                                  ) : (
-                                    <Badge variant="outline" className="bg-red-50 text-red-800">
-                                      Not uploaded
-                                    </Badge>
-                                  )}
-                                </div>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center">
+                              <FileText className="h-4 w-4 mr-2 text-gray-500" />
+                              <span>Resume</span>
+                            </div>
+                            {getDocuments(student).resume.url ? (
+                              <a
+                                href={getDocuments(student).resume.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline"
+                              >
+                                View
+                              </a>
+                            ) : (
+                              <span className="text-red-600">Not uploaded</span>
+                            )}
+                          </div>
 
-                                {docs.videoResume.url && (
-                                  <div className="flex justify-between items-center">
-                                    <div className="flex items-center">
-                                      <Video className="h-4 w-4 mr-2 text-gray-500" />
-                                      <span>Video Resume</span>
-                                    </div>
-                                    <Button variant="outline" size="sm" asChild>
-                                      <a href={docs.videoResume.url} target="_blank" rel="noopener noreferrer">
-                                        View Video
-                                      </a>
-                                    </Button>
-                                  </div>
-                                )}
+                          {getDocuments(student).videoResume.url && (
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center">
+                                <Video className="h-4 w-4 mr-2 text-gray-500" />
+                                <span>Video Resume</span>
+                              </div>
+                              <a
+                                href={getDocuments(student).videoResume.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline"
+                              >
+                                View
+                              </a>
+                            </div>
+                          )}
 
-                                {docs.audioBiodata.url && (
-                                  <div className="flex justify-between items-center">
-                                    <div className="flex items-center">
-                                      <Music className="h-4 w-4 mr-2 text-gray-500" />
-                                      <span>Audio Bio</span>
-                                    </div>
-                                    <Button variant="outline" size="sm" asChild>
-                                      <a href={docs.audioBiodata.url} target="_blank" rel="noopener noreferrer">
-                                        Listen
-                                      </a>
-                                    </Button>
-                                  </div>
-                                )}
+                          {getDocuments(student).audioBiodata.url && (
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center">
+                                <Music className="h-4 w-4 mr-2 text-gray-500" />
+                                <span>Audio Bio</span>
+                              </div>
+                              <a
+                                href={getDocuments(student).audioBiodata.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline"
+                              >
+                                Listen
+                              </a>
+                            </div>
+                          )}
 
-                                {docs.photograph.url && (
-                                  <div className="flex justify-between items-center">
-                                    <div className="flex items-center">
-                                      <ImageIcon className="h-4 w-4 mr-2 text-gray-500" />
-                                      <span>Photograph</span>
-                                    </div>
-                                    <Button variant="outline" size="sm" asChild>
-                                      <a href={docs.photograph.url} target="_blank" rel="noopener noreferrer">
-                                        View Photo
-                                      </a>
-                                    </Button>
-                                  </div>
-                                )}
-                              </>
-                            )
-                          })()}
+                          {getDocuments(student).photograph.url && (
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center">
+                                <ImageIcon className="h-4 w-4 mr-2 text-gray-500" />
+                                <span>Profile Photo</span>
+                              </div>
+                              <a
+                                href={getDocuments(student).photograph.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline"
+                              >
+                                View
+                              </a>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -3427,141 +3357,206 @@ function StudentDashboardPage({ user }: { user: any }) {
           <div>
             <Card>
               <CardHeader>
-                <CardTitle>Account Settings</CardTitle>
-                <CardDescription>Manage your account preferences and security settings</CardDescription>
+                <CardTitle>Settings</CardTitle>
+                <CardDescription>Manage your account settings and preferences</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  <Separator />
+                  {/* Email Settings */}
                   <div>
-                    <h3 className="text-lg font-medium mb-4">Email Settings</h3>
+                    <h4 className="text-sm font-medium text-gray-500 mb-3">Email Settings</h4>
                     <div className="space-y-4">
                       {/* Primary Email */}
-                      <div className="border rounded-md p-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <Label htmlFor="primary-email" className="text-sm font-medium">
-                            Primary Email
-                          </Label>
-                          {isUpdatingPrimaryEmail ? (
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Button variant="outline" size="sm" onClick={handleSavePrimaryEmail}>
-                              Save
-                            </Button>
-                          )}
+                      <div>
+                        <Label htmlFor="primary-email" className="text-sm font-medium">
+                          Primary Email
+                        </Label>
+                        <div className="flex gap-2 mt-1">
+                          <Input
+                            id="primary-email"
+                            type="email"
+                            value={primaryEmail}
+                            onChange={(e) => setPrimaryEmail(e.target.value)}
+                            placeholder="Enter your primary email"
+                          />
+                          <Button
+                            onClick={handleSavePrimaryEmail}
+                            disabled={isUpdatingPrimaryEmail || !primaryEmail || primaryEmail === student?.email}
+                          >
+                            {isUpdatingPrimaryEmail ? "Updating..." : "Update"}
+                          </Button>
                         </div>
-                        <Input
-                          id="primary-email"
-                          type="email"
-                          placeholder="Primary Email"
-                          value={primaryEmail}
-                          onChange={(e) => setPrimaryEmail(e.target.value)}
-                          disabled={isUpdatingPrimaryEmail}
-                        />
-                        {primaryEmailError && <p className="text-red-500 text-sm mt-1">{primaryEmailError}</p>}
+                        {primaryEmailError && <p className="text-sm text-red-600 mt-1">{primaryEmailError}</p>}
                       </div>
 
                       {/* Alternative Email */}
-                      <div className="border rounded-md p-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <Label htmlFor="alternative-email" className="text-sm font-medium">
-                            Alternative Email
-                          </Label>
-                          {currentAlternativeEmail ? (
-                            isRemovingAlternativeEmail ? (
-                              <RefreshCw className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Button variant="destructive" size="sm" onClick={handleRemoveAlternativeEmail}>
-                                Remove
-                              </Button>
-                            )
-                          ) : isUpdatingAlternativeEmail ? (
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Button variant="outline" size="sm" onClick={handleSaveAlternativeEmail}>
-                              Save
-                            </Button>
-                          )}
-                        </div>
-                        {currentAlternativeEmail && (
-                          <div className="p-3 bg-gray-50 rounded-md border mb-3">
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <p className="text-sm text-gray-500">Current Alternative Email:</p>
-                                <p className="font-medium">{currentAlternativeEmail}</p>
-                              </div>
-                              <Badge variant="outline" className="bg-green-50 text-green-800">
-                                Active
-                              </Badge>
-                            </div>
-                          </div>
-                        )}
+                      <div>
+                        <Label htmlFor="alternative-email" className="text-sm font-medium">
+                          Alternative Email
+                        </Label>
                         {currentAlternativeEmail ? (
-                          <div className="flex items-center justify-between">
-                            <p className="text-gray-500">Current Alternative Email:</p>
-                            <p className="font-medium">{currentAlternativeEmail}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Input value={currentAlternativeEmail} disabled className="flex-1" />
+                            <Button
+                              variant="outline"
+                              onClick={handleRemoveAlternativeEmail}
+                              disabled={isRemovingAlternativeEmail}
+                            >
+                              {isRemovingAlternativeEmail ? "Removing..." : "Remove"}
+                            </Button>
                           </div>
                         ) : (
-                          <>
+                          <div className="flex gap-2 mt-1">
                             <Input
                               id="alternative-email"
                               type="email"
-                              placeholder="Alternative Email"
                               value={alternativeEmail}
                               onChange={(e) => setAlternativeEmail(e.target.value)}
-                              disabled={isUpdatingAlternativeEmail}
+                              placeholder="Enter alternative email"
                             />
-                            {alternativeEmailError && (
-                              <p className="text-red-500 text-sm mt-1">{alternativeEmailError}</p>
-                            )}
-                          </>
+                            <Button
+                              onClick={handleSaveAlternativeEmail}
+                              disabled={isUpdatingAlternativeEmail || !alternativeEmail}
+                            >
+                              {isUpdatingAlternativeEmail ? "Adding..." : "Add"}
+                            </Button>
+                          </div>
                         )}
+                        {alternativeEmailError && <p className="text-sm text-red-600 mt-1">{alternativeEmailError}</p>}
+                        <p className="text-xs text-gray-500 mt-1">You can use this email to sign in to your account</p>
                       </div>
                     </div>
                   </div>
 
                   <Separator />
 
+                  {/* Profile Settings */}
                   <div>
-                    <h3 className="text-lg font-medium mb-4">Security</h3>
+                    <h4 className="text-sm font-medium text-gray-500 mb-3">Profile Settings</h4>
                     <div className="space-y-4">
-                      <Button variant="outline" onClick={() => router.push("/student/change-password")}>
-                        Change Password
-                      </Button>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-sm font-medium">Profile Visibility</Label>
+                          <p className="text-xs text-gray-500">Make your profile visible to employers</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={settings?.profileVisibility || false}
+                          onChange={(e) =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              profileVisibility: e.target.checked,
+                            }))
+                          }
+                          className="h-4 w-4"
+                        />
+                      </div>
                     </div>
                   </div>
 
                   <Separator />
 
+                  {/* Notification Settings */}
                   <div>
-                    <h3 className="text-lg font-medium mb-4">Account Actions</h3>
+                    <h4 className="text-sm font-medium text-gray-500 mb-3">Notification Settings</h4>
                     <div className="space-y-4">
-                      <Button
-                        variant="destructive"
-                        onClick={async () => {
-                          if (confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
-                            try {
-                              const response = await fetch("/api/student/delete-account", {
-                                method: "DELETE",
-                              })
-
-                              if (response.ok) {
-                                toast.success("Account deleted successfully")
-                                router.push("/auth/login")
-                              } else {
-                                const data = await response.json()
-                                toast.error(data.message || "Failed to delete account")
-                              }
-                            } catch (error) {
-                              console.error("Error deleting account:", error)
-                              toast.error("An error occurred while deleting your account")
-                            }
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-sm font-medium">Email Notifications</Label>
+                          <p className="text-xs text-gray-500">Receive notifications via email</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={settings?.notifications?.email || false}
+                          onChange={(e) =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              notifications: {
+                                ...prev?.notifications,
+                                email: e.target.checked,
+                              },
+                            }))
                           }
-                        }}
-                      >
-                        Delete Account
-                      </Button>
+                          className="h-4 w-4"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-sm font-medium">Job Recommendations</Label>
+                          <p className="text-xs text-gray-500">Get personalized job recommendations</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={settings?.notifications?.jobRecommendations || false}
+                          onChange={(e) =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              notifications: {
+                                ...prev?.notifications,
+                                jobRecommendations: e.target.checked,
+                              },
+                            }))
+                          }
+                          className="h-4 w-4"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-sm font-medium">Application Updates</Label>
+                          <p className="text-xs text-gray-500">Get updates on your job applications</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={settings?.notifications?.applicationUpdates || false}
+                          onChange={(e) =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              notifications: {
+                                ...prev?.notifications,
+                                applicationUpdates: e.target.checked,
+                              },
+                            }))
+                          }
+                          className="h-4 w-4"
+                        />
+                      </div>
                     </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Job Preferences */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-3">Job Preferences</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="shift-preference" className="text-sm font-medium">
+                          Shift Preference
+                        </Label>
+                        <select
+                          id="shift-preference"
+                          className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm mt-1"
+                          value={settings?.shiftPreference || "flexible"}
+                          onChange={(e) =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              shiftPreference: e.target.value,
+                            }))
+                          }
+                        >
+                          <option value="flexible">Flexible</option>
+                          <option value="day">Day Shift</option>
+                          <option value="night">Night Shift</option>
+                          <option value="rotational">Rotational</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button onClick={handleSaveSettings} disabled={isUpdatingSettings}>
+                      {isUpdatingSettings ? "Saving..." : "Save Settings"}
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -3572,5 +3567,3 @@ function StudentDashboardPage({ user }: { user: any }) {
     </div>
   )
 }
-
-export default StudentDashboardPage
