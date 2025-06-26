@@ -4,8 +4,11 @@ import { getUserFromRequest } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 import ExcelJS from "exceljs"
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
+    // Await the params as they're now Promise-based in Next.js 15
+    const params = await context.params
+    
     // Get user ID from request
     const userId = await getUserFromRequest(request)
 
