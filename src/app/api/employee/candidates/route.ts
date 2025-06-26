@@ -15,10 +15,18 @@ export async function GET(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Find employee to verify
-    const employee = await db.collection("employees").findOne({
-      $or: [{ _id: new ObjectId(userId) }, { _id: userId }],
-    })
+    // Find employee to verify - use only ObjectId for _id field
+    let employee
+    try {
+      employee = await db.collection("employees").findOne({
+        _id: new ObjectId(userId),
+      })
+    } catch (error) {
+      // If ObjectId conversion fails, try with string-based fields
+      employee = await db.collection("employees").findOne({
+        $or: [{ employeeId: userId }, { email: userId }],
+      })
+    }
 
     if (!employee) {
       return NextResponse.json({ message: "Employee not found" }, { status: 404 })
