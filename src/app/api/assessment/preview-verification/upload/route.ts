@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
           resource_type: "image",
           format: "jpg",
           quality: "auto:good",
-        })
+        } as any)
 
         console.log("Cloudinary upload successful:", cloudinaryResult.public_id)
         break
