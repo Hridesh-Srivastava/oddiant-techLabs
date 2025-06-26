@@ -52,7 +52,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
             submittedBy: submitterName,
             submittedAt: new Date(),
           },
-        },
+        } as any,
         $set: {
           updatedAt: new Date(),
         },
