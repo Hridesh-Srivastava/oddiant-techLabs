@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import type React from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { EmployeeNavbar } from "@/components/layout/employee-navbar"
+import { use } from "react"
 
 interface Interview {
   _id: string
@@ -27,11 +29,15 @@ interface Interview {
   notes: string
 }
 
-export default function RescheduleInterviewPage({ params }: { params: { id: string } }) {
+export default function RescheduleInterviewPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
   const router = useRouter()
-  // Unwrap the params object using React.use()
-  const unwrappedParams = React.use(params)
-  const interviewId = unwrappedParams.id
+  // Await the params as they're now Promise-based in Next.js 15
+  const resolvedParams = use(params)
+  const interviewId = resolvedParams.id
 
   const [interview, setInterview] = useState<Interview | null>(null)
   const [isLoading, setIsLoading] = useState(true)
