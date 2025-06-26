@@ -3,7 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb"
 import { getUserFromRequest } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 
-export async function GET(request: NextRequest, { params }: { params: { email: string } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ email: string }> }) {
   try {
     // Get user ID from request
     const userId = await getUserFromRequest(request)
@@ -12,7 +12,9 @@ export async function GET(request: NextRequest, { params }: { params: { email: s
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
     }
 
-    const candidateEmail = decodeURIComponent(params.email)
+    // Await the params since they're now a Promise in newer Next.js versions
+    const { email } = await context.params
+    const candidateEmail = decodeURIComponent(email)
     console.log("Fetching verifications for email:", candidateEmail)
 
     // Connect to database
