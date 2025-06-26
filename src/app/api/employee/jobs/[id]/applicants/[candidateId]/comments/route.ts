@@ -4,7 +4,7 @@ import { getUserFromRequest } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 
 // Get comments for a specific job application
-export async function GET(request: NextRequest, { params }: { params: { id: string; candidateId: string } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string; candidateId: string }> }) {
   try {
     // Get user ID from request
     const userId = await getUserFromRequest(request)
@@ -13,8 +13,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const jobId = params.id
-    const candidateId = params.candidateId
+    // Await the params since they're now a Promise in newer Next.js versions
+    const { id: jobId, candidateId } = await context.params
 
     // Connect to database
     const { db } = await connectToDatabase()
@@ -25,8 +25,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       $or: [
         { candidateId: new ObjectId(candidateId) },
         { studentId: new ObjectId(candidateId) },
-        { applicantId: new ObjectId(candidateId) }
-      ]
+        { applicantId: new ObjectId(candidateId) },
+      ],
     })
 
     if (!application) {
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       comments: application.comments || [],
       lastComment: application.lastComment || null,
       jobId: jobId,
-      candidateId: candidateId
+      candidateId: candidateId,
     })
   } catch (error) {
     console.error("Error fetching comments:", error)
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // Add a new comment to a specific job application
-export async function POST(request: NextRequest, { params }: { params: { id: string; candidateId: string } }) {
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string; candidateId: string }> }) {
   try {
     // Get user ID from request
     const userId = await getUserFromRequest(request)
@@ -57,8 +57,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const jobId = params.id
-    const candidateId = params.candidateId
+    // Await the params since they're now a Promise in newer Next.js versions
+    const { id: jobId, candidateId } = await context.params
     const { comment } = await request.json()
 
     if (!comment || !comment.trim()) {
@@ -70,7 +70,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     // Get employee details for the comment
     const employee = await db.collection("employees").findOne({ _id: new ObjectId(userId) })
-    const employeeName = employee ? `${employee.firstName || ""} ${employee.lastName || ""}`.trim() || employee.email : "Unknown Employee"
+    const employeeName = employee
+      ? `${employee.firstName || ""} ${employee.lastName || ""}`.trim() || employee.email
+      : "Unknown Employee"
 
     // Create a new comment object
     const newComment = {
@@ -80,27 +82,27 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       createdBy: userId,
       createdByName: employeeName,
       jobId: jobId, // Add jobId to comment for tracking
-      candidateId: candidateId // Add candidateId to comment for tracking
+      candidateId: candidateId, // Add candidateId to comment for tracking
     }
 
     // Update ONLY the specific job application with the new comment
     const result = await db.collection("job_applications").updateOne(
-      { 
-        jobId: new ObjectId(jobId), 
+      {
+        jobId: new ObjectId(jobId),
         $or: [
           { candidateId: new ObjectId(candidateId) },
           { studentId: new ObjectId(candidateId) },
-          { applicantId: new ObjectId(candidateId) }
-        ]
+          { applicantId: new ObjectId(candidateId) },
+        ],
       },
       {
         $push: { comments: newComment },
-        $set: { 
-          lastComment: comment.trim(), 
+        $set: {
+          lastComment: comment.trim(),
           lastCommentDate: new Date(),
           lastCommentBy: userId,
           lastCommentByName: employeeName,
-          updatedAt: new Date() 
+          updatedAt: new Date(),
         },
       },
     )
@@ -109,14 +111,16 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ message: "Failed to add comment - Application not found" }, { status: 404 })
     }
 
-    console.log(`Comment added successfully to job ${jobId} for candidate ${candidateId} - Comment: "${comment.trim()}"`)
+    console.log(
+      `Comment added successfully to job ${jobId} for candidate ${candidateId} - Comment: "${comment.trim()}"`,
+    )
 
     return NextResponse.json({
       success: true,
       message: "Comment added successfully",
       comment: newComment,
       jobId: jobId,
-      candidateId: candidateId
+      candidateId: candidateId,
     })
   } catch (error) {
     console.error("Error adding comment:", error)
