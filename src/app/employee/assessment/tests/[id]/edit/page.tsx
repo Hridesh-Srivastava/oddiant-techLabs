@@ -424,12 +424,17 @@ function solution() {
         return;
       }
 
-      if (!validOptions.includes(questionForm.correctAnswer)) {
-        toast.error(
-          "The selected correct answer is not valid. Please select from the available options."
-        );
-        return;
-      }
+    const correctAnswerStr = 
+  typeof questionForm.correctAnswer === "string"
+    ? questionForm.correctAnswer
+    : Array.isArray(questionForm.correctAnswer)
+      ? questionForm.correctAnswer[0] || ""
+      : ""
+
+if (!validOptions.includes(correctAnswerStr)) {
+  toast.error("The selected correct answer is not valid. Please select from the available options.")
+  return
+}
 
       console.log("MCQ Edit Validation passed:");
       console.log("- Question:", questionForm.text);
