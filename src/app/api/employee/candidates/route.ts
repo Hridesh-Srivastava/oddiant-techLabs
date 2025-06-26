@@ -184,7 +184,6 @@ export async function GET(request: NextRequest) {
           : null
 
       return {
-        _id: student._id,
         name: `${student.firstName || ""} ${student.lastName || ""}`.trim() || student.name || "Unknown",
         email: student.email || student.emailAddress || "",
         phone: student.phone || student.mobileNumber || "",
