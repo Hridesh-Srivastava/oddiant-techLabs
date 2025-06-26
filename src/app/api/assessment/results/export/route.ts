@@ -248,9 +248,9 @@ async function createExcelFile(results: any[], testId?: string) {
       row.eachCell((cell) => {
         cell.alignment = { vertical: "middle" }
 
-        // Color the status cell based on value
-        if (cell.col === 5) {
-          // Status column
+        // Color the status cell based on value - FIXED: Using address-based check
+        if (cell.address && cell.address.startsWith("E")) {
+          // Status column (column E)
           if (cell.value === "Passed") {
             cell.fill = {
               type: "pattern",
