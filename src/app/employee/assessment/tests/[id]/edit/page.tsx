@@ -412,7 +412,12 @@ function solution() {
       }
 
       // Enhanced validation for correct answer
-      if (!questionForm.correctAnswer || !questionForm.correctAnswer.trim()) {
+      if (
+  !questionForm.correctAnswer ||
+  (typeof questionForm.correctAnswer === "string"
+    ? !questionForm.correctAnswer.trim()
+    : !questionForm.correctAnswer)
+) {
         toast.error(
           "Please select a correct answer by clicking the radio button"
         );
@@ -629,10 +634,14 @@ function solution() {
                       const oldValue = newOptions[index];
                       newOptions[index] = e.target.value;
 
-                      if (
-                        questionForm.correctAnswer === oldValue &&
-                        e.target.value !== oldValue
-                      ) {
+                     const currentCorrectAnswer =
+  typeof questionForm.correctAnswer === "string"
+    ? questionForm.correctAnswer
+    : Array.isArray(questionForm.correctAnswer)
+      ? questionForm.correctAnswer[0] || ""
+      : ""
+
+if (currentCorrectAnswer === oldValue && e.target.value !== oldValue) {
                         setQuestionForm({
                           ...questionForm,
                           options: newOptions,
@@ -651,9 +660,12 @@ function solution() {
                     type="radio"
                     name="correctAnswer"
                     checked={
-                      questionForm.correctAnswer === option &&
-                      option.trim() !== ""
-                    }
+  (typeof questionForm.correctAnswer === "string"
+    ? questionForm.correctAnswer
+    : Array.isArray(questionForm.correctAnswer)
+      ? questionForm.correctAnswer[0] || ""
+      : "") === option && option.trim() !== ""
+}
                     onChange={() =>
                       option.trim() &&
                       setQuestionForm({
@@ -680,10 +692,14 @@ function solution() {
                         const newOptions =
                           questionForm.options?.filter((_, i) => i !== index) ||
                           [];
-                        const correctAnswer =
-                          questionForm.correctAnswer === option
-                            ? ""
-                            : questionForm.correctAnswer;
+                       const currentCorrectAnswer =
+  typeof questionForm.correctAnswer === "string"
+    ? questionForm.correctAnswer
+    : Array.isArray(questionForm.correctAnswer)
+      ? questionForm.correctAnswer[0] || ""
+      : ""
+
+const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correctAnswer
                         setQuestionForm({
                           ...questionForm,
                           options: newOptions,
@@ -713,7 +729,13 @@ function solution() {
                 <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
                   <p className="text-xs text-green-700">
                     Correct answer selected: "
-                    <strong>{questionForm.correctAnswer}</strong>"
+                    <strong>
+  {typeof questionForm.correctAnswer === "string"
+    ? questionForm.correctAnswer
+    : Array.isArray(questionForm.correctAnswer)
+      ? questionForm.correctAnswer[0] || ""
+      : ""}
+</strong>"
                   </p>
                 </div>
               )}
