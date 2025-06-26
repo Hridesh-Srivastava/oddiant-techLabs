@@ -283,7 +283,7 @@ export async function POST(request: NextRequest) {
                 date: new Date(),
                 note: "Interview scheduled",
               },
-            },
+            } as any,
           },
         )
       }
