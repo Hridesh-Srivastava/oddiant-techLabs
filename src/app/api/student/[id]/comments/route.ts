@@ -7,7 +7,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   try {
     // Await the params as they're now Promise-based in Next.js 15
     const params = await context.params
-    
+
     // Get user ID from request
     const userId = await getUserFromRequest(request)
 
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
             createdBy: new ObjectId(userId),
             jobId: jobId ? new ObjectId(jobId) : null,
           },
-        },
+        } as any,
       },
     )
 
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
                 createdAt: new Date(),
                 createdBy: new ObjectId(userId),
               },
-            },
+            } as any,
           },
         )
       }
