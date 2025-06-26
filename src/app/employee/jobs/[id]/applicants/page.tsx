@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ApplicantStatus } from "@/components/candidates/applicant-status"
 import { EmployeeNavbar } from "@/components/layout/employee-navbar"
 import { Checkbox } from "@/components/ui/checkbox"
+import { use } from "react"
 
 interface Applicant {
   _id: string
@@ -30,9 +31,16 @@ interface Job {
   status: string
 }
 
-export default function JobApplicantsPage({ params }: { params: { id: string } }) {
+export default function JobApplicantsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
   const router = useRouter()
-  const [jobId, setJobId] = useState<string>("")
+  // Await the params as they're now Promise-based in Next.js 15
+  const resolvedParams = use(params)
+  const jobId = resolvedParams.id
+
   const [job, setJob] = useState<Job | null>(null)
   const [applicants, setApplicants] = useState<Applicant[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -41,12 +49,6 @@ export default function JobApplicantsPage({ params }: { params: { id: string } }
   const [isDownloading, setIsDownloading] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (params && params.id) {
-      setJobId(params.id)
-    }
-  }, [params])
 
   const fetchData = async () => {
     if (!jobId) return
