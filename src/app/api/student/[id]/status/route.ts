@@ -7,7 +7,7 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
   try {
     // Await the params as they're now Promise-based in Next.js 15
     const params = await context.params
-    
+
     // Get user ID from request
     const userId = await getUserFromRequest(request)
 
@@ -89,7 +89,7 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
                 date: new Date(),
                 note: comment || `Status updated to ${status}`,
               },
-            },
+            } as any,
           },
         )
       } else {
