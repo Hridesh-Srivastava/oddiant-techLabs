@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
       // Get candidate details
       let candidate = existingCandidate
-      let candidateId
+      let candidateId: ObjectId | null = null
 
       if (!candidate) {
         // Create a new candidate record if user exists but no candidate record
@@ -105,6 +105,12 @@ export async function POST(request: NextRequest) {
         }
       } else {
         candidateId = candidate._id
+      }
+
+      // Ensure candidateId is not null before proceeding
+      if (!candidateId) {
+        await session.abortTransaction()
+        return NextResponse.json({ success: false, message: "Failed to create or find candidate" }, { status: 500 })
       }
 
       // Check if already applied to this job
