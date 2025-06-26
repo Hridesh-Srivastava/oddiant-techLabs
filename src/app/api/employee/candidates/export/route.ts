@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
           return null
         }
       })
-      .filter(Boolean)
+      .filter((id): id is ObjectId => id !== null)
 
     if (objectIds.length === 0) {
       return NextResponse.json({ success: false, message: "No valid candidate IDs provided" }, { status: 400 })
