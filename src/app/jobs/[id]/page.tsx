@@ -52,7 +52,7 @@ interface JobPosting {
   createdAt: string
 }
 
-export default function PublicJobPage({ params }: { params: { id: string } }) {
+export default function PublicJobPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const jobId = use(params).id
   const [job, setJob] = useState<JobPosting | null>(null)
