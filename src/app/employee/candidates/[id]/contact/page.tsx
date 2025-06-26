@@ -1,10 +1,11 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
+import { use } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Mail, Phone, Send, Copy, Check, AlertCircle } from "lucide-react"
+import { ArrowLeft, Mail, Phone, Send, Copy, Check, AlertCircle } from 'lucide-react'
 import { toast, Toaster } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Textarea } from "@/components/ui/textarea"
@@ -22,9 +23,11 @@ interface Candidate {
   avatar?: string
 }
 
-export default function ContactCandidatePage({ params }: { params: { id: string } }) {
+export default function ContactCandidatePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
-  const candidateId = React.use(params).id
+  // Await the params as they're now Promise-based in Next.js 15
+  const resolvedParams = use(params)
+  const candidateId = resolvedParams.id
   const [candidate, setCandidate] = useState<Candidate | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [emailSubject, setEmailSubject] = useState("")
