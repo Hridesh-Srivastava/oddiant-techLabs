@@ -113,7 +113,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
     // Generate Assessment Excel file
     console.log("Starting Assessment Excel generation...")
-    const excelBuffer = await generateAssessmentResultExcel(result, test, questions)
+    const excelBuffer = await generateAssessmentResultExcel(result as any, test as any, questions)
     console.log("Assessment Excel generation completed, buffer size:", excelBuffer.length)
 
     // Create filename
@@ -135,13 +135,13 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   } catch (error) {
     console.error("=== Assessment Excel Download Error ===")
     console.error("Error details:", error)
-    console.error("Stack trace:", error.stack)
+    console.error("Stack trace:", (error as Error).stack)
 
     return NextResponse.json(
       {
         success: false,
         message: "Failed to download assessment result",
-        error: process.env.NODE_ENV === "development" ? error.message : undefined,
+        error: process.env.NODE_ENV === "development" ? (error as Error).message : undefined,
       },
       { status: 500 },
     )
