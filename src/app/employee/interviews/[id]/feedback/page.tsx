@@ -21,9 +21,15 @@ interface Interview {
   }
 }
 
-export default function InterviewFeedbackPage({ params }: { params: { id: string } }) {
+export default function InterviewFeedbackPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
   const router = useRouter()
-  const interviewId = use(params).id
+  // Await the params as they're now Promise-based in Next.js 15
+  const resolvedParams = use(params)
+  const interviewId = resolvedParams.id
   const [interview, setInterview] = useState<Interview | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
