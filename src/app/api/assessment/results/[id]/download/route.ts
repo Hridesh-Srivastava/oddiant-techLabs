@@ -113,7 +113,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
     // Generate Assessment Excel file
     console.log("Starting Assessment Excel generation...")
-    const excelBuffer = await generateAssessmentResultExcel(result as any, test as any, questions)
+    const excelBuffer = await generateAssessmentResultExcel(result as any, test as any, questions as any)
     console.log("Assessment Excel generation completed, buffer size:", excelBuffer.length)
 
     // Create filename
