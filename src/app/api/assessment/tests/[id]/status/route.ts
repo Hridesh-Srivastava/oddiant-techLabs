@@ -3,7 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb"
 import { getUserFromRequest } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     // Get user ID from request
     const userId = await getUserFromRequest(request)
@@ -12,7 +12,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
     }
 
-    const testId = params.id
+    // Await the params since they're now a Promise in newer Next.js versions
+    const { id: testId } = await context.params
 
     // Get status from request body
     const { status } = await request.json()
