@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("=== Export Error ===")
     console.error("Error details:", error)
-    console.error("Stack trace:", error.stack)
+    console.error("Stack trace:", (error as Error).stack)
     return NextResponse.json({ success: false, message: "Failed to export results" }, { status: 500 })
   }
 }
