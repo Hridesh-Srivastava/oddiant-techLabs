@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
     // Find employee to verify
     const employee = await db.collection("employees").findOne({
-      $or: [{ _id: new ObjectId(userId) }, { _id: userId }],
+      _id: new ObjectId(userId),
     })
 
     if (!employee) {
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
 
     // Check if user is an employee
     const employee = await db.collection("employees").findOne({
-      $or: [{ _id: new ObjectId(userId) }, { _id: userId }],
+      _id: new ObjectId(userId),
     })
 
     if (employee) {
@@ -82,12 +82,7 @@ export async function GET(request: NextRequest) {
       const jobs = await db
         .collection("jobs")
         .find({
-          $or: [
-            { employerId: new ObjectId(userId) },
-            { companyId: companyId },
-            { employerId: userId },
-            { companyId: new ObjectId(companyId) },
-          ],
+          $or: [{ employerId: new ObjectId(userId) }, { companyId: companyId }, { companyId: new ObjectId(companyId) }],
         })
         .sort({ createdAt: -1 })
         .toArray()
