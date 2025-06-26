@@ -65,7 +65,7 @@ interface JobPosting {
   createdAt: string
 }
 
-export default function JobDetailsPage({ params }: { params: { id: string } }) {
+export default function JobDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   // Unwrap the params object using React.use()
   const unwrappedParams = use(params)
