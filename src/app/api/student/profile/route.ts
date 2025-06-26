@@ -329,12 +329,12 @@ function transformStudentToCandidateFormat(studentData: any, originalCandidate: 
   const updateData: any = { ...studentData }
 
   // Map firstName and lastName back to name
-if (updateData.firstName || updateData.lastName) {
-  const firstName = updateData.firstName || ""
-  const middleName = updateData.middleName ? ` ${updateData.middleName}` : ""
-  const lastName = updateData.lastName ? ` ${updateData.lastName}` : ""
-  updateData.name = `${firstName}${middleName}${lastName}`.trim()
-}
+  if (updateData.firstName || updateData.lastName) {
+    const firstName = updateData.firstName || ""
+    const middleName = updateData.middleName ? ` ${updateData.middleName}` : ""
+    const lastName = updateData.lastName ? ` ${updateData.lastName}` : ""
+    updateData.name = `${firstName}${middleName}${lastName}`.trim()
+  }
 
   // Keep original candidate fields and add new ones
   return {
@@ -368,12 +368,12 @@ export async function GET(request: NextRequest) {
     const { db } = await connectToDatabase()
 
     // First check students collection
-    let student: UserDocument | null = await db.collection("students").findOne({ _id: new ObjectId(userId) })
+    let student = (await db.collection("students").findOne({ _id: new ObjectId(userId) })) as any
     let sourceCollection = "students"
 
     // If not found in students, check candidates collection
     if (!student) {
-      student = await db.collection("candidates").findOne({ _id: new ObjectId(userId) })
+      student = (await db.collection("candidates").findOne({ _id: new ObjectId(userId) })) as any
       sourceCollection = "candidates"
     }
 
@@ -470,12 +470,12 @@ export async function PUT(request: NextRequest) {
     const { db } = await connectToDatabase()
 
     // First check students collection
-    let student: UserDocument | null = await db.collection("students").findOne({ _id: new ObjectId(userId) })
+    let student = (await db.collection("students").findOne({ _id: new ObjectId(userId) })) as any
     let collection = "students"
 
     // If not found in students, check candidates collection
     if (!student) {
-      student = await db.collection("candidates").findOne({ _id: new ObjectId(userId) })
+      student = (await db.collection("candidates").findOne({ _id: new ObjectId(userId) })) as any
       collection = "candidates"
     }
 
@@ -542,7 +542,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get updated user data
-    let updatedStudent: UserDocument | null = await db.collection(collection).findOne({ _id: new ObjectId(userId) })
+    let updatedStudent = (await db.collection(collection).findOne({ _id: new ObjectId(userId) })) as any
 
     if (!updatedStudent) {
       return NextResponse.json({ success: false, message: "Failed to retrieve updated profile" }, { status: 500 })
