@@ -51,10 +51,10 @@ export async function POST(request: NextRequest) {
         _id: new ObjectId(userId),
       })
 
-      // If not found, try with string ID
+      // If not found, try with string ID (using type assertion to bypass TypeScript)
       if (!employee) {
         employee = await db.collection("employees").findOne({
-          _id: userId,
+          _id: userId as any,
         })
       }
 
