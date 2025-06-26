@@ -75,7 +75,8 @@ export default function RejectEmployeePage() {
       }, 2000)
     } catch (error) {
       console.error("Error rejecting employee:", error)
-      toast.error(`Failed to reject employee: ${error.message}`)
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
+      toast.error(`Failed to reject employee: ${errorMessage}`)
     } finally {
       setIsSubmitting(false)
     }
