@@ -15,18 +15,10 @@ export async function GET(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Find employee to verify - use only ObjectId for _id field
-    let employee
-    try {
-      employee = await db.collection("employees").findOne({
-        _id: new ObjectId(userId),
-      })
-    } catch (error) {
-      // If ObjectId conversion fails, try with string-based fields
-      employee = await db.collection("employees").findOne({
-        $or: [{ employeeId: userId }, { email: userId }],
-      })
-    }
+    // Find employee to verify
+    const employee = await db.collection("employees").findOne({
+      _id: new ObjectId(userId),
+    })
 
     if (!employee) {
       return NextResponse.json({ message: "Employee not found" }, { status: 404 })
@@ -41,12 +33,7 @@ export async function GET(request: NextRequest) {
     const employeeJobs = await db
       .collection("jobs")
       .find({
-        $or: [
-          { employerId: new ObjectId(userId) },
-          { companyId: companyId },
-          { employerId: userId },
-          { companyId: new ObjectId(companyId) },
-        ],
+        $or: [{ employerId: new ObjectId(userId) }, { companyId: companyId }, { companyId: new ObjectId(companyId) }],
       })
       .toArray()
 
@@ -118,12 +105,7 @@ export async function GET(request: NextRequest) {
     const directCandidates = await db
       .collection("candidates")
       .find({
-        $or: [
-          { employerId: new ObjectId(userId) },
-          { companyId: companyId },
-          { employerId: userId },
-          { companyId: new ObjectId(companyId) },
-        ],
+        $or: [{ employerId: new ObjectId(userId) }, { companyId: companyId }, { companyId: new ObjectId(companyId) }],
       })
       .sort({ createdAt: -1 })
       .toArray()
@@ -134,12 +116,7 @@ export async function GET(request: NextRequest) {
     const directStudents = await db
       .collection("students")
       .find({
-        $or: [
-          { employerId: new ObjectId(userId) },
-          { companyId: companyId },
-          { employerId: userId },
-          { companyId: new ObjectId(companyId) },
-        ],
+        $or: [{ employerId: new ObjectId(userId) }, { companyId: companyId }, { companyId: new ObjectId(companyId) }],
       })
       .sort({ createdAt: -1 })
       .toArray()
@@ -335,10 +312,10 @@ export async function GET(request: NextRequest) {
     // Step 13: Combine all candidates
     const allCandidates = [...processedCandidates, ...studentCandidates]
 
-    // Step 14: Sort by creation/application date
+    // Step 14: Sort by creation/application date with proper type handling
     allCandidates.sort((a, b) => {
-      const dateA = new Date(a.appliedDate || a.createdAt).getTime()
-      const dateB = new Date(b.appliedDate || b.createdAt).getTime()
+      const dateA = new Date((a as any).appliedDate || (a as any).createdAt || new Date()).getTime()
+      const dateB = new Date((b as any).appliedDate || (b as any).createdAt || new Date()).getTime()
       return dateB - dateA
     })
 
