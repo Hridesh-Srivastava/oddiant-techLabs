@@ -12,10 +12,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Connect to database
-    const { db } = await connectToDatabase()
+    const { db, client } = await connectToDatabase()
 
     // Start a session for transaction
-    const session = db.client.startSession()
+    const session = client.startSession()
 
     try {
       // Start transaction
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
           const candidateResult = await db.collection("candidates").insertOne(newCandidate, { session })
           candidateId = candidateResult.insertedId
           candidate = newCandidate
-        } 
+        }
         // If student exists but no candidate record
         else if (existingStudent) {
           const newCandidate = {
@@ -188,8 +188,7 @@ export async function POST(request: NextRequest) {
       // End session
       await session.endSession()
     }
-  }
-  catch (error: any) {
+  } catch (error: any) {
     console.error("Error during job application:", error)
     return NextResponse.json(
       {
