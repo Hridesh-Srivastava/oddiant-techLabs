@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
             .collection("communications")
             .updateOne(
               { _id: communicationResult.insertedId },
-              { $set: { status: "failed", error: emailError.message } },
+              { $set: { status: "failed", error: (emailError as any).message || "Unknown error" } },
             )
         }
 
@@ -172,7 +172,10 @@ export async function POST(request: NextRequest) {
         if (communicationResult?.insertedId) {
           await db
             .collection("communications")
-            .updateOne({ _id: communicationResult.insertedId }, { $set: { status: "failed", error: smsError.message } })
+            .updateOne(
+              { _id: communicationResult.insertedId },
+              { $set: { status: "failed", error: (smsError as any).message || "Unknown error" } },
+            )
         }
 
         return NextResponse.json(
