@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
           const candidateResult = await db.collection("candidates").insertOne(newCandidate, { session })
           candidateId = candidateResult.insertedId
-          candidate = newCandidate
+          candidate = { ...newCandidate, _id: candidateResult.insertedId } as any
         }
         // If student exists but no candidate record
         else if (existingStudent) {
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
 
           const candidateResult = await db.collection("candidates").insertOne(newCandidate, { session })
           candidateId = candidateResult.insertedId
-          candidate = newCandidate
+          candidate = { ...newCandidate, _id: candidateResult.insertedId } as any
         }
       } else {
         candidateId = candidate._id
