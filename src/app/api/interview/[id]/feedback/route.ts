@@ -42,7 +42,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const result = await db.collection("interviews").updateOne(
       { _id: new ObjectId(interviewId) },
       {
-        $push: { feedback: feedbackEntry },
+        $push: { feedback: feedbackEntry } as any,
         $set: { updatedAt: new Date() },
       },
     )
