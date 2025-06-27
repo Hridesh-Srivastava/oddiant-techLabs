@@ -80,9 +80,10 @@ export async function generateNewsletterExcel(): Promise<Buffer> {
     worksheet.getColumn("subscriptionDate").numFmt = "yyyy-mm-dd hh:mm:ss"
     worksheet.getColumn("createdAt").numFmt = "yyyy-mm-dd hh:mm:ss"
 
-    // Save the workbook to a buffer
+    // Save the workbook to a buffer - Fixed TypeScript error
     console.log("Generating Excel buffer...")
-    const buffer = await workbook.xlsx.writeBuffer()
+    const uint8Array = await workbook.xlsx.writeBuffer()
+    const buffer = Buffer.from(uint8Array)
 
     try {
       // Save the Excel file to the file system (for backup purposes)

@@ -1,15 +1,21 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect, useRef } from "react"
-import jsPDF from "jspdf"
-import html2canvas from "html2canvas"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { toast, Toaster } from "sonner"
+import { useState, useEffect, useRef } from "react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast, Toaster } from "sonner";
 import {
   User,
   FileText,
@@ -52,283 +58,267 @@ import {
   MessageSquare,
   Layers,
   ChevronLeft,
-} from "lucide-react"
-import { MapPinIcon } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Label } from "@/components/ui/label"
+} from "lucide-react";
+import { MapPinIcon } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
 
 interface StudentData {
-  _id: string
-  firstName: string
-  middleName?: string
-  lastName: string
-  email: string
-  phone?: string
-  alternativePhone?: string
-  profileCompleted: boolean
-  salutation?: string
-  gender?: string
-  dob?: string
-  currentCity?: string
-  currentState?: string
-  pincode?: string
-  permanentAddress?: string
-  skills?: string[]
+  _id: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  alternativePhone?: string;
+  profileCompleted: boolean;
+  salutation?: string;
+  gender?: string;
+  dob?: string;
+  currentCity?: string;
+  currentState?: string;
+  pincode?: string;
+  permanentAddress?: string;
+  skills?: string[];
   education?: Array<{
-    level?: string
-    degree?: string
-    institution?: string
-    school?: string
-    field?: string
-    grade?: string
-    percentage?: string
-    startingYear?: string
-    endingYear?: string
-    mode?: string
-  }>
+    level?: string;
+    degree?: string;
+    institution?: string;
+    school?: string;
+    field?: string;
+    grade?: string;
+    percentage?: string;
+    startingYear?: string;
+    endingYear?: string;
+    mode?: string;
+  }>;
   certifications?:
     | string[]
     | Array<{
-        name: string
-        issuingOrganization: string
-        issueDate: string
-        expiryDate?: string
-        credentialId?: string
-        credentialUrl?: string
-      }>
+        name: string;
+        issuingOrganization: string;
+        issueDate: string;
+        expiryDate?: string;
+        credentialId?: string;
+        credentialUrl?: string;
+      }>;
   experience?: Array<{
-    title: string
-    companyName: string
-    department?: string
-    location?: string
-    tenure?: string
-    currentlyWorking?: boolean
-    professionalSummary?: string
-    summary?: string
-    currentSalary?: string
-    expectedSalary?: string
-    noticePeriod?: string
-    totalExperience?: string
-    yearsOfExperience?: string
-  }>
-  // Add support for candidates collection field names
-  workExperience?: Array<{
-    title: string
-    companyName: string
-    department?: string
-    location?: string
-    tenure?: string
-    currentlyWorking?: boolean
-    professionalSummary?: string
-    summary?: string
-    currentSalary?: string
-    expectedSalary?: string
-    noticePeriod?: string
-    totalExperience?: string
-    yearsOfExperience?: string
-  }>
-  totalExperience?: string
-  yearsOfExperience?: string
-  shiftPreference?: string | string[]
-  preferenceCities?: string[]
-  preferredCities?: string[]
-  profileOutline?: string
+    title: string;
+    companyName: string;
+    department?: string;
+    location?: string;
+    tenure?: string;
+    currentlyWorking?: boolean;
+    professionalSummary?: string;
+    summary?: string;
+    currentSalary?: string;
+    expectedSalary?: string;
+    noticePeriod?: string;
+    totalExperience?: string;
+    yearsOfExperience?: string;
+  }>;
+
+  totalExperience?: string;
+  yearsOfExperience?: string;
+  shiftPreference?: string | string[];
+  preferenceCities?: string[];
+  preferredCities?: string[];
+  profileOutline?: string;
   onlinePresence?: {
-    portfolio?: string
-    linkedin?: string
-    github?: string
-    socialMedia?: string
-  }
-  portfolioLink?: string
-  socialMediaLink?: string
-  linkedIn?: string
-  coverLetter?: string
-  additionalInfo?: string
+    portfolio?: string;
+    linkedin?: string;
+    github?: string;
+    socialMedia?: string;
+  };
+  portfolioLink?: string;
+  socialMediaLink?: string;
+  linkedIn?: string;
+  coverLetter?: string;
+  additionalInfo?: string;
   documents?: {
     resume?: {
-      url?: string
-      public_id?: string
-      filename?: string
-      uploadDate?: string
-    }
+      url?: string;
+      public_id?: string;
+      filename?: string;
+      uploadDate?: string;
+    };
     photograph?: {
-      url?: string
-      public_id?: string
-      name?: string
-      uploadDate?: string
-    }
+      url?: string;
+      public_id?: string;
+      name?: string;
+      uploadDate?: string;
+    };
     videoResume?: {
-      url?: string
-      public_id?: string
-      filename?: string
-      uploadDate?: string
-    }
+      url?: string;
+      public_id?: string;
+      filename?: string;
+      uploadDate?: string;
+    };
     audioBiodata?: {
-      url?: string
-      public_id?: string
-      filename?: string
-      uploadDate?: string
-    }
-  }
+      url?: string;
+      public_id?: string;
+      filename?: string;
+      uploadDate?: string;
+    };
+  };
   assets?: {
-    bike?: boolean
-    wifi?: boolean
-    laptop?: boolean
-    panCard?: boolean
-    aadhar?: boolean
-    bankAccount?: boolean
-    idProof?: boolean
-  }
+    bike?: boolean;
+    wifi?: boolean;
+    laptop?: boolean;
+    panCard?: boolean;
+    aadhar?: boolean;
+    bankAccount?: boolean;
+    idProof?: boolean;
+  };
   settings?: {
-    profileVisibility: boolean
+    profileVisibility: boolean;
     notifications: {
-      email: boolean
-      jobRecommendations: boolean
-      applicationUpdates: boolean
-    }
-    preferredJobTypes: string[]
-    preferredLocations: string[]
-    shiftPreference: string
-    alternativeEmail?: string
-  }
-  avatar?: string
-  currentSalary?: string
-  expectedSalary?: string
-  noticePeriod?: string
-  source?: string
+      email: boolean;
+      jobRecommendations: boolean;
+      applicationUpdates: boolean;
+    };
+    preferredJobTypes: string[];
+    preferredLocations: string[];
+    shiftPreference: string;
+    alternativeEmail?: string;
+  };
+  avatar?: string;
+  currentSalary?: string;
+  expectedSalary?: string;
+  noticePeriod?: string;
 
   // Add candidates collection field mappings
-  dateOfBirth?: string // candidates use this instead of dob
+  dateOfBirth?: string; // candidates use this instead of dob
   workExperience?: Array<{
-    title: string
-    companyName: string
-    department?: string
-    location?: string
-    tenure?: string
-    currentlyWorking?: boolean
-    professionalSummary?: string
-    summary?: string
-    currentSalary?: string
-    expectedSalary?: string
-    noticePeriod?: string
-    totalExperience?: string
-    yearsOfExperience?: string
-  }>
+    title: string;
+    companyName: string;
+    department?: string;
+    location?: string;
+    tenure?: string;
+    currentlyWorking?: boolean;
+    professionalSummary?: string;
+    summary?: string;
+    currentSalary?: string;
+    expectedSalary?: string;
+    noticePeriod?: string;
+    totalExperience?: string;
+    yearsOfExperience?: string;
+  }>;
 
   // Document field mappings for candidates
-  resumeUrl?: string
-  videoResumeUrl?: string
-  audioBiodataUrl?: string
-  photographUrl?: string
+  resumeUrl?: string;
+  videoResumeUrl?: string;
+  audioBiodataUrl?: string;
+  photographUrl?: string;
 
   // Other candidates fields
-  availableAssets?: string[]
-  identityDocuments?: string[]
+  availableAssets?: string[];
+  identityDocuments?: string[];
 
   // Add source field to track collection
-  source?: string
+  source?: string;
 }
 
 interface JobPosting {
-  _id: string
-  jobTitle: string
-  jobLocation: string
-  experienceRange: string
-  jobType: string
-  salaryRange: string
-  companyName: string
-  skills: string[]
-  status: string
-  createdAt: string
-  daysLeft: number
-  description?: string
-  responsibilities?: string[]
-  requirements?: string[]
-  benefits?: string[]
-  hasApplied?: boolean
+  _id: string;
+  jobTitle: string;
+  jobLocation: string;
+  experienceRange: string;
+  jobType: string;
+  salaryRange: string;
+  companyName: string;
+  skills: string[];
+  status: string;
+  createdAt: string;
+  daysLeft: number;
+  description?: string;
+  responsibilities?: string[];
+  requirements?: string[];
+  benefits?: string[];
+  hasApplied?: boolean;
 }
 
 interface Application {
-  _id: string
-  jobId: string
-  status: string
-  appliedDate: string
+  _id: string;
+  jobId: string;
+  status: string;
+  appliedDate: string;
   job: {
-    jobTitle: string
-    companyName: string
-    jobLocation: string
-    jobType: string
-  }
+    jobTitle: string;
+    companyName: string;
+    jobLocation: string;
+    jobType: string;
+  };
 }
 
 const formatDate = (dateString: string | undefined): string => {
-  if (!dateString) return "Not specified"
+  if (!dateString) return "Not specified";
   try {
-    const date = new Date(dateString)
+    const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
-    })
+    });
   } catch (error) {
-    return "Invalid date"
+    return "Invalid date";
   }
-}
+};
 
 const formatUrl = (url: string): string => {
-  if (!url) return ""
+  if (!url) return "";
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
-    return "https://" + url
+    return "https://" + url;
   }
-  return url
-}
+  return url;
+};
 
 // Helper function to format full name properly (FIXED)
 const getFullName = (student: StudentData): string => {
-  const parts: string[] = []
+  const parts: string[] = [];
 
   if (student.salutation) {
-    parts.push(student.salutation)
+    parts.push(student.salutation);
   }
 
   if (student.firstName) {
-    parts.push(student.firstName)
+    parts.push(student.firstName);
   }
 
   // Only add middleName if it exists and is not "noMid"
   if (student.middleName && student.middleName.toLowerCase() !== "nomid") {
-    parts.push(student.middleName)
+    parts.push(student.middleName);
   }
 
   if (student.lastName) {
-    parts.push(student.lastName)
+    parts.push(student.lastName);
   }
 
-  return parts.join(" ")
-}
+  return parts.join(" ");
+};
 
 // Helper function to safely get experience array from either collection
 const getExperienceArray = (student: StudentData): Array<any> => {
   // Try experience field first (students collection)
   if (student.experience && Array.isArray(student.experience)) {
-    return student.experience
+    return student.experience;
   }
 
   // Try workExperience field (candidates collection)
   if (student.workExperience && Array.isArray(student.workExperience)) {
-    return student.workExperience
+    return student.workExperience;
   }
 
   // Return empty array as fallback
-  return []
-}
+  return [];
+};
 
 // Helper function to get date of birth from either collection
 const getDateOfBirth = (student: StudentData): string => {
-  return student.dob || student.dateOfBirth || ""
-}
+  return student.dob || student.dateOfBirth || "";
+};
 
 // Helper function to get documents safely
 const getDocuments = (student: StudentData) => {
@@ -344,153 +334,169 @@ const getDocuments = (student: StudentData) => {
       uploadDate: student.documents?.videoResume?.uploadDate || "",
     },
     audioBiodata: {
-      url: student.documents?.audioBiodata?.url || student.audioBiodataUrl || "",
+      url:
+        student.documents?.audioBiodata?.url || student.audioBiodataUrl || "",
       filename: student.documents?.audioBiodata?.filename || "",
       uploadDate: student.documents?.audioBiodata?.uploadDate || "",
     },
     photograph: {
-      url: student.documents?.photograph?.url || student.photographUrl || student.avatar || "",
+      url:
+        student.documents?.photograph?.url ||
+        student.photographUrl ||
+        student.avatar ||
+        "",
       name: student.documents?.photograph?.name || "",
       uploadDate: student.documents?.photograph?.uploadDate || "",
     },
-  }
-}
+  };
+};
 
 // Helper function to get available assets
 const getAvailableAssets = (student: StudentData): string[] => {
   if (student.availableAssets && student.availableAssets.length > 0) {
-    return student.availableAssets
+    return student.availableAssets;
   }
 
   if (student.assets) {
-    const assets: string[] = []
-    if (student.assets.bike) assets.push("Bike / Car")
-    if (student.assets.wifi) assets.push("WiFi")
-    if (student.assets.laptop) assets.push("Laptop")
-    return assets
+    const assets: string[] = [];
+    if (student.assets.bike) assets.push("Bike / Car");
+    if (student.assets.wifi) assets.push("WiFi");
+    if (student.assets.laptop) assets.push("Laptop");
+    return assets;
   }
 
-  return []
-}
+  return [];
+};
 
 // Helper function to get identity documents
 const getIdentityDocuments = (student: StudentData): string[] => {
   if (student.identityDocuments && student.identityDocuments.length > 0) {
-    return student.identityDocuments
+    return student.identityDocuments;
   }
 
   if (student.assets) {
-    const documents: string[] = []
-    if (student.assets.panCard) documents.push("PAN Card")
-    if (student.assets.aadhar) documents.push("Aadhar")
-    if (student.assets.bankAccount) documents.push("Bank Account")
-    if (student.assets.idProof) documents.push("Voter ID / Passport / DL (Any)")
-    return documents
+    const documents: string[] = [];
+    if (student.assets.panCard) documents.push("PAN Card");
+    if (student.assets.aadhar) documents.push("Aadhar");
+    if (student.assets.bankAccount) documents.push("Bank Account");
+    if (student.assets.idProof)
+      documents.push("Voter ID / Passport / DL (Any)");
+    return documents;
   }
 
-  return []
-}
+  return [];
+};
 
 // Helper function to safely get preferred cities from either collection
 const getPreferredCities = (student: StudentData): string[] => {
   // Try preferenceCities field first (students collection)
   if (student.preferenceCities && Array.isArray(student.preferenceCities)) {
-    return student.preferenceCities
+    return student.preferenceCities;
   }
 
   // Try preferredCities field (candidates collection)
   if (student.preferredCities && Array.isArray(student.preferredCities)) {
-    return student.preferredCities
+    return student.preferredCities;
   }
 
   // Return empty array as fallback
-  return []
-}
+  return [];
+};
 
 const getTotalExperience = (student: StudentData): string => {
   // First check direct properties
-  if (student.totalExperience) return student.totalExperience
-  if (student.yearsOfExperience) return student.yearsOfExperience
+  if (student.totalExperience) return student.totalExperience;
+  if (student.yearsOfExperience) return student.yearsOfExperience;
 
   // Get experience array safely
-  const experienceArray = getExperienceArray(student)
+  const experienceArray = getExperienceArray(student);
 
   if (experienceArray.length > 0) {
     // First check if any experience entry has totalExperience or yearsOfExperience
     for (const exp of experienceArray) {
-      if (exp.totalExperience) return exp.totalExperience
-      if (exp.yearsOfExperience) return exp.yearsOfExperience
+      if (exp.totalExperience) return exp.totalExperience;
+      if (exp.yearsOfExperience) return exp.yearsOfExperience;
     }
 
     // Then try to calculate from tenure
-    let totalYears = 0
+    let totalYears = 0;
     experienceArray.forEach((exp) => {
       if (exp.tenure) {
-        const yearMatch = exp.tenure.match(/(\d+)\s*years?/i)
+        const yearMatch = exp.tenure.match(/(\d+)\s*years?/i);
         if (yearMatch && yearMatch[1]) {
-          totalYears += Number.parseInt(yearMatch[1], 10)
+          totalYears += Number.parseInt(yearMatch[1], 10);
         }
       }
-    })
+    });
 
-    if (totalYears > 0) return `${totalYears} years`
+    if (totalYears > 0) return `${totalYears} years`;
   }
 
-  return "Not specified"
-}
+  return "Not specified";
+};
 
 export default function StudentDashboardPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const activeTab = searchParams.get("tab") || "jobs"
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get("tab") || "jobs";
 
-  const [student, setStudent] = useState<StudentData | null>(null)
-  const [jobs, setJobs] = useState<JobPosting[]>([])
-  const [applications, setApplications] = useState<Application[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isLoadingJobs, setIsLoadingJobs] = useState(true)
-  const [isLoadingApplications, setIsLoadingApplications] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterLocation, setFilterLocation] = useState("")
-  const [filterJobType, setFilterJobType] = useState("")
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [settings, setSettings] = useState<StudentData["settings"] | null>(null)
-  const [isUpdatingSettings, setIsUpdatingSettings] = useState(false)
-  const [isEditingAvatar, setIsEditingAvatar] = useState(false)
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const pdfContentRef = useRef<HTMLDivElement>(null)
+  const [student, setStudent] = useState<StudentData | null>(null);
+  const [jobs, setJobs] = useState<JobPosting[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingJobs, setIsLoadingJobs] = useState(true);
+  const [isLoadingApplications, setIsLoadingApplications] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterLocation, setFilterLocation] = useState("");
+  const [filterJobType, setFilterJobType] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [settings, setSettings] = useState<StudentData["settings"] | null>(
+    null
+  );
+  const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
+  const [isEditingAvatar, setIsEditingAvatar] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pdfContentRef = useRef<HTMLDivElement>(null);
 
-  const [alternativeEmail, setAlternativeEmail] = useState("")
-  const [currentAlternativeEmail, setCurrentAlternativeEmail] = useState("")
-  const [alternativeEmailError, setAlternativeEmailError] = useState("")
-  const [isUpdatingAlternativeEmail, setIsUpdatingAlternativeEmail] = useState(false)
-  const [isRemovingAlternativeEmail, setIsRemovingAlternativeEmail] = useState(false)
+  const [alternativeEmail, setAlternativeEmail] = useState("");
+  const [currentAlternativeEmail, setCurrentAlternativeEmail] = useState("");
+  const [alternativeEmailError, setAlternativeEmailError] = useState("");
+  const [isUpdatingAlternativeEmail, setIsUpdatingAlternativeEmail] =
+    useState(false);
+  const [isRemovingAlternativeEmail, setIsRemovingAlternativeEmail] =
+    useState(false);
 
-  const [primaryEmail, setPrimaryEmail] = useState("")
-  const [isUpdatingPrimaryEmail, setIsUpdatingPrimaryEmail] = useState(false)
-  const [primaryEmailError, setPrimaryEmailError] = useState("")
+  const [primaryEmail, setPrimaryEmail] = useState("");
+  const [isUpdatingPrimaryEmail, setIsUpdatingPrimaryEmail] = useState(false);
+  const [primaryEmailError, setPrimaryEmailError] = useState("");
 
   // New filters for My Applications section
-  const [applicationSearchTerm, setApplicationSearchTerm] = useState("")
-  const [applicationFilterLocation, setApplicationFilterLocation] = useState("")
-  const [applicationFilterStatus, setApplicationFilterStatus] = useState("")
-  const [applicationFilterJobTitle, setApplicationFilterJobTitle] = useState("")
-  const [applicationFilterCompany, setApplicationFilterCompany] = useState("")
-  const [applicationFilterJobId, setApplicationFilterJobId] = useState("")
-  const [applicationDateFrom, setApplicationDateFrom] = useState("")
-  const [applicationDateTo, setApplicationDateTo] = useState("")
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [applicationSearchTerm, setApplicationSearchTerm] = useState("");
+  const [applicationFilterLocation, setApplicationFilterLocation] =
+    useState("");
+  const [applicationFilterStatus, setApplicationFilterStatus] = useState("");
+  const [applicationFilterJobTitle, setApplicationFilterJobTitle] =
+    useState("");
+  const [applicationFilterCompany, setApplicationFilterCompany] = useState("");
+  const [applicationFilterJobId, setApplicationFilterJobId] = useState("");
+  const [applicationDateFrom, setApplicationDateFrom] = useState("");
+  const [applicationDateTo, setApplicationDateTo] = useState("");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-  const [showRecentApplicationsOnly, setShowRecentApplicationsOnly] = useState(false)
+  const [showRecentApplicationsOnly, setShowRecentApplicationsOnly] =
+    useState(false);
 
-  const [globalSearch, setGlobalSearch] = useState("")
-  const [searchResults, setSearchResults] = useState({
+  const [globalSearch, setGlobalSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<{
+    jobs: JobPosting[];
+    applications: Application[];
+  }>({
     jobs: [],
     applications: [],
-  })
+  });
 
   // Add these state variables for job filters
   const [jobFilters, setJobFilters] = useState({
@@ -498,27 +504,27 @@ export default function StudentDashboardPage() {
     location: "",
     jobType: "",
     recentOnly: false, // New filter for recent jobs
-  })
+  });
 
   // Add pagination state
-  const [currentPage, setCurrentPage] = useState(1)
-  const jobsPerPage = 6
+  const [currentPage, setCurrentPage] = useState(1);
+  const jobsPerPage = 6;
 
   // Store all jobs for filtering
-  const [allJobs, setAllJobs] = useState([])
+  const [allJobs, setAllJobs] = useState<JobPosting[]>([]);
 
   // Add pagination state for applications
-  const [currentApplicationPage, setCurrentApplicationPage] = useState(1)
-  const applicationsPerPage = 6
+  const [currentApplicationPage, setCurrentApplicationPage] = useState(1);
+  const applicationsPerPage = 6;
 
   // Store all applications for filtering
-  const [allApplications, setAllApplications] = useState([])
+  const [allApplications, setAllApplications] = useState<Application[]>([]);
 
   useEffect(() => {
     const fetchStudentData = async () => {
       try {
-        setIsLoading(true)
-        setError(null)
+        setIsLoading(true);
+        setError(null);
 
         // Fetch user data from API instead of relying on props
         const response = await fetch("/api/student/profile", {
@@ -528,46 +534,48 @@ export default function StudentDashboardPage() {
             Pragma: "no-cache",
             Expires: "0",
           },
-        })
+        });
 
         if (response.status === 401) {
-          router.push("/auth/login")
-          return
+          router.push("/auth/login");
+          return;
         }
 
         if (!response.ok) {
           if (response.status === 404) {
-            setError("Student profile not found. Please complete your registration.")
+            setError(
+              "Student profile not found. Please complete your registration."
+            );
           } else {
-            setError("Failed to load profile data. Please try again later.")
+            setError("Failed to load profile data. Please try again later.");
           }
-          return
+          return;
         }
 
-        const data = await response.json()
+        const data = await response.json();
 
         if (!data.success) {
-          setError(data.message || "Failed to load profile data")
-          return
+          setError(data.message || "Failed to load profile data");
+          return;
         }
 
         // Log the student data for debugging
-        console.log("Student data:", data.student)
+        console.log("Student data:", data.student);
 
-        setStudent(data.student)
+        setStudent(data.student);
 
         // Fetch settings
-        fetchSettings()
+        fetchSettings();
       } catch (error) {
-        console.error("Error loading profile data:", error)
-        setError("An unexpected error occurred. Please try again later.")
+        console.error("Error loading profile data:", error);
+        setError("An unexpected error occurred. Please try again later.");
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchStudentData()
-  }, [router])
+    fetchStudentData();
+  }, [router]);
 
   const fetchSettings = async () => {
     try {
@@ -578,25 +586,25 @@ export default function StudentDashboardPage() {
           Pragma: "no-cache",
           Expires: "0",
         },
-      })
+      });
 
       if (response.ok) {
-        const data = await response.json()
+        const data = await response.json();
         if (data.success) {
-          setSettings(data.settings)
+          setSettings(data.settings);
           if (data.alternativeEmail) {
-            setCurrentAlternativeEmail(data.alternativeEmail)
+            setCurrentAlternativeEmail(data.alternativeEmail);
           }
         }
       }
     } catch (error) {
-      console.error("Error fetching settings:", error)
+      console.error("Error fetching settings:", error);
     }
-  }
+  };
 
   const fetchJobs = async () => {
     try {
-      setIsLoadingJobs(true)
+      setIsLoadingJobs(true);
       const response = await fetch("/api/jobs/available", {
         cache: "no-store",
         headers: {
@@ -604,10 +612,10 @@ export default function StudentDashboardPage() {
           Pragma: "no-cache",
           Expires: "0",
         },
-      })
+      });
 
       if (!response.ok) {
-        console.error("Failed to fetch jobs:", response.status)
+        console.error("Failed to fetch jobs:", response.status);
         // Use mock data if API fails
         const mockJobs = [
           {
@@ -636,18 +644,18 @@ export default function StudentDashboardPage() {
             createdAt: new Date().toISOString(),
             daysLeft: 25,
           },
-        ]
-        setJobs(mockJobs)
-        setAllJobs(mockJobs) // Store all jobs for filtering
-        return
+        ];
+        setJobs(mockJobs);
+        setAllJobs(mockJobs); // Store all jobs for filtering
+        return;
       }
 
-      const data = await response.json()
-      console.log("Fetched jobs:", data.jobs)
-      setJobs(data.jobs || [])
-      setAllJobs(data.jobs || []) // Store all jobs for filtering
+      const data = await response.json();
+      console.log("Fetched jobs:", data.jobs);
+      setJobs(data.jobs || []);
+      setAllJobs(data.jobs || []); // Store all jobs for filtering
     } catch (error) {
-      console.error("Error fetching jobs:", error)
+      console.error("Error fetching jobs:", error);
       // Use mock data if API fails
       const mockJobs = [
         {
@@ -676,16 +684,16 @@ export default function StudentDashboardPage() {
           createdAt: new Date().toISOString(),
           daysLeft: 25,
         },
-      ]
-      setJobs(mockJobs)
-      setAllJobs(mockJobs) // Store all jobs for filtering
+      ];
+      setJobs(mockJobs);
+      setAllJobs(mockJobs); // Store all jobs for filtering
     } finally {
-      setIsLoadingJobs(false)
+      setIsLoadingJobs(false);
     }
-  }
+  };
   const fetchApplications = async () => {
     try {
-      setIsLoadingApplications(true)
+      setIsLoadingApplications(true);
       const response = await fetch("/api/student/applications", {
         cache: "no-store",
         headers: {
@@ -693,122 +701,122 @@ export default function StudentDashboardPage() {
           Pragma: "no-cache",
           Expires: "0",
         },
-      })
+      });
 
       if (!response.ok) {
-        console.error("Failed to fetch applications:", response.status)
-        setApplications([])
-        return
+        console.error("Failed to fetch applications:", response.status);
+        setApplications([]);
+        return;
       }
 
-      const data = await response.json()
-      console.log("Fetched applications:", data.applications)
-      setApplications(data.applications || [])
+      const data = await response.json();
+      console.log("Fetched applications:", data.applications);
+      setApplications(data.applications || []);
     } catch (error) {
-      console.error("Error fetching applications:", error)
-      setApplications([])
+      console.error("Error fetching applications:", error);
+      setApplications([]);
     } finally {
-      setIsLoadingApplications(false)
+      setIsLoadingApplications(false);
     }
-  }
+  };
 
   useEffect(() => {
     if (!isLoading && student) {
-      fetchJobs()
-      fetchApplications()
+      fetchJobs();
+      fetchApplications();
     }
-  }, [isLoading, student])
+  }, [isLoading, student]);
 
   // This effect ensures the tab content is updated when the URL parameter changes
   useEffect(() => {
     // Force re-render when tab changes in URL
-    console.log("Active tab changed to:", activeTab)
-  }, [activeTab])
+    console.log("Active tab changed to:", activeTab);
+  }, [activeTab]);
 
   const handleRefresh = async () => {
-    setIsRefreshing(true)
-    await Promise.all([fetchJobs(), fetchApplications()])
-    setIsRefreshing(false)
-    toast.success("Data refreshed successfully")
-  }
+    setIsRefreshing(true);
+    await Promise.all([fetchJobs(), fetchApplications()]);
+    setIsRefreshing(false);
+    toast.success("Data refreshed successfully");
+  };
 
   const handleLogout = async () => {
     try {
       const response = await fetch("/api/auth/logout", {
         method: "POST",
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Logout failed")
+        throw new Error("Logout failed");
       }
 
-      router.push("/auth/login")
+      router.push("/auth/login");
     } catch (error) {
-      toast.error("Logout failed")
+      toast.error("Logout failed");
     }
-  }
+  };
 
   const handleTabChange = (value: string) => {
-    router.push(`/student/dashboard?tab=${value}`)
-  }
+    router.push(`/student/dashboard?tab=${value}`);
+  };
 
   const handleSearchResultClick = (type: string, id?: string) => {
     // Clear the search
-    setGlobalSearch("")
+    setGlobalSearch("");
 
     if (type === "job" && id) {
       // Redirect to specific job details
-      router.push(`/jobs/${id}`)
+      router.push(`/jobs/${id}`);
     } else if (type === "application" && id) {
       // Redirect to specific application details
-      router.push(`/student/applications/${id}`)
+      router.push(`/student/applications/${id}`);
     } else if (type === "profile") {
       // Switch to profile tab
-      handleTabChange("profile")
+      handleTabChange("profile");
     } else if (type === "settings") {
       // Switch to settings tab
-      handleTabChange("settings")
+      handleTabChange("settings");
     } else if (type === "jobs") {
       // Switch to jobs tab
-      handleTabChange("jobs")
+      handleTabChange("jobs");
     } else if (type === "applications") {
       // Switch to applications tab
-      handleTabChange("applications")
+      handleTabChange("applications");
     }
-  }
+  };
 
   const handleAvatarEdit = () => {
-    setIsEditingAvatar(true)
-  }
+    setIsEditingAvatar(true);
+  };
 
-  const filterRecentApplications = (applications) => {
-    if (!showRecentApplicationsOnly) return applications
+  const filterRecentApplications = (applications: Application[]) => {
+    if (!showRecentApplicationsOnly) return applications;
 
-    const oneWeekAgo = new Date()
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
     return applications.filter((app) => {
-      const appliedDate = new Date(app.appliedDate)
-      return appliedDate >= oneWeekAgo
-    })
-  }
+      const appliedDate = new Date(app.appliedDate);
+      return appliedDate >= oneWeekAgo;
+    });
+  };
 
   const handleAvatarUpload = () => {
     if (fileInputRef.current) {
-      fileInputRef.current.click()
+      fileInputRef.current.click();
     }
-  }
+  };
 
   // Add this search function with your other functions
-  const handleSearchInput = (term) => {
-    setGlobalSearch(term)
+  const handleSearchInput = (term: string) => {
+    setGlobalSearch(term);
 
     if (!term.trim()) {
-      setSearchResults({ jobs: [], applications: [] })
-      return
+      setSearchResults({ jobs: [], applications: [] });
+      return;
     }
 
-    const searchTerm = term.toLowerCase()
+    const searchTerm = term.toLowerCase();
 
     // Search in jobs
     const matchedJobs = jobs.filter(
@@ -816,78 +824,78 @@ export default function StudentDashboardPage() {
         job.jobTitle.toLowerCase().includes(searchTerm) ||
         job.companyName.toLowerCase().includes(searchTerm) ||
         job.jobLocation.toLowerCase().includes(searchTerm) ||
-        job.skills.some((skill) => skill.toLowerCase().includes(searchTerm)),
-    )
+        job.skills.some((skill) => skill.toLowerCase().includes(searchTerm))
+    );
 
     // Search in applications
     const matchedApplications = applications.filter(
       (app) =>
         app.job.jobTitle.toLowerCase().includes(searchTerm) ||
         app.job.companyName.toLowerCase().includes(searchTerm) ||
-        app.status.toLowerCase().includes(searchTerm),
-    )
+        app.status.toLowerCase().includes(searchTerm)
+    );
 
     setSearchResults({
       jobs: matchedJobs,
       applications: matchedApplications,
-    })
-  }
+    });
+  };
 
   // Update this function to work with your data structure
   const filterRecentJobs = (days = 7) => {
-    const today = new Date()
-    const cutoffDate = new Date()
-    cutoffDate.setDate(today.getDate() - days)
+    const today = new Date();
+    const cutoffDate = new Date();
+    cutoffDate.setDate(today.getDate() - days);
 
     const recentJobs = allJobs.filter((job) => {
-      const postedDate = new Date(job.createdAt)
-      return postedDate >= cutoffDate
-    })
+      const postedDate = new Date(job.createdAt);
+      return postedDate >= cutoffDate;
+    });
 
-    setJobs(recentJobs)
-    setJobFilters({ ...jobFilters, recentOnly: true })
+    setJobs(recentJobs);
+    setJobFilters({ ...jobFilters, recentOnly: true });
 
-    toast.success(`Showing newly available jobs`)
-  }
+    toast.success(`Showing newly available jobs`);
+  };
 
   // Update this function to work with your data structure
   const resetJobFilters = () => {
-    setSearchTerm("")
-    setFilterLocation("")
-    setFilterJobType("")
-    setJobFilters({ ...jobFilters, recentOnly: false })
-    setJobs(allJobs)
+    setSearchTerm("");
+    setFilterLocation("");
+    setFilterJobType("");
+    setJobFilters({ ...jobFilters, recentOnly: false });
+    setJobs(allJobs);
 
-    toast.success("All job filters have been reset")
-  }
+    toast.success("All job filters have been reset");
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const file = e.target.files?.[0];
+    if (!file) return;
 
     try {
-      setIsUploadingAvatar(true)
-      toast.loading("Uploading avatar...")
+      setIsUploadingAvatar(true);
+      toast.loading("Uploading avatar...");
 
       // Create form data
-      const formData = new FormData()
-      formData.append("avatar", file)
+      const formData = new FormData();
+      formData.append("avatar", file);
 
       // Send to server
       const response = await fetch("/api/student/profile/avatar", {
         method: "POST",
         body: formData,
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to upload avatar")
+        throw new Error("Failed to upload avatar");
       }
 
-      const data = await response.json()
+      const data = await response.json();
 
       // Update student state with new avatar URL from server
       setStudent((prev) => {
-        if (!prev) return prev
+        if (!prev) return prev;
         return {
           ...prev,
           avatar: data.avatarUrl,
@@ -899,48 +907,50 @@ export default function StudentDashboardPage() {
               name: file.name,
             },
           },
-        }
-      })
+        };
+      });
 
-      toast.dismiss()
-      toast.success("Avatar updated successfully")
+      toast.dismiss();
+      toast.success("Avatar updated successfully");
     } catch (error) {
-      console.error("Error uploading avatar:", error)
-      toast.dismiss()
-      toast.error("Failed to upload avatar")
+      console.error("Error uploading avatar:", error);
+      toast.dismiss();
+      toast.error("Failed to upload avatar");
     } finally {
-      setIsUploadingAvatar(false)
-      setIsEditingAvatar(false)
+      setIsUploadingAvatar(false);
+      setIsEditingAvatar(false);
     }
-  }
+  };
 
   const handleCancelAvatarEdit = () => {
-    setIsEditingAvatar(false)
-  }
+    setIsEditingAvatar(false);
+  };
 
   const handleExportToPDF = async () => {
-    if (!student) return
+    if (!student) return;
 
     try {
-      setIsGeneratingPDF(true)
-      toast.loading("Generating PDF resume...")
+      setIsGeneratingPDF(true);
+      toast.loading("Generating PDF resume...");
 
       // Create a hidden div to render the PDF content
-      const pdfContainer = document.createElement("div")
-      pdfContainer.style.position = "absolute"
-      pdfContainer.style.left = "-9999px"
-      pdfContainer.style.top = "-9999px"
-      document.body.appendChild(pdfContainer)
+      const pdfContainer = document.createElement("div");
+      pdfContainer.style.position = "absolute";
+      pdfContainer.style.left = "-9999px";
+      pdfContainer.style.top = "-9999px";
+      document.body.appendChild(pdfContainer);
 
       // Get experience array safely
-      const experienceArray = getExperienceArray(student)
-      const preferredCities = getPreferredCities(student)
+      const experienceArray = getExperienceArray(student);
+      const preferredCities = getPreferredCities(student);
 
       // Create the PDF content with proper styling
       pdfContainer.innerHTML = `
         <div id="pdf-content" style="width: 210mm; padding: 20mm; font-family: Arial, sans-serif; color: #333;">
           <div style="text-align: center; margin-bottom: 20px;">
-          <h1 style="font-size: 24px; color: #000; margin-bottom: 5px;">${getFullName(student)} - Resume</h1>
+          <h1 style="font-size: 24px; color: #000; margin-bottom: 5px;">${getFullName(
+            student
+          )} - Resume</h1>
             <p style="color: #666; font-size: 14px;">Generated on ${new Date().toLocaleDateString()}</p>
           </div>
 
@@ -950,15 +960,21 @@ export default function StudentDashboardPage() {
             <div style="display: flex; flex-wrap: wrap;">
               <div style="width: 50%; margin-bottom: 10px;">
                 <p style="font-size: 14px; color: #666; margin-bottom: 2px;">Full Name</p>
-              <p style="font-size: 16px; margin-top: 0;">${getFullName(student)}</p>
+              <p style="font-size: 16px; margin-top: 0;">${getFullName(
+                student
+              )}</p>
               </div>
               <div style="width: 50%; margin-bottom: 10px;">
                 <p style="font-size: 14px; color: #666; margin-bottom: 2px;">Gender</p>
-                <p style="font-size: 16px; margin-top: 0;">${student.gender || "Not specified"}</p>
+                <p style="font-size: 16px; margin-top: 0;">${
+                  student.gender || "Not specified"
+                }</p>
               </div>
               <div style="width: 50%; margin-bottom: 10px;">
                 <p style="font-size: 14px; color: #666; margin-bottom: 2px;">Date of Birth</p>
-                <p style="font-size: 16px; margin-top: 0;">${formatDate(student.dob)}</p>
+                <p style="font-size: 16px; margin-top: 0;">${formatDate(
+                  student.dob
+                )}</p>
               </div>
               ${
                 student.pincode
@@ -983,7 +999,9 @@ export default function StudentDashboardPage() {
               </div>
               <div style="width: 50%; margin-bottom: 10px;">
                 <p style="font-size: 14px; color: #666; margin-bottom: 2px;">Phone</p>
-                <p style="font-size: 16px; margin-top: 0;">${student.phone || "Not provided"}</p>
+                <p style="font-size: 16px; margin-top: 0;">${
+                  student.phone || "Not provided"
+                }</p>
               </div>
               ${
                 student.alternativePhone
@@ -1068,7 +1086,8 @@ export default function StudentDashboardPage() {
                 <div style="width: 50%; margin-bottom: 10px;">
                   <p style="font-size: 14px; color: #666; margin-bottom: 2px;">Social Media</p>
                   <p style="font-size: 16px; margin-top: 0; color: #2563eb;">${
-                    student.onlinePresence?.socialMedia || student.socialMediaLink
+                    student.onlinePresence?.socialMedia ||
+                    student.socialMediaLink
                   }</p>
                 </div>
                 `
@@ -1103,7 +1122,7 @@ export default function StudentDashboardPage() {
               ${student.skills
                 .map(
                   (skill) =>
-                    `<span style="display: inline-block; background-color: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 4px; padding: 4px 8px; font-size: 14px;">${skill}</span>`,
+                    `<span style="display: inline-block; background-color: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 4px; padding: 4px 8px; font-size: 14px;">${skill}</span>`
                 )
                 .join("")}
             </div>
@@ -1119,40 +1138,51 @@ export default function StudentDashboardPage() {
               <div style="background-color: #eff6ff; border-radius: 6px; padding: 15px; text-align: center; flex: 1;">
                 <p style="font-size: 14px; color: #666; margin-bottom: 5px;">Total Experience</p>
                 <p style="font-size: 18px; font-weight: bold; color: #2563eb; margin: 0;">${getTotalExperience(
-                  student,
+                  student
                 )}</p>
               </div>
               ${
-                student.currentSalary || (experienceArray.length > 0 && experienceArray[0]?.currentSalary)
+                student.currentSalary ||
+                (experienceArray.length > 0 &&
+                  experienceArray[0]?.currentSalary)
                   ? `
               <div style="background-color: #ecfdf5; border-radius: 6px; padding: 15px; text-align: center; flex: 1;">
                 <p style="font-size: 14px; color: #666; margin-bottom: 5px;">Current Salary</p>
                 <p style="font-size: 18px; font-weight: bold; color: #059669; margin: 0;">${
-                  student.currentSalary || experienceArray[0]?.currentSalary || "Not specified"
+                  student.currentSalary ||
+                  experienceArray[0]?.currentSalary ||
+                  "Not specified"
                 }</p>
               </div>
               `
                   : ""
               }
               ${
-                student.expectedSalary || (experienceArray.length > 0 && experienceArray[0]?.expectedSalary)
+                student.expectedSalary ||
+                (experienceArray.length > 0 &&
+                  experienceArray[0]?.expectedSalary)
                   ? `
               <div style="background-color: #f5f3ff; border-radius: 6px; padding: 15px; text-align: center; flex: 1;">
                 <p style="font-size: 14px; color: #666; margin-bottom: 5px;">Expected Salary</p>
                 <p style="font-size: 18px; font-weight: bold; color: #7c3aed; margin: 0;">${
-                  student.expectedSalary || experienceArray[0]?.expectedSalary || "Not specified"
+                  student.expectedSalary ||
+                  experienceArray[0]?.expectedSalary ||
+                  "Not specified"
                 }</p>
               </div>
               `
                   : ""
               }
               ${
-                student.noticePeriod || (experienceArray.length > 0 && experienceArray[0]?.noticePeriod)
+                student.noticePeriod ||
+                (experienceArray.length > 0 && experienceArray[0]?.noticePeriod)
                   ? `
               <div style="background-color: #fffbeb; border-radius: 6px; padding: 15px; text-align: center; flex: 1;">
                 <p style="font-size: 14px; color: #666; margin-bottom: 5px;">Notice Period</p>
                 <p style="font-size: 18px; font-weight: bold; color: #d97706; margin: 0;">${
-                  student.noticePeriod || experienceArray[0]?.noticePeriod || "Not specified"
+                  student.noticePeriod ||
+                  experienceArray[0]?.noticePeriod ||
+                  "Not specified"
                 }</p>
               </div>
               `
@@ -1164,7 +1194,8 @@ export default function StudentDashboardPage() {
           <!-- Shift Preference Section -->
           ${
             student.shiftPreference ||
-            (student.settings?.shiftPreference && student.settings.shiftPreference !== "flexible")
+            (student.settings?.shiftPreference &&
+              student.settings.shiftPreference !== "flexible")
               ? `
           <div style="margin-bottom: 20px;">
             <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">Shift Preference</h2>
@@ -1174,11 +1205,13 @@ export default function StudentDashboardPage() {
                   ? student.shiftPreference
                       .map(
                         (shift) =>
-                          `<span style="display: inline-block; background-color: #dbeafe; border: 1px solid #bfdbfe; border-radius: 4px; padding: 4px 8px; font-size: 14px; color: #1e40af;">${shift}</span>`,
+                          `<span style="display: inline-block; background-color: #dbeafe; border: 1px solid #bfdbfe; border-radius: 4px; padding: 4px 8px; font-size: 14px; color: #1e40af;">${shift}</span>`
                       )
                       .join("")
                   : `<span style="display: inline-block; background-color: #dbeafe; border: 1px solid #bfdbfe; border-radius: 4px; padding: 4px 8px; font-size: 14px; color: #1e40af;">${
-                      student.shiftPreference || student.settings?.shiftPreference || "Flexible"
+                      student.shiftPreference ||
+                      student.settings?.shiftPreference ||
+                      "Flexible"
                     }</span>`
               }
             </div>
@@ -1198,7 +1231,7 @@ export default function StudentDashboardPage() {
                 .slice(0, 5)
                 .map(
                   (city) =>
-                    `<span style="display: inline-block; background-color: #d1fae5; border: 1px solid #a7f3d0; border-radius: 4px; padding: 4px 8px; font-size: 14px; color: #065f46;">${city}</span>`,
+                    `<span style="display: inline-block; background-color: #d1fae5; border: 1px solid #a7f3d0; border-radius: 4px; padding: 4px 8px; font-size: 14px; color: #065f46;">${city}</span>`
                 )
                 .join("")}
             </div>
@@ -1219,7 +1252,9 @@ export default function StudentDashboardPage() {
                   (edu) => `
                 <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px;">
                   <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <h3 style="font-size: 16px; margin: 0;">Degree/Course: ${edu.degree || "Not specified"}</h3>
+                    <h3 style="font-size: 16px; margin: 0;">Degree/Course: ${
+                      edu.degree || "Not specified"
+                    }</h3>
                     <span style="background-color: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-size: 14px;">%age/CGPA: ${
                       edu.percentage || edu.grade || "Not specified"
                     }</span>
@@ -1234,7 +1269,9 @@ export default function StudentDashboardPage() {
                   }
                   <p style="font-size: 14px; color: #6b7280; margin: 5px 0;">
                     <span style="margin-right: 5px;">📅</span>
-                    ${edu.startingYear || "Not provided"} - ${edu.endingYear || "Present"}
+                    ${edu.startingYear || "Not provided"} - ${
+                    edu.endingYear || "Present"
+                  }
                   </p>
                   ${
                     edu.level || edu.mode
@@ -1265,7 +1302,7 @@ export default function StudentDashboardPage() {
                       : ""
                   }
                 </div>
-              `,
+              `
                 )
                 .join("")}
             </div>
@@ -1282,7 +1319,7 @@ export default function StudentDashboardPage() {
             <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">
               Work Experience
               <span style="display: inline-block; background-color: #dbeafe; border: 1px solid #bfdbfe; border-radius: 4px; padding: 2px 6px; font-size: 14px; color: #1e40af; margin-left: 10px;">Total: ${getTotalExperience(
-                student,
+                student
               )}</span>
             </h2>
             <div style="display: flex; flex-direction: column; gap: 15px;">
@@ -1291,7 +1328,9 @@ export default function StudentDashboardPage() {
                   (exp) => `
                 <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px;">
                   <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <h3 style="font-size: 16px; margin: 0;">Title: ${exp.title || "Not specified"}</h3>
+                    <h3 style="font-size: 16px; margin: 0;">Title: ${
+                      exp.title || "Not specified"
+                    }</h3>
                     ${
                       exp.currentlyWorking
                         ? `<span style="background-color: #d1fae5; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-size: 14px; color: #065f46;">Current</span>`
@@ -1301,9 +1340,15 @@ export default function StudentDashboardPage() {
                   <p style="font-size: 15px; color: #4b5563; margin: 5px 0;">Company: ${
                     exp.companyName || "Not specified"
                   }</p>
-                  ${exp.department ? `<p style="font-size: 15px; margin: 5px 0;">Department: ${exp.department}</p>` : ""}
                   ${
-                    exp.location ? `<p style="font-size: 14px; color: #6b7280; margin: 5px 0;">${exp.location}</p>` : ""
+                    exp.department
+                      ? `<p style="font-size: 15px; margin: 5px 0;">Department: ${exp.department}</p>`
+                      : ""
+                  }
+                  ${
+                    exp.location
+                      ? `<p style="font-size: 14px; color: #6b7280; margin: 5px 0;">${exp.location}</p>`
+                      : ""
                   }
                   ${
                     exp.tenure
@@ -1319,7 +1364,9 @@ export default function StudentDashboardPage() {
                     exp.professionalSummary || exp.summary
                       ? `
                   <p style="font-size: 14px; margin: 10px 0; white-space: pre-line;">
-                    <strong>Professional Summary:</strong> ${exp.professionalSummary || exp.summary}
+                    <strong>Professional Summary:</strong> ${
+                      exp.professionalSummary || exp.summary
+                    }
                   </p>
                   `
                       : ""
@@ -1357,7 +1404,7 @@ export default function StudentDashboardPage() {
                     }
                   </div>
                 </div>
-              `,
+              `
                 )
                 .join("")}
             </div>
@@ -1368,7 +1415,9 @@ export default function StudentDashboardPage() {
 
           <!-- Certifications Section -->
           ${
-            student.certifications && Array.isArray(student.certifications) && student.certifications.length > 0
+            student.certifications &&
+            Array.isArray(student.certifications) &&
+            student.certifications.length > 0
               ? `
           <div style="margin-bottom: 20px;">
             <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">Certifications</h2>
@@ -1379,7 +1428,7 @@ export default function StudentDashboardPage() {
                 <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px;">
                   <h3 style="font-size: 16px; margin: 0;">${cert}</h3>
                 </div>
-              `,
+              `
                 )
                 .join("")}
             </div>
@@ -1402,7 +1451,7 @@ export default function StudentDashboardPage() {
                   <span style="margin-right: 8px; color: #6b7280;">✓</span>
                   <span>${asset.replace(/_/g, " ")}</span>
                 </div>
-              `,
+              `
                 )
                 .join("")}
             </div>
@@ -1428,7 +1477,7 @@ export default function StudentDashboardPage() {
                   </div>
                   <span style="background-color: #d1fae5; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-size: 14px; color: #065f46;">Verified</span>
                 </div>
-              `,
+              `
                 )
                 .join("")}
             </div>
@@ -1476,7 +1525,11 @@ export default function StudentDashboardPage() {
       </div>
       ${
         getDocuments(student).resume.url
-          ? `<a href="${getDocuments(student).resume.url}" style="color: #2563eb; text-decoration: underline;">${getDocuments(student).resume.url}</a>`
+          ? `<a href="${
+              getDocuments(student).resume.url
+            }" style="color: #2563eb; text-decoration: underline;">${
+              getDocuments(student).resume.url
+            }</a>`
           : `<span style="color: #b91c1c;">Not uploaded</span>`
       }
     </div>
@@ -1490,7 +1543,11 @@ export default function StudentDashboardPage() {
         <span style="margin-right: 8px;">🎥</span>
         <span>Video Resume</span>
       </div>
-      <a href="${getDocuments(student).videoResume.url}" style="color: #2563eb; text-decoration: underline;">${getDocuments(student).videoResume.url}</a>
+      <a href="${
+        getDocuments(student).videoResume.url
+      }" style="color: #2563eb; text-decoration: underline;">${
+            getDocuments(student).videoResume.url
+          }</a>
     </div>
     `
         : ""
@@ -1505,7 +1562,11 @@ export default function StudentDashboardPage() {
         <span style="margin-right: 8px;">🎵</span>
         <span>Audio Bio</span>
       </div>
-      <a href="${getDocuments(student).audioBiodata.url}" style="color: #2563eb; text-decoration: underline;">${getDocuments(student).audioBiodata.url}</a>
+      <a href="${
+        getDocuments(student).audioBiodata.url
+      }" style="color: #2563eb; text-decoration: underline;">${
+            getDocuments(student).audioBiodata.url
+          }</a>
     </div>
     `
         : ""
@@ -1520,7 +1581,11 @@ export default function StudentDashboardPage() {
         <span style="margin-right: 8px;">🖼️</span>
         <span>Profile Photo</span>
       </div>
-      <a href="${getDocuments(student).photograph.url}" style="color: #2563eb; text-decoration: underline;">${getDocuments(student).photograph.url}</a>
+      <a href="${
+        getDocuments(student).photograph.url
+      }" style="color: #2563eb; text-decoration: underline;">${
+            getDocuments(student).photograph.url
+          }</a>
     </div>
     `
         : ""
@@ -1535,15 +1600,15 @@ export default function StudentDashboardPage() {
             <p>© ${new Date().getFullYear()} Oddiant Techlabs - All Rights Reserved</p>
           </div>
         </div>
-      `
+      `;
 
       // Wait for the content to render
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Get the content element
-      const content = document.getElementById("pdf-content")
+      const content = document.getElementById("pdf-content");
       if (!content) {
-        throw new Error("PDF content element not found")
+        throw new Error("PDF content element not found");
       }
 
       // Create PDF
@@ -1551,7 +1616,7 @@ export default function StudentDashboardPage() {
         orientation: "portrait",
         unit: "mm",
         format: "a4",
-      })
+      });
 
       // Capture the content as an image
       const canvas = await html2canvas(content, {
@@ -1559,69 +1624,71 @@ export default function StudentDashboardPage() {
         useCORS: true,
         allowTaint: true,
         logging: false,
-      })
+      });
 
       // Add the image to the PDF
-      const imgData = canvas.toDataURL("image/jpeg", 1.0)
-      const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = pdf.internal.pageSize.getHeight()
-      const imgWidth = pdfWidth
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      const imgData = canvas.toDataURL("image/jpeg", 1.0);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
       // If the image is taller than the page, split it into multiple pages
-      let heightLeft = imgHeight
-      let position = 0
-      let pageCount = 1
+      let heightLeft = imgHeight;
+      let position = 0;
+      let pageCount = 1;
 
       // Add first page
-      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight)
-      heightLeft -= pdfHeight
+      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
 
       // Add additional pages if needed
       while (heightLeft > 0) {
-        position = -pdfHeight * pageCount
-        pageCount++
-        pdf.addPage()
-        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight)
-        heightLeft -= pdfHeight
+        position = -pdfHeight * pageCount;
+        pageCount++;
+        pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
       }
 
       // Save the PDF
-      pdf.save(`${getFullName(student).replace(/\s+/g, "_")}_Resume.pdf`)
+      pdf.save(`${getFullName(student).replace(/\s+/g, "_")}_Resume.pdf`);
 
       // Clean up
-      document.body.removeChild(pdfContainer)
+      document.body.removeChild(pdfContainer);
 
-      toast.dismiss()
-      toast.success("PDF resume generated successfully")
+      toast.dismiss();
+      toast.success("PDF resume generated successfully");
     } catch (error) {
-      console.error("Error generating PDF:", error)
-      toast.dismiss()
-      toast.error("Failed to generate PDF resume")
+      console.error("Error generating PDF:", error);
+      toast.dismiss();
+      toast.error("Failed to generate PDF resume");
     } finally {
-      setIsGeneratingPDF(false)
+      setIsGeneratingPDF(false);
     }
-  }
+  };
 
   // Helper function to get certification names
   const getCertificationNames = (student: StudentData) => {
     if (!student.certifications || student.certifications.length === 0) {
-      return []
+      return [];
     }
 
     // If certifications is an array of strings, return it directly
     if (typeof student.certifications[0] === "string") {
-      return student.certifications as string[]
+      return student.certifications as string[];
     }
 
     // If certifications is an array of objects, extract the name property
-    return (student.certifications as Array<{ name: string }>).map((cert) => cert.name)
-  }
+    return (student.certifications as Array<{ name: string }>).map(
+      (cert) => cert.name
+    );
+  };
 
   const handleSaveSettings = async () => {
-    if (!settings) return
+    if (!settings) return;
 
-    setIsUpdatingSettings(true)
+    setIsUpdatingSettings(true);
     try {
       const response = await fetch("/api/student/settings", {
         method: "PUT",
@@ -1629,20 +1696,20 @@ export default function StudentDashboardPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ settings }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to update settings")
+        throw new Error("Failed to update settings");
       }
 
-      const data = await response.json()
-      toast.success("Settings updated successfully")
+      const data = await response.json();
+      toast.success("Settings updated successfully");
     } catch (error) {
-      toast.error("Failed to update settings")
+      toast.error("Failed to update settings");
     } finally {
-      setIsUpdatingSettings(false)
+      setIsUpdatingSettings(false);
     }
-  }
+  };
 
   const handleApplyToJob = async (jobId: string) => {
     try {
@@ -1652,16 +1719,16 @@ export default function StudentDashboardPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ jobId }),
-      })
+      });
 
       if (!response.ok) {
-        const data = await response.json()
-        toast.error(data.message || "Failed to apply for job")
-        return
+        const data = await response.json();
+        toast.error(data.message || "Failed to apply for job");
+        return;
       }
 
-      const data = await response.json()
-      toast.success("Application submitted successfully")
+      const data = await response.json();
+      toast.success("Application submitted successfully");
 
       // Update jobs list to mark this job as applied
       setJobs((prevJobs) =>
@@ -1671,38 +1738,44 @@ export default function StudentDashboardPage() {
                 ...job,
                 hasApplied: true,
               }
-            : job,
-        ),
-      )
+            : job
+        )
+      );
 
       // Refresh applications list
-      fetchApplications()
+      fetchApplications();
     } catch (error) {
-      console.error("Error applying for job:", error)
-      toast.error("An error occurred while applying for the job")
+      console.error("Error applying for job:", error);
+      toast.error("An error occurred while applying for the job");
     }
-  }
+  };
 
   const filteredJobs = jobs.filter((job) => {
     const matchesSearch =
       job.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
       job.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.skills.some((skill) => skill.toLowerCase().includes(searchTerm.toLowerCase()))
+      job.skills.some((skill) =>
+        skill.toLowerCase().includes(searchTerm.toLowerCase())
+      );
 
-    const matchesLocation = filterLocation ? job.jobLocation.toLowerCase().includes(filterLocation.toLowerCase()) : true
-    const matchesJobType = filterJobType ? job.jobType.toLowerCase() === filterJobType.toLowerCase() : true
+    const matchesLocation = filterLocation
+      ? job.jobLocation.toLowerCase().includes(filterLocation.toLowerCase())
+      : true;
+    const matchesJobType = filterJobType
+      ? job.jobType.toLowerCase() === filterJobType.toLowerCase()
+      : true;
 
-    return matchesSearch && matchesLocation && matchesJobType
-  })
+    return matchesSearch && matchesLocation && matchesJobType;
+  });
 
   // Get current jobs for pagination
-  const indexOfLastJob = currentPage * jobsPerPage
-  const indexOfFirstJob = indexOfLastJob - jobsPerPage
-  const currentJobs = filteredJobs.slice(indexOfFirstJob, indexOfLastJob)
-  const totalPages = Math.ceil(filteredJobs.length / jobsPerPage)
+  const indexOfLastJob = currentPage * jobsPerPage;
+  const indexOfFirstJob = indexOfLastJob - jobsPerPage;
+  const currentJobs = filteredJobs.slice(indexOfFirstJob, indexOfLastJob);
+  const totalPages = Math.ceil(filteredJobs.length / jobsPerPage);
 
   // Change page
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber)
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   // Filter applications based on all filter criteria
   const filteredApplications = applications.filter((application) => {
@@ -1710,59 +1783,82 @@ export default function StudentDashboardPage() {
     const matchesMainSearch = !applicationSearchTerm
       ? true
       : (application.job?.jobTitle &&
-          application.job.jobTitle.toLowerCase().includes(applicationSearchTerm.toLowerCase())) ||
+          application.job.jobTitle
+            .toLowerCase()
+            .includes(applicationSearchTerm.toLowerCase())) ||
         (application.job?.companyName &&
-          application.job.companyName.toLowerCase().includes(applicationSearchTerm.toLowerCase())) ||
-        (application._id && application._id.toLowerCase().includes(applicationSearchTerm.toLowerCase())) ||
-        (application.jobId && application.jobId.toLowerCase().includes(applicationSearchTerm.toLowerCase()))
+          application.job.companyName
+            .toLowerCase()
+            .includes(applicationSearchTerm.toLowerCase())) ||
+        (application._id &&
+          application._id
+            .toLowerCase()
+            .includes(applicationSearchTerm.toLowerCase())) ||
+        (application.jobId &&
+          application.jobId
+            .toLowerCase()
+            .includes(applicationSearchTerm.toLowerCase()));
 
     // Location filter
     const matchesLocation = !applicationFilterLocation
       ? true
       : application.job?.jobLocation &&
-        application.job.jobLocation.toLowerCase().includes(applicationFilterLocation.toLowerCase())
+        application.job.jobLocation
+          .toLowerCase()
+          .includes(applicationFilterLocation.toLowerCase());
 
     // Status filter
     const matchesStatus = !applicationFilterStatus
       ? true
-      : application.status.toLowerCase() === applicationFilterStatus.toLowerCase()
+      : application.status.toLowerCase() ===
+        applicationFilterStatus.toLowerCase();
 
     // Job title filter (advanced)
     const matchesJobTitle = !applicationFilterJobTitle
       ? true
       : application.job?.jobTitle &&
-        application.job.jobTitle.toLowerCase().includes(applicationFilterJobTitle.toLowerCase())
+        application.job.jobTitle
+          .toLowerCase()
+          .includes(applicationFilterJobTitle.toLowerCase());
 
     // Company filter (advanced)
     const matchesCompany = !applicationFilterCompany
       ? true
       : application.job?.companyName &&
-        application.job.companyName.toLowerCase().includes(applicationFilterCompany.toLowerCase())
+        application.job.companyName
+          .toLowerCase()
+          .includes(applicationFilterCompany.toLowerCase());
 
     // Job ID filter (advanced)
     const matchesJobId = !applicationFilterJobId
       ? true
-      : (application.jobId && application.jobId.toLowerCase().includes(applicationFilterJobId.toLowerCase())) ||
-        (application._id && application._id.toLowerCase().includes(applicationFilterJobId.toLowerCase()))
+      : (application.jobId &&
+          application.jobId
+            .toLowerCase()
+            .includes(applicationFilterJobId.toLowerCase())) ||
+        (application._id &&
+          application._id
+            .toLowerCase()
+            .includes(applicationFilterJobId.toLowerCase()));
 
     // Date range filter (advanced)
-    let matchesDateRange = true
+    let matchesDateRange = true;
     if (applicationDateFrom || applicationDateTo) {
-      const appliedDate = new Date(application.appliedDate)
+      const appliedDate = new Date(application.appliedDate);
 
       if (applicationDateFrom) {
-        const fromDate = new Date(applicationDateFrom)
+        const fromDate = new Date(applicationDateFrom);
         if (appliedDate < fromDate) {
-          matchesDateRange = false
+          matchesDateRange = false;
         }
       }
 
       if (applicationDateTo) {
-        const toDate = new Date(applicationDateTo)
+        const toDate = new Date(applicationDateTo);
         // Set to end of day
-        toDate.setHours(23, 59, 59, 999)
+        toDate.setHours(23, 59, 59, 999);
         if (appliedDate > toDate) {
-          matchesDateRange = false
+          matchesDateRange = false;
         }
       }
     }
@@ -1775,65 +1871,71 @@ export default function StudentDashboardPage() {
       matchesCompany &&
       matchesJobId &&
       matchesDateRange
-    )
-  })
+    );
+  });
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
       case "applied":
-        return <Badge className="bg-blue-100 text-blue-800">Applied</Badge>
+        return <Badge className="bg-blue-100 text-blue-800">Applied</Badge>;
       case "shortlisted":
-        return <Badge className="bg-yellow-100 text-yellow-800">Shortlisted</Badge>
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800">Shortlisted</Badge>
+        );
       case "interview":
-        return <Badge className="bg-purple-100 text-purple-800">Interview</Badge>
+        return (
+          <Badge className="bg-purple-100 text-purple-800">Interview</Badge>
+        );
       case "rejected":
-        return <Badge className="bg-red-100 text-red-800">Rejected</Badge>
+        return <Badge className="bg-red-100 text-red-800">Rejected</Badge>;
       case "hired":
-        return <Badge className="bg-green-100 text-green-800">Hired</Badge>
+        return <Badge className="bg-green-100 text-green-800">Hired</Badge>;
       default:
-        return <Badge className="bg-gray-100 text-gray-800">{status}</Badge>
+        return <Badge className="bg-gray-100 text-gray-800">{status}</Badge>;
     }
-  }
+  };
 
   // Format date helper function
   const formatUrlOriginal = (url: string | undefined) => {
-    if (!url) return ""
-    return url.startsWith("http") ? url : `https://${url}`
-  }
+    if (!url) return "";
+    return url.startsWith("http") ? url : `https://${url}`;
+  };
 
   // Reset all application filters
   const resetApplicationFilters = () => {
-    setApplicationSearchTerm("")
-    setApplicationFilterLocation("")
-    setApplicationFilterStatus("")
-    setApplicationFilterJobTitle("")
-    setApplicationFilterCompany("")
-    setApplicationFilterJobId("")
-    setApplicationDateFrom("")
-    setApplicationDateTo("")
-    setShowAdvancedFilters(false)
-    setShowRecentApplicationsOnly(false)
-    setCurrentApplicationPage(1) // Reset to first page when filters are cleared
-  }
+    setApplicationSearchTerm("");
+    setApplicationFilterLocation("");
+    setApplicationFilterStatus("");
+    setApplicationFilterJobTitle("");
+    setApplicationFilterCompany("");
+    setApplicationFilterJobId("");
+    setApplicationDateFrom("");
+    setApplicationDateTo("");
+    setShowAdvancedFilters(false);
+    setShowRecentApplicationsOnly(false);
+    setCurrentApplicationPage(1); // Reset to first page when filters are cleared
+  };
 
   const handleSaveAlternativeEmail = async () => {
-    if (!alternativeEmail) return
+    if (!alternativeEmail) return;
 
     // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(alternativeEmail)) {
-      setAlternativeEmailError("Please enter a valid email address")
-      return
+      setAlternativeEmailError("Please enter a valid email address");
+      return;
     }
 
     // Check if same as primary email
     if (student && student.email === alternativeEmail) {
-      setAlternativeEmailError("Alternative email cannot be the same as your primary email")
-      return
+      setAlternativeEmailError(
+        "Alternative email cannot be the same as your primary email"
+      );
+      return;
     }
 
-    setAlternativeEmailError("")
-    setIsUpdatingAlternativeEmail(true)
+    setAlternativeEmailError("");
+    setIsUpdatingAlternativeEmail(true);
 
     try {
       const response = await fetch("/api/student/alternative-email", {
@@ -1842,77 +1944,91 @@ export default function StudentDashboardPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ alternativeEmail }),
-      })
-      const data = await response.json()
+      });
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to save alternative email")
+        throw new Error(data.message || "Failed to save alternative email");
       }
 
-      setCurrentAlternativeEmail(alternativeEmail)
-      setAlternativeEmail("")
-      toast.success("Alternative email saved successfully")
+      setCurrentAlternativeEmail(alternativeEmail);
+      setAlternativeEmail("");
+      toast.success("Alternative email saved successfully");
     } catch (error) {
-      console.error("Error saving alternative email:", error)
-      setAlternativeEmailError(error instanceof Error ? error.message : "Failed to save alternative email")
-      toast.error(error instanceof Error ? error.message : "Failed to save alternative email")
+      console.error("Error saving alternative email:", error);
+      setAlternativeEmailError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save alternative email"
+      );
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to save alternative email"
+      );
     } finally {
-      setIsUpdatingAlternativeEmail(false)
+      setIsUpdatingAlternativeEmail(false);
     }
-  }
+  };
 
   const handleRemoveAlternativeEmail = async () => {
-    if (!currentAlternativeEmail) return
+    if (!currentAlternativeEmail) return;
 
     if (
       !confirm(
-        "Are you sure you want to remove your alternative email? You will no longer be able to use it to sign in.",
+        "Are you sure you want to remove your alternative email? You will no longer be able to use it to sign in."
       )
     ) {
-      return
+      return;
     }
 
-    setIsRemovingAlternativeEmail(true)
+    setIsRemovingAlternativeEmail(true);
 
     try {
       const response = await fetch("/api/student/alternative-email", {
         method: "DELETE",
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to remove alternative email")
+        throw new Error(data.message || "Failed to remove alternative email");
       }
 
-      setCurrentAlternativeEmail("")
-      toast.success("Alternative email removed successfully")
+      setCurrentAlternativeEmail("");
+      toast.success("Alternative email removed successfully");
     } catch (error) {
-      console.error("Error removing alternative email:", error)
-      toast.error(error instanceof Error ? error.message : "Failed to remove alternative email")
+      console.error("Error removing alternative email:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to remove alternative email"
+      );
     } finally {
-      setIsRemovingAlternativeEmail(false)
+      setIsRemovingAlternativeEmail(false);
     }
-  }
+  };
 
   const handleSavePrimaryEmail = async () => {
-    if (!primaryEmail) return
+    if (!primaryEmail) return;
 
     // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(primaryEmail)) {
-      setPrimaryEmailError("Please enter a valid email address")
-      return
+      setPrimaryEmailError("Please enter a valid email address");
+      return;
     }
 
     // Check if same as alternative email
     if (currentAlternativeEmail && primaryEmail === currentAlternativeEmail) {
-      setPrimaryEmailError("Primary email cannot be the same as your alternative email")
-      return
+      setPrimaryEmailError(
+        "Primary email cannot be the same as your alternative email"
+      );
+      return;
     }
 
-    setPrimaryEmailError("")
-    setIsUpdatingPrimaryEmail(true)
+    setPrimaryEmailError("");
+    setIsUpdatingPrimaryEmail(true);
 
     try {
       const response = await fetch("/api/student/primary-email", {
@@ -1921,37 +2037,41 @@ export default function StudentDashboardPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ primaryEmail }),
-      })
-      const data = await response.json()
+      });
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to save primary email")
+        throw new Error(data.message || "Failed to save primary email");
       }
 
       // Update student state with new email
-      setStudent((prev) => (prev ? { ...prev, email: primaryEmail } : prev))
-      toast.success("Primary email updated successfully")
+      setStudent((prev) => (prev ? { ...prev, email: primaryEmail } : prev));
+      toast.success("Primary email updated successfully");
     } catch (error) {
-      console.error("Error saving primary email:", error)
-      setPrimaryEmailError(error instanceof Error ? error.message : "Failed to save primary email")
-      toast.error(error instanceof Error ? error.message : "Failed to save primary email")
+      console.error("Error saving primary email:", error);
+      setPrimaryEmailError(
+        error instanceof Error ? error.message : "Failed to save primary email"
+      );
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save primary email"
+      );
     } finally {
-      setIsUpdatingPrimaryEmail(false)
+      setIsUpdatingPrimaryEmail(false);
     }
-  }
+  };
 
   useEffect(() => {
     if (student) {
-      setPrimaryEmail(student.email || "")
+      setPrimaryEmail(student.email || "");
     }
-  }, [student])
+  }, [student]);
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -1960,7 +2080,9 @@ export default function StudentDashboardPage() {
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Error</CardTitle>
-            <CardDescription>There was a problem loading your dashboard</CardDescription>
+            <CardDescription>
+              There was a problem loading your dashboard
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-2 text-amber-600">
@@ -1968,15 +2090,20 @@ export default function StudentDashboardPage() {
               <p>{error}</p>
             </div>
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => router.push("/auth/login")}>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/auth/login")}
+              >
                 Go to Login
               </Button>
-              <Button onClick={() => window.location.reload()}>Try Again</Button>
+              <Button onClick={() => window.location.reload()}>
+                Try Again
+              </Button>
             </div>
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   if (!student) {
@@ -1985,16 +2112,21 @@ export default function StudentDashboardPage() {
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Session Expired</CardTitle>
-            <CardDescription>Your session has expired or you are not logged in.</CardDescription>
+            <CardDescription>
+              Your session has expired or you are not logged in.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => router.push("/auth/login")} className="w-full hover:bg-green-600 hover:text-black">
+            <Button
+              onClick={() => router.push("/auth/login")}
+              className="w-full hover:bg-green-600 hover:text-black"
+            >
               Go to Login
             </Button>
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -2004,7 +2136,9 @@ export default function StudentDashboardPage() {
       <header className="bg-black shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <h1 className="text-xl font-semibold text-white">Candidate Dashboard</h1>
+            <h1 className="text-xl font-semibold text-white">
+              Candidate Dashboard
+            </h1>
 
             {/* Search Bar - RIGHT NEXT TO Candidate Dashboard text */}
             <div className="relative w-64">
@@ -2022,20 +2156,25 @@ export default function StudentDashboardPage() {
                   <div className="flex items-start">
                     <AlertCircle className="h-4 w-4 mr-2 text-gray-500 mt-0.5" />
                     <p className="text-sm">
-                      Found {searchResults.jobs.length} jobs and {searchResults.applications.length} applications
-                      matching "{globalSearch}"
+                      Found {searchResults.jobs.length} jobs and{" "}
+                      {searchResults.applications.length} applications matching
+                      "{globalSearch}"
                     </p>
                   </div>
 
                   {/* Jobs section */}
                   {searchResults.jobs.length > 0 && (
                     <div className="mt-2">
-                      <p className="text-xs font-medium text-gray-500 mb-1">Jobs</p>
+                      <p className="text-xs font-medium text-gray-500 mb-1">
+                        Jobs
+                      </p>
                       {searchResults.jobs.slice(0, 3).map((job) => (
                         <div
                           key={job._id}
                           className="px-2 py-1 hover:bg-gray-100 rounded cursor-pointer text-sm"
-                          onClick={() => handleSearchResultClick("job", job._id)}
+                          onClick={() =>
+                            handleSearchResultClick("job", job._id)
+                          }
                         >
                           <div className="flex items-center">
                             <Briefcase className="h-3 w-3 mr-2 text-blue-500" />
@@ -2059,17 +2198,22 @@ export default function StudentDashboardPage() {
                   {/* Applications section */}
                   {searchResults.applications.length > 0 && (
                     <div className="mt-2">
-                      <p className="text-xs font-medium text-gray-500 mb-1">Applications</p>
+                      <p className="text-xs font-medium text-gray-500 mb-1">
+                        Applications
+                      </p>
                       {searchResults.applications.slice(0, 3).map((app) => (
                         <div
                           key={app._id}
                           className="px-2 py-1 hover:bg-gray-100 rounded cursor-pointer text-sm"
-                          onClick={() => handleSearchResultClick("application", app._id)}
+                          onClick={() =>
+                            handleSearchResultClick("application", app._id)
+                          }
                         >
                           <div className="flex items-center">
                             <FileText className="h-3 w-3 mr-2 text-green-500" />
                             <span>
-                              {app.job?.jobTitle || "Unknown Job"} ({app.status})
+                              {app.job?.jobTitle || "Unknown Job"} ({app.status}
+                              )
                             </span>
                           </div>
                         </div>
@@ -2077,9 +2221,12 @@ export default function StudentDashboardPage() {
                       {searchResults.applications.length > 3 && (
                         <div
                           className="px-2 py-1 text-xs text-blue-600 hover:underline cursor-pointer"
-                          onClick={() => handleSearchResultClick("applications")}
+                          onClick={() =>
+                            handleSearchResultClick("applications")
+                          }
                         >
-                          View all {searchResults.applications.length} applications
+                          View all {searchResults.applications.length}{" "}
+                          applications
                         </div>
                       )}
                     </div>
@@ -2087,7 +2234,9 @@ export default function StudentDashboardPage() {
 
                   {/* Quick links section */}
                   <div className="mt-2 border-t pt-2">
-                    <p className="text-xs font-medium text-gray-500 mb-1">Quick Links</p>
+                    <p className="text-xs font-medium text-gray-500 mb-1">
+                      Quick Links
+                    </p>
                     <div className="grid grid-cols-2 gap-1">
                       <div
                         className="px-2 py-1 hover:bg-gray-100 rounded cursor-pointer text-sm"
@@ -2115,7 +2264,9 @@ export default function StudentDashboardPage() {
           </div>
 
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-white">Welcome, {getFullName(student)}</span>
+            <span className="text-sm text-white">
+              Welcome, {getFullName(student)}
+            </span>
             <Button
               variant="outline"
               size="sm"
@@ -2134,7 +2285,12 @@ export default function StudentDashboardPage() {
         {!student.profileCompleted && (
           <Card className="mb-8 border-yellow-300 bg-yellow-50">
             <CardContent className="p-4 flex items-center">
-              <svg className="h-6 w-6 text-yellow-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg
+                className="h-6 w-6 text-yellow-500 mr-3"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -2144,7 +2300,8 @@ export default function StudentDashboardPage() {
               </svg>
               <div>
                 <p className="text-sm font-medium text-yellow-800">
-                  Your profile is incomplete. Please complete your profile to access all features.
+                  Your profile is incomplete. Please complete your profile to
+                  access all features.
                 </p>
               </div>
               <Button
@@ -2161,8 +2318,14 @@ export default function StudentDashboardPage() {
 
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">Dashboard</h2>
-          <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+            />
             {isRefreshing ? "Refreshing..." : "Refresh Data"}
           </Button>
         </div>
@@ -2173,7 +2336,9 @@ export default function StudentDashboardPage() {
             <button
               onClick={() => handleTabChange("jobs")}
               className={`px-4 py-2 font-medium ${
-                activeTab === "jobs" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-500 hover:text-gray-700"
+                activeTab === "jobs"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               <Briefcase className="h-4 w-4 inline mr-2" />
@@ -2222,7 +2387,8 @@ export default function StudentDashboardPage() {
               <CardHeader>
                 <CardTitle>Latest Job Openings</CardTitle>
                 <CardDescription>
-                  Browse through the latest job opportunities that match your skills and experience
+                  Browse through the latest job opportunities that match your
+                  skills and experience
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -2291,7 +2457,9 @@ export default function StudentDashboardPage() {
                 ) : filteredJobs.length === 0 ? (
                   <div className="text-center py-12 border rounded-lg">
                     <Briefcase className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-1">No job openings found</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">
+                      No job openings found
+                    </h3>
                     <p className="text-gray-500">
                       {searchTerm || filterLocation || filterJobType
                         ? "Try adjusting your search filters"
@@ -2301,13 +2469,20 @@ export default function StudentDashboardPage() {
                 ) : (
                   <div className="space-y-4">
                     {currentJobs.map((job) => (
-                      <Card key={job._id} className="overflow-hidden hover:shadow-md transition-shadow">
+                      <Card
+                        key={job._id}
+                        className="overflow-hidden hover:shadow-md transition-shadow"
+                      >
                         <CardContent className="p-0">
                           <div className="p-6">
                             <div className="flex justify-between items-start">
                               <div>
-                                <h3 className="text-lg font-semibold mb-1">{job.jobTitle}</h3>
-                                <p className="text-gray-600 mb-2">{job.companyName}</p>
+                                <h3 className="text-lg font-semibold mb-1">
+                                  {job.jobTitle}
+                                </h3>
+                                <p className="text-gray-600 mb-2">
+                                  {job.companyName}
+                                </p>
                                 <div className="flex flex-wrap gap-2 mb-4">
                                   <div className="flex items-center text-sm text-gray-500">
                                     <MapPin className="h-4 w-4 mr-1" />
@@ -2323,22 +2498,34 @@ export default function StudentDashboardPage() {
                                   </div>
                                 </div>
                                 <div className="flex flex-wrap gap-2 mb-4">
-                                  {job.skills.slice(0, 3).map((skill, index) => (
-                                    <Badge key={index} variant="outline" className="bg-blue-50">
-                                      {skill}
-                                    </Badge>
-                                  ))}
+                                  {job.skills
+                                    .slice(0, 3)
+                                    .map((skill, index) => (
+                                      <Badge
+                                        key={index}
+                                        variant="outline"
+                                        className="bg-blue-50"
+                                      >
+                                        {skill}
+                                      </Badge>
+                                    ))}
                                   {job.skills.length > 3 && (
-                                    <Badge variant="outline" className="bg-gray-50">
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-gray-50"
+                                    >
                                       +{job.skills.length - 3} more
                                     </Badge>
                                   )}
                                 </div>
                               </div>
                               <div className="text-right">
-                                <Badge className="mb-2 bg-green-100 text-green-800">{job.daysLeft} days left</Badge>
+                                <Badge className="mb-2 bg-green-100 text-green-800">
+                                  {job.daysLeft} days left
+                                </Badge>
                                 <p className="text-xs text-gray-500">
-                                  Posted on {new Date(job.createdAt).toLocaleDateString()}
+                                  Posted on{" "}
+                                  {new Date(job.createdAt).toLocaleDateString()}
                                 </p>
                               </div>
                             </div>
@@ -2347,7 +2534,12 @@ export default function StudentDashboardPage() {
                                 {job.salaryRange || "Salary not disclosed"}
                               </p>
                               <div className="flex gap-2">
-                                <Button variant="outline" onClick={() => router.push(`/jobs/${job._id}`)}>
+                                <Button
+                                  variant="outline"
+                                  onClick={() =>
+                                    router.push(`/jobs/${job._id}`)
+                                  }
+                                >
                                   View Details
                                 </Button>
                                 {job.hasApplied ? (
@@ -2355,7 +2547,11 @@ export default function StudentDashboardPage() {
                                     Applied
                                   </Button>
                                 ) : (
-                                  <Button onClick={() => handleApplyToJob(job._id)}>Apply Now</Button>
+                                  <Button
+                                    onClick={() => handleApplyToJob(job._id)}
+                                  >
+                                    Apply Now
+                                  </Button>
                                 )}
                               </div>
                             </div>
@@ -2377,13 +2573,22 @@ export default function StudentDashboardPage() {
                           Previous
                         </Button>
 
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
+                        {Array.from(
+                          { length: totalPages },
+                          (_, i) => i + 1
+                        ).map((number) => (
                           <Button
                             key={number}
-                            variant={currentPage === number ? "default" : "outline"}
+                            variant={
+                              currentPage === number ? "default" : "outline"
+                            }
                             size="sm"
                             onClick={() => paginate(number)}
-                            className={`w-8 ${currentPage === number ? "bg-blue-600 text-white" : "hover:bg-gray-100"}`}
+                            className={`w-8 ${
+                              currentPage === number
+                                ? "bg-blue-600 text-white"
+                                : "hover:bg-gray-100"
+                            }`}
                           >
                             {number}
                           </Button>
@@ -2413,7 +2618,9 @@ export default function StudentDashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle>My Applications</CardTitle>
-                <CardDescription>Track the status of your job applications</CardDescription>
+                <CardDescription>
+                  Track the status of your job applications
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {/* Main Filters */}
@@ -2425,16 +2632,26 @@ export default function StudentDashboardPage() {
                         placeholder="Search by job title, company, or job ID..."
                         className="pl-10"
                         value={applicationSearchTerm}
-                        onChange={(e) => setApplicationSearchTerm(e.target.value)}
+                        onChange={(e) =>
+                          setApplicationSearchTerm(e.target.value)
+                        }
                       />
                     </div>
                     <Button
-                      variant={showRecentApplicationsOnly ? "default" : "outline"}
-                      onClick={() => setShowRecentApplicationsOnly(!showRecentApplicationsOnly)}
+                      variant={
+                        showRecentApplicationsOnly ? "default" : "outline"
+                      }
+                      onClick={() =>
+                        setShowRecentApplicationsOnly(
+                          !showRecentApplicationsOnly
+                        )
+                      }
                       className="whitespace-nowrap"
                     >
                       <Clock className="h-4 w-4 mr-2" />
-                      {showRecentApplicationsOnly ? "All Applications" : "Recent Applications"}
+                      {showRecentApplicationsOnly
+                        ? "All Applications"
+                        : "Recent Applications"}
                     </Button>
                     <div className="flex gap-4">
                       <div className="relative w-full md:w-40">
@@ -2443,7 +2660,9 @@ export default function StudentDashboardPage() {
                           placeholder="Location"
                           className="pl-10"
                           value={applicationFilterLocation}
-                          onChange={(e) => setApplicationFilterLocation(e.target.value)}
+                          onChange={(e) =>
+                            setApplicationFilterLocation(e.target.value)
+                          }
                         />
                       </div>
                       <div className="relative w-full md:w-40">
@@ -2451,7 +2670,9 @@ export default function StudentDashboardPage() {
                         <select
                           className="w-full h-10 pl-10 pr-4 rounded-md border border-input bg-background text-sm"
                           value={applicationFilterStatus}
-                          onChange={(e) => setApplicationFilterStatus(e.target.value)}
+                          onChange={(e) =>
+                            setApplicationFilterStatus(e.target.value)
+                          }
                         >
                           <option value="">Status</option>
                           <option value="applied">Applied</option>
@@ -2469,11 +2690,15 @@ export default function StudentDashboardPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                      onClick={() =>
+                        setShowAdvancedFilters(!showAdvancedFilters)
+                      }
                       className="text-blue-600"
                     >
                       <SlidersHorizontal className="h-4 w-4 mr-2" />
-                      {showAdvancedFilters ? "Hide Advanced Filters" : "Show Advanced Filters"}
+                      {showAdvancedFilters
+                        ? "Hide Advanced Filters"
+                        : "Show Advanced Filters"}
                     </Button>
 
                     {(applicationSearchTerm ||
@@ -2484,7 +2709,11 @@ export default function StudentDashboardPage() {
                       applicationFilterJobId ||
                       applicationDateFrom ||
                       applicationDateTo) && (
-                      <Button variant="outline" size="sm" onClick={resetApplicationFilters}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={resetApplicationFilters}
+                      >
                         Clear Filters
                       </Button>
                     )}
@@ -2494,7 +2723,10 @@ export default function StudentDashboardPage() {
                   {showAdvancedFilters && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg border">
                       <div>
-                        <Label htmlFor="job-title" className="text-sm font-medium mb-1 block">
+                        <Label
+                          htmlFor="job-title"
+                          className="text-sm font-medium mb-1 block"
+                        >
                           Job Title
                         </Label>
                         <div className="relative">
@@ -2504,13 +2736,18 @@ export default function StudentDashboardPage() {
                             placeholder="Filter by job title"
                             className="pl-10"
                             value={applicationFilterJobTitle}
-                            onChange={(e) => setApplicationFilterJobTitle(e.target.value)}
+                            onChange={(e) =>
+                              setApplicationFilterJobTitle(e.target.value)
+                            }
                           />
                         </div>
                       </div>
 
                       <div>
-                        <Label htmlFor="company" className="text-sm font-medium mb-1 block">
+                        <Label
+                          htmlFor="company"
+                          className="text-sm font-medium mb-1 block"
+                        >
                           Company
                         </Label>
                         <div className="relative">
@@ -2520,13 +2757,18 @@ export default function StudentDashboardPage() {
                             placeholder="Filter by company"
                             className="pl-10"
                             value={applicationFilterCompany}
-                            onChange={(e) => setApplicationFilterCompany(e.target.value)}
+                            onChange={(e) =>
+                              setApplicationFilterCompany(e.target.value)
+                            }
                           />
                         </div>
                       </div>
 
                       <div>
-                        <Label htmlFor="job-id" className="text-sm font-medium mb-1 block">
+                        <Label
+                          htmlFor="job-id"
+                          className="text-sm font-medium mb-1 block"
+                        >
                           Job ID
                         </Label>
                         <div className="relative">
@@ -2536,13 +2778,18 @@ export default function StudentDashboardPage() {
                             placeholder="Filter by job ID"
                             className="pl-10"
                             value={applicationFilterJobId}
-                            onChange={(e) => setApplicationFilterJobId(e.target.value)}
+                            onChange={(e) =>
+                              setApplicationFilterJobId(e.target.value)
+                            }
                           />
                         </div>
                       </div>
 
                       <div>
-                        <Label htmlFor="date-from" className="text-sm font-medium mb-1 block">
+                        <Label
+                          htmlFor="date-from"
+                          className="text-sm font-medium mb-1 block"
+                        >
                           Applied From
                         </Label>
                         <div className="relative">
@@ -2552,13 +2799,18 @@ export default function StudentDashboardPage() {
                             type="date"
                             className="pl-10"
                             value={applicationDateFrom}
-                            onChange={(e) => setApplicationDateFrom(e.target.value)}
+                            onChange={(e) =>
+                              setApplicationDateFrom(e.target.value)
+                            }
                           />
                         </div>
                       </div>
 
                       <div>
-                        <Label htmlFor="date-to" className="text-sm font-medium mb-1 block">
+                        <Label
+                          htmlFor="date-to"
+                          className="text-sm font-medium mb-1 block"
+                        >
                           Applied To
                         </Label>
                         <div className="relative">
@@ -2568,7 +2820,9 @@ export default function StudentDashboardPage() {
                             type="date"
                             className="pl-10"
                             value={applicationDateTo}
-                            onChange={(e) => setApplicationDateTo(e.target.value)}
+                            onChange={(e) =>
+                              setApplicationDateTo(e.target.value)
+                            }
                           />
                         </div>
                       </div>
@@ -2583,15 +2837,25 @@ export default function StudentDashboardPage() {
                 ) : applications.length === 0 ? (
                   <div className="text-center py-12 border rounded-lg">
                     <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-1">No applications yet</h3>
-                    <p className="text-gray-500 mb-4">You haven't applied to any jobs yet</p>
-                    <Button onClick={() => handleTabChange("jobs")}>Browse Jobs</Button>
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">
+                      No applications yet
+                    </h3>
+                    <p className="text-gray-500 mb-4">
+                      You haven't applied to any jobs yet
+                    </p>
+                    <Button onClick={() => handleTabChange("jobs")}>
+                      Browse Jobs
+                    </Button>
                   </div>
                 ) : filteredApplications.length === 0 ? (
                   <div className="text-center py-12 border rounded-lg">
                     <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-1">No matching applications</h3>
-                    <p className="text-gray-500 mb-4">No applications match your current filters</p>
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">
+                      No matching applications
+                    </h3>
+                    <p className="text-gray-500 mb-4">
+                      No applications match your current filters
+                    </p>
                     <Button variant="outline" onClick={resetApplicationFilters}>
                       Clear Filters
                     </Button>
@@ -2601,10 +2865,13 @@ export default function StudentDashboardPage() {
                     {filterRecentApplications(filteredApplications)
                       .slice(
                         (currentApplicationPage - 1) * applicationsPerPage,
-                        currentApplicationPage * applicationsPerPage,
+                        currentApplicationPage * applicationsPerPage
                       )
                       .map((application) => (
-                        <Card key={application._id} className="overflow-hidden hover:shadow-md transition-shadow">
+                        <Card
+                          key={application._id}
+                          className="overflow-hidden hover:shadow-md transition-shadow"
+                        >
                           <CardContent className="p-6">
                             <div className="flex justify-between items-start">
                               <div>
@@ -2612,11 +2879,13 @@ export default function StudentDashboardPage() {
                                   {application.job?.jobTitle || "Unknown Job"}
                                 </h3>
                                 <p className="text-gray-600 mb-2">
-                                  {application.job?.companyName || "Unknown Company"}
+                                  {application.job?.companyName ||
+                                    "Unknown Company"}
                                 </p>
                                 <div className="flex items-center text-sm text-gray-500 mb-2">
                                   <MapPin className="h-4 w-4 mr-1" />
-                                  {application.job?.jobLocation || "Unknown Location"}
+                                  {application.job?.jobLocation ||
+                                    "Unknown Location"}
                                 </div>
                                 <div className="text-xs text-gray-500">
                                   Job ID: {application.jobId || application._id}
@@ -2625,14 +2894,21 @@ export default function StudentDashboardPage() {
                               <div className="text-right">
                                 {getStatusBadge(application.status)}
                                 <p className="text-xs text-gray-500 mt-1">
-                                  Applied on {new Date(application.appliedDate).toLocaleDateString()}
+                                  Applied on{" "}
+                                  {new Date(
+                                    application.appliedDate
+                                  ).toLocaleDateString()}
                                 </p>
                               </div>
                             </div>
                             <div className="flex justify-end mt-4">
                               <Button
                                 variant="outline"
-                                onClick={() => router.push(`/student/applications/${application._id}`)}
+                                onClick={() =>
+                                  router.push(
+                                    `/student/applications/${application._id}`
+                                  )
+                                }
                               >
                                 View Application
                                 <ChevronRight className="ml-2 h-4 w-4" />
@@ -2648,7 +2924,11 @@ export default function StudentDashboardPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setCurrentApplicationPage(currentApplicationPage - 1)}
+                          onClick={() =>
+                            setCurrentApplicationPage(
+                              currentApplicationPage - 1
+                            )
+                          }
                           disabled={currentApplicationPage === 1}
                         >
                           <ChevronLeft className="h-4 w-4" />
@@ -2656,16 +2936,26 @@ export default function StudentDashboardPage() {
                         </Button>
 
                         {Array.from(
-                          { length: Math.ceil(filteredApplications.length / applicationsPerPage) },
-                          (_, i) => i + 1,
+                          {
+                            length: Math.ceil(
+                              filteredApplications.length / applicationsPerPage
+                            ),
+                          },
+                          (_, i) => i + 1
                         ).map((number) => (
                           <Button
                             key={number}
-                            variant={currentApplicationPage === number ? "default" : "outline"}
+                            variant={
+                              currentApplicationPage === number
+                                ? "default"
+                                : "outline"
+                            }
                             size="sm"
                             onClick={() => setCurrentApplicationPage(number)}
                             className={`w-8 ${
-                              currentApplicationPage === number ? "bg-blue-600 text-white" : "hover:bg-gray-100"
+                              currentApplicationPage === number
+                                ? "bg-blue-600 text-white"
+                                : "hover:bg-gray-100"
                             }`}
                           >
                             {number}
@@ -2675,9 +2965,16 @@ export default function StudentDashboardPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setCurrentApplicationPage(currentApplicationPage + 1)}
+                          onClick={() =>
+                            setCurrentApplicationPage(
+                              currentApplicationPage + 1
+                            )
+                          }
                           disabled={
-                            currentApplicationPage === Math.ceil(filteredApplications.length / applicationsPerPage)
+                            currentApplicationPage ===
+                            Math.ceil(
+                              filteredApplications.length / applicationsPerPage
+                            )
                           }
                         >
                           Next
@@ -2698,7 +2995,9 @@ export default function StudentDashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle>My Profile</CardTitle>
-                <CardDescription>View and manage your profile information</CardDescription>
+                <CardDescription>
+                  View and manage your profile information
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col md:flex-row gap-8">
@@ -2766,8 +3065,12 @@ export default function StudentDashboardPage() {
                       )}
                     </div>
 
-                    <h3 className="text-xl font-semibold text-center">{getFullName(student)}</h3>
-                    <p className="text-gray-500 text-center mb-4">{student.email}</p>
+                    <h3 className="text-xl font-semibold text-center">
+                      {getFullName(student)}
+                    </h3>
+                    <p className="text-gray-500 text-center mb-4">
+                      {student.email}
+                    </p>
                     <Button
                       variant="outline"
                       className="w-full mb-2"
@@ -2778,7 +3081,9 @@ export default function StudentDashboardPage() {
                     {(student.documents?.resume?.url || student.resumeUrl) && (
                       <Button variant="outline" className="w-full mb-2" asChild>
                         <a
-                          href={student.documents?.resume?.url || student.resumeUrl}
+                          href={
+                            student.documents?.resume?.url || student.resumeUrl
+                          }
                           target="_blank"
                           rel="noopener noreferrer"
                         >
@@ -2809,7 +3114,9 @@ export default function StudentDashboardPage() {
                   <div className="md:w-2/3" ref={pdfContentRef}>
                     <div className="space-y-6">
                       <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-1">Personal Information</h4>
+                        <h4 className="text-sm font-medium text-gray-500 mb-1">
+                          Personal Information
+                        </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <p className="text-sm text-gray-500">Full Name</p>
@@ -2820,7 +3127,9 @@ export default function StudentDashboardPage() {
                             <p>{student.gender || "Not provided"}</p>
                           </div>
                           <div>
-                            <p className="text-sm text-gray-500">Date of Birth</p>
+                            <p className="text-sm text-gray-500">
+                              Date of Birth
+                            </p>
                             <p>{formatDate(getDateOfBirth(student))}</p>
                           </div>
                           {student.pincode && (
@@ -2835,7 +3144,9 @@ export default function StudentDashboardPage() {
                       <Separator />
 
                       <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-1">Contact Information</h4>
+                        <h4 className="text-sm font-medium text-gray-500 mb-1">
+                          Contact Information
+                        </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="flex items-start gap-2">
                             <Mail className="h-4 w-4 mt-0.5 text-gray-500" />
@@ -2855,7 +3166,9 @@ export default function StudentDashboardPage() {
                             <div className="flex items-start gap-2">
                               <Phone className="h-4 w-4 mt-0.5 text-gray-500" />
                               <div>
-                                <p className="text-sm text-gray-500">Alternative Phone</p>
+                                <p className="text-sm text-gray-500">
+                                  Alternative Phone
+                                </p>
                                 <p>{student.alternativePhone}</p>
                               </div>
                             </div>
@@ -2863,7 +3176,9 @@ export default function StudentDashboardPage() {
                           <div className="flex items-start gap-2">
                             <MapPin className="h-4 w-4 mt-0.5 text-gray-500" />
                             <div>
-                              <p className="text-sm text-gray-500">Current Location</p>
+                              <p className="text-sm text-gray-500">
+                                Current Location
+                              </p>
                               <p>
                                 {student.currentCity && student.currentState
                                   ? `${student.currentCity}, ${student.currentState}`
@@ -2871,61 +3186,80 @@ export default function StudentDashboardPage() {
                               </p>
                             </div>
                           </div>
-                          {(student.onlinePresence?.linkedin || student.linkedIn) && (
+                          {(student.onlinePresence?.linkedin ||
+                            student.linkedIn) && (
                             <div className="flex items-start gap-2">
                               <Linkedin className="h-4 w-4 mt-0.5 text-gray-500" />
                               <div>
-                                <p className="text-sm text-gray-500">LinkedIn</p>
-                                <a
-                                  href={formatUrlOriginal(student.onlinePresence?.linkedin || student.linkedIn)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:underline"
-                                >
-                                  {(student.onlinePresence?.linkedin || student.linkedIn).replace(
-                                    /^https?:\/\/(www\.)?/,
-                                    "",
-                                  )}
-                                </a>
-                              </div>
-                            </div>
-                          )}
-                          {(student.onlinePresence?.portfolio || student.portfolioLink) && (
-                            <div className="flex items-start gap-2">
-                              <Globe className="h-4 w-4 mt-0.5 text-gray-500" />
-                              <div>
-                                <p className="text-sm text-gray-500">Portfolio</p>
-                                <a
-                                  href={formatUrlOriginal(student.onlinePresence?.portfolio || student.portfolioLink)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:underline"
-                                >
-                                  {(student.onlinePresence?.portfolio || student.portfolioLink).replace(
-                                    /^https?:\/\/(www\.)?/,
-                                    "",
-                                  )}
-                                </a>
-                              </div>
-                            </div>
-                          )}
-                          {(student.onlinePresence?.socialMedia || student.socialMediaLink) && (
-                            <div className="flex items-start gap-2">
-                              <Globe className="h-4 w-4 mt-0.5 text-gray-500" />
-                              <div>
-                                <p className="text-sm text-gray-500">Social Media</p>
+                                <p className="text-sm text-gray-500">
+                                  LinkedIn
+                                </p>
                                 <a
                                   href={formatUrlOriginal(
-                                    student.onlinePresence?.socialMedia || student.socialMediaLink,
+                                    student.onlinePresence?.linkedin ||
+                                      student.linkedIn
                                   )}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-blue-600 hover:underline"
                                 >
-                                  {(student.onlinePresence?.socialMedia || student.socialMediaLink).replace(
-                                    /^https?:\/\/(www\.)?/,
-                                    "",
+                                  {(
+                                    student.onlinePresence?.linkedin ||
+                                    student.linkedIn ||
+                                    ""
+                                  ).replace(/^https?:\/\/(www\.)?/, "")}
+                                </a>
+                              </div>
+                            </div>
+                          )}
+                          {(student.onlinePresence?.portfolio ||
+                            student.portfolioLink) && (
+                            <div className="flex items-start gap-2">
+                              <Globe className="h-4 w-4 mt-0.5 text-gray-500" />
+                              <div>
+                                <p className="text-sm text-gray-500">
+                                  Portfolio
+                                </p>
+                                <a
+                                  href={formatUrlOriginal(
+                                    student.onlinePresence?.portfolio ||
+                                      student.portfolioLink
                                   )}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline"
+                                >
+                                  {(
+                                    student.onlinePresence?.portfolio ||
+                                    student.portfolioLink ||
+                                    ""
+                                  ).replace(/^https?:\/\/(www\.)?/, "")}
+                                </a>
+                              </div>
+                            </div>
+                          )}
+                          {(student.onlinePresence?.socialMedia ||
+                            student.socialMediaLink) && (
+                            <div className="flex items-start gap-2">
+                              <Globe className="h-4 w-4 mt-0.5 text-gray-500" />
+                              <div>
+                                <p className="text-sm text-gray-500">
+                                  Social Media
+                                </p>
+                                <a
+                                  href={formatUrlOriginal(
+                                    student.onlinePresence?.socialMedia ||
+                                      student.socialMediaLink
+                                  )}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline"
+                                >
+                                  {(
+                                    student.onlinePresence?.socialMedia ||
+                                    student.socialMediaLink ||
+                                    ""
+                                  ).replace(/^https?:\/\/(www\.)?/, "")}
                                 </a>
                               </div>
                             </div>
@@ -2936,7 +3270,9 @@ export default function StudentDashboardPage() {
                       <Separator />
 
                       <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-1">Profile Summary</h4>
+                        <h4 className="text-sm font-medium text-gray-500 mb-1">
+                          Profile Summary
+                        </h4>
                         <p className="whitespace-pre-line">
                           {student.profileOutline ||
                             "No profile summary provided. Add a summary to tell employers about yourself."}
@@ -2946,7 +3282,9 @@ export default function StudentDashboardPage() {
                       <Separator />
 
                       <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-1">Skills</h4>
+                        <h4 className="text-sm font-medium text-gray-500 mb-1">
+                          Skills
+                        </h4>
                         {student.skills && student.skills.length > 0 ? (
                           <div className="flex flex-wrap gap-2">
                             {student.skills.map((skill, index) => (
@@ -2969,18 +3307,26 @@ export default function StudentDashboardPage() {
                         </h4>
                         <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="bg-blue-50 p-3 rounded-md flex flex-col items-center">
-                            <span className="text-sm text-gray-500">Total Experience</span>
-                            <span className="text-lg font-semibold text-blue-700">{getTotalExperience(student)}</span>
+                            <span className="text-sm text-gray-500">
+                              Total Experience
+                            </span>
+                            <span className="text-lg font-semibold text-blue-700">
+                              {getTotalExperience(student)}
+                            </span>
                           </div>
 
                           {(student.currentSalary ||
                             (getExperienceArray(student).length > 0 &&
-                              getExperienceArray(student)[0]?.currentSalary)) && (
+                              getExperienceArray(student)[0]
+                                ?.currentSalary)) && (
                             <div className="bg-green-50 p-3 rounded-md flex flex-col items-center">
-                              <span className="text-sm text-gray-500">Current Salary</span>
+                              <span className="text-sm text-gray-500">
+                                Current Salary
+                              </span>
                               <span className="text-lg font-semibold text-green-700">
                                 {student.currentSalary ||
-                                  getExperienceArray(student)[0]?.currentSalary ||
+                                  getExperienceArray(student)[0]
+                                    ?.currentSalary ||
                                   "Not specified"}
                               </span>
                             </div>
@@ -2988,12 +3334,16 @@ export default function StudentDashboardPage() {
 
                           {(student.expectedSalary ||
                             (getExperienceArray(student).length > 0 &&
-                              getExperienceArray(student)[0]?.expectedSalary)) && (
+                              getExperienceArray(student)[0]
+                                ?.expectedSalary)) && (
                             <div className="bg-purple-50 p-3 rounded-md flex flex-col items-center">
-                              <span className="text-sm text-gray-500">Expected Salary</span>
+                              <span className="text-sm text-gray-500">
+                                Expected Salary
+                              </span>
                               <span className="text-lg font-semibold text-purple-700">
                                 {student.expectedSalary ||
-                                  getExperienceArray(student)[0]?.expectedSalary ||
+                                  getExperienceArray(student)[0]
+                                    ?.expectedSalary ||
                                   "Not specified"}
                               </span>
                             </div>
@@ -3001,12 +3351,16 @@ export default function StudentDashboardPage() {
 
                           {(student.noticePeriod ||
                             (getExperienceArray(student).length > 0 &&
-                              getExperienceArray(student)[0]?.noticePeriod)) && (
+                              getExperienceArray(student)[0]
+                                ?.noticePeriod)) && (
                             <div className="bg-amber-50 p-3 rounded-md flex flex-col items-center">
-                              <span className="text-sm text-gray-500">Notice Period</span>
+                              <span className="text-sm text-gray-500">
+                                Notice Period
+                              </span>
                               <span className="text-lg font-semibold text-amber-700">
                                 {student.noticePeriod ||
-                                  getExperienceArray(student)[0]?.noticePeriod ||
+                                  getExperienceArray(student)[0]
+                                    ?.noticePeriod ||
                                   "Not specified"}
                               </span>
                             </div>
@@ -3016,7 +3370,8 @@ export default function StudentDashboardPage() {
 
                       {/* Shift Preference */}
                       {(student.shiftPreference ||
-                        (student.settings?.shiftPreference && student.settings.shiftPreference !== "flexible")) && (
+                        (student.settings?.shiftPreference &&
+                          student.settings.shiftPreference !== "flexible")) && (
                         <>
                           <Separator />
                           <div>
@@ -3027,13 +3382,22 @@ export default function StudentDashboardPage() {
                             <div className="flex flex-wrap gap-2 mt-2">
                               {Array.isArray(student.shiftPreference) ? (
                                 student.shiftPreference.map((shift, index) => (
-                                  <Badge key={index} variant="outline" className="bg-blue-50 text-blue-800">
+                                  <Badge
+                                    key={index}
+                                    variant="outline"
+                                    className="bg-blue-50 text-blue-800"
+                                  >
                                     {shift}
                                   </Badge>
                                 ))
                               ) : (
-                                <Badge variant="outline" className="bg-blue-50 text-blue-800">
-                                  {student.shiftPreference || student.settings?.shiftPreference || "Flexible"}
+                                <Badge
+                                  variant="outline"
+                                  className="bg-blue-50 text-blue-800"
+                                >
+                                  {student.shiftPreference ||
+                                    student.settings?.shiftPreference ||
+                                    "Flexible"}
                                 </Badge>
                               )}
                             </div>
@@ -3054,7 +3418,11 @@ export default function StudentDashboardPage() {
                               {getPreferredCities(student)
                                 .slice(0, 5)
                                 .map((city, index) => (
-                                  <Badge key={index} variant="outline" className="bg-green-50 text-green-800">
+                                  <Badge
+                                    key={index}
+                                    variant="outline"
+                                    className="bg-green-50 text-green-800"
+                                  >
                                     {city}
                                   </Badge>
                                 ))}
@@ -3073,33 +3441,49 @@ export default function StudentDashboardPage() {
                             </h4>
                             <div className="space-y-4">
                               {student.education.map((edu, index) => (
-                                <div key={index} className="border rounded-md p-3">
+                                <div
+                                  key={index}
+                                  className="border rounded-md p-3"
+                                >
                                   <div className="flex justify-between">
-                                    <h5 className="font-medium">Degree/Course: {edu.degree}</h5>
+                                    <h5 className="font-medium">
+                                      Degree/Course: {edu.degree}
+                                    </h5>
                                     <Badge variant="outline">
-                                      %age/CGPA: {edu.percentage || edu.grade || "Not specified"}
+                                      %age/CGPA:{" "}
+                                      {edu.percentage ||
+                                        edu.grade ||
+                                        "Not specified"}
                                     </Badge>
                                   </div>
                                   <p className="text-gray-600">
-                                    School/College/Univ.: {edu.institution || edu.school || "Not specified"}
+                                    School/College/Univ.:{" "}
+                                    {edu.institution ||
+                                      edu.school ||
+                                      "Not specified"}
                                   </p>
                                   <div className="flex justify-between mt-1">
                                     <p className="text-sm text-gray-500">
                                       <Calendar className="h-3 w-3 inline mr-1" />
-                                      {edu.startingYear || "Not provided"} - {edu.endingYear || "Present"}
+                                      {edu.startingYear || "Not provided"} -{" "}
+                                      {edu.endingYear || "Present"}
                                     </p>
                                   </div>
                                   {(edu.level || edu.mode) && (
                                     <div className="mt-2 grid grid-cols-2 gap-2 text-sm justify-between">
                                       {edu.level && (
                                         <div>
-                                          <span className="text-gray-500">Level: </span>
+                                          <span className="text-gray-500">
+                                            Level:{" "}
+                                          </span>
                                           {edu.level}
                                         </div>
                                       )}
                                       {edu.mode && (
                                         <div className="ml-auto">
-                                          <span className="text-gray-500">Mode: </span>
+                                          <span className="text-gray-500">
+                                            Mode:{" "}
+                                          </span>
                                           {edu.mode}
                                         </div>
                                       )}
@@ -3119,22 +3503,40 @@ export default function StudentDashboardPage() {
                             <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
                               <Briefcase className="h-4 w-4 mr-2" />
                               Work Experience
-                              <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-800">
+                              <Badge
+                                variant="outline"
+                                className="ml-2 bg-blue-50 text-blue-800"
+                              >
                                 Total: {getTotalExperience(student)}
                               </Badge>
                             </h4>
                             <div className="space-y-4">
                               {getExperienceArray(student).map((exp, index) => (
-                                <div key={index} className="border rounded-md p-3">
+                                <div
+                                  key={index}
+                                  className="border rounded-md p-3"
+                                >
                                   <div className="flex justify-between">
-                                    <h5 className="font-medium">Title: {exp.title}</h5>
+                                    <h5 className="font-medium">
+                                      Title: {exp.title}
+                                    </h5>
                                     {exp.currentlyWorking && (
-                                      <Badge className="bg-green-100 text-green-800">Current</Badge>
+                                      <Badge className="bg-green-100 text-green-800">
+                                        Current
+                                      </Badge>
                                     )}
                                   </div>
-                                  <p className="text-gray-600">Company: {exp.companyName}</p>
-                                  {exp.department && <p>Department: {exp.department}</p>}
-                                  {exp.location && <p className="text-sm text-gray-500">{exp.location}</p>}
+                                  <p className="text-gray-600">
+                                    Company: {exp.companyName}
+                                  </p>
+                                  {exp.department && (
+                                    <p>Department: {exp.department}</p>
+                                  )}
+                                  {exp.location && (
+                                    <p className="text-sm text-gray-500">
+                                      {exp.location}
+                                    </p>
+                                  )}
                                   {exp.tenure && (
                                     <p className="text-sm text-gray-500">
                                       <Timer className="h-3 w-3 inline mr-1" />
@@ -3143,7 +3545,8 @@ export default function StudentDashboardPage() {
                                   )}
                                   {(exp.professionalSummary || exp.summary) && (
                                     <p className="text-sm mt-2 whitespace-pre-line">
-                                      <strong>Professional Summary:</strong> {exp.professionalSummary || exp.summary}
+                                      <strong>Professional Summary:</strong>{" "}
+                                      {exp.professionalSummary || exp.summary}
                                     </p>
                                   )}
                                   <div className="flex flex-wrap gap-4 mt-2 text-sm">
@@ -3184,11 +3587,16 @@ export default function StudentDashboardPage() {
                                 Certifications
                               </h4>
                               <div className="space-y-2">
-                                {getCertificationNames(student).map((cert, index) => (
-                                  <div key={index} className="border rounded-md p-3">
-                                    <h5 className="font-medium">{cert}</h5>
-                                  </div>
-                                ))}
+                                {getCertificationNames(student).map(
+                                  (cert, index) => (
+                                    <div
+                                      key={index}
+                                      className="border rounded-md p-3"
+                                    >
+                                      <h5 className="font-medium">{cert}</h5>
+                                    </div>
+                                  )
+                                )}
                               </div>
                             </div>
                           </>
@@ -3203,12 +3611,19 @@ export default function StudentDashboardPage() {
                               Available Assets
                             </h4>
                             <div className="space-y-2">
-                              {getAvailableAssets(student).map((asset, index) => (
-                                <div key={index} className="flex items-center">
-                                  <span className="mr-2 text-green-600">✓</span>
-                                  <span>{asset.replace(/_/g, " ")}</span>
-                                </div>
-                              ))}
+                              {getAvailableAssets(student).map(
+                                (asset, index) => (
+                                  <div
+                                    key={index}
+                                    className="flex items-center"
+                                  >
+                                    <span className="mr-2 text-green-600">
+                                      ✓
+                                    </span>
+                                    <span>{asset.replace(/_/g, " ")}</span>
+                                  </div>
+                                )
+                              )}
                             </div>
                           </div>
                         </>
@@ -3223,15 +3638,22 @@ export default function StudentDashboardPage() {
                               Identity Documents
                             </h4>
                             <div className="space-y-2">
-                              {getIdentityDocuments(student).map((doc, index) => (
-                                <div key={index} className="flex justify-between items-center">
-                                  <div className="flex items-center">
-                                    <FileCheck className="h-4 w-4 mr-2 text-gray-500" />
-                                    <span>{doc.replace(/_/g, " ")}</span>
+                              {getIdentityDocuments(student).map(
+                                (doc, index) => (
+                                  <div
+                                    key={index}
+                                    className="flex justify-between items-center"
+                                  >
+                                    <div className="flex items-center">
+                                      <FileCheck className="h-4 w-4 mr-2 text-gray-500" />
+                                      <span>{doc.replace(/_/g, " ")}</span>
+                                    </div>
+                                    <Badge className="bg-green-100 text-green-800">
+                                      Verified
+                                    </Badge>
                                   </div>
-                                  <Badge className="bg-green-100 text-green-800">Verified</Badge>
-                                </div>
-                              ))}
+                                )
+                              )}
                             </div>
                           </div>
                         </>
@@ -3246,7 +3668,9 @@ export default function StudentDashboardPage() {
                               Cover Letter
                             </h4>
                             <div className="bg-gray-50 p-3 rounded-md">
-                              <p className="whitespace-pre-line">{student.coverLetter}</p>
+                              <p className="whitespace-pre-line">
+                                {student.coverLetter}
+                              </p>
                             </div>
                           </div>
                         </>
@@ -3260,7 +3684,9 @@ export default function StudentDashboardPage() {
                               <Info className="h-4 w-4 mr-2" />
                               Additional Information
                             </h4>
-                            <p className="whitespace-pre-line">{student.additionalInfo}</p>
+                            <p className="whitespace-pre-line">
+                              {student.additionalInfo}
+                            </p>
                           </div>
                         </>
                       )}
@@ -3358,17 +3784,24 @@ export default function StudentDashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Settings</CardTitle>
-                <CardDescription>Manage your account settings and preferences</CardDescription>
+                <CardDescription>
+                  Manage your account settings and preferences
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
                   {/* Email Settings */}
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-3">Email Settings</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-3">
+                      Email Settings
+                    </h4>
                     <div className="space-y-4">
                       {/* Primary Email */}
                       <div>
-                        <Label htmlFor="primary-email" className="text-sm font-medium">
+                        <Label
+                          htmlFor="primary-email"
+                          className="text-sm font-medium"
+                        >
                           Primary Email
                         </Label>
                         <div className="flex gap-2 mt-1">
@@ -3381,28 +3814,45 @@ export default function StudentDashboardPage() {
                           />
                           <Button
                             onClick={handleSavePrimaryEmail}
-                            disabled={isUpdatingPrimaryEmail || !primaryEmail || primaryEmail === student?.email}
+                            disabled={
+                              isUpdatingPrimaryEmail ||
+                              !primaryEmail ||
+                              primaryEmail === student?.email
+                            }
                           >
                             {isUpdatingPrimaryEmail ? "Updating..." : "Update"}
                           </Button>
                         </div>
-                        {primaryEmailError && <p className="text-sm text-red-600 mt-1">{primaryEmailError}</p>}
+                        {primaryEmailError && (
+                          <p className="text-sm text-red-600 mt-1">
+                            {primaryEmailError}
+                          </p>
+                        )}
                       </div>
 
                       {/* Alternative Email */}
                       <div>
-                        <Label htmlFor="alternative-email" className="text-sm font-medium">
+                        <Label
+                          htmlFor="alternative-email"
+                          className="text-sm font-medium"
+                        >
                           Alternative Email
                         </Label>
                         {currentAlternativeEmail ? (
                           <div className="flex items-center gap-2 mt-1">
-                            <Input value={currentAlternativeEmail} disabled className="flex-1" />
+                            <Input
+                              value={currentAlternativeEmail}
+                              disabled
+                              className="flex-1"
+                            />
                             <Button
                               variant="outline"
                               onClick={handleRemoveAlternativeEmail}
                               disabled={isRemovingAlternativeEmail}
                             >
-                              {isRemovingAlternativeEmail ? "Removing..." : "Remove"}
+                              {isRemovingAlternativeEmail
+                                ? "Removing..."
+                                : "Remove"}
                             </Button>
                           </div>
                         ) : (
@@ -3411,19 +3861,29 @@ export default function StudentDashboardPage() {
                               id="alternative-email"
                               type="email"
                               value={alternativeEmail}
-                              onChange={(e) => setAlternativeEmail(e.target.value)}
+                              onChange={(e) =>
+                                setAlternativeEmail(e.target.value)
+                              }
                               placeholder="Enter alternative email"
                             />
                             <Button
                               onClick={handleSaveAlternativeEmail}
-                              disabled={isUpdatingAlternativeEmail || !alternativeEmail}
+                              disabled={
+                                isUpdatingAlternativeEmail || !alternativeEmail
+                              }
                             >
                               {isUpdatingAlternativeEmail ? "Adding..." : "Add"}
                             </Button>
                           </div>
                         )}
-                        {alternativeEmailError && <p className="text-sm text-red-600 mt-1">{alternativeEmailError}</p>}
-                        <p className="text-xs text-gray-500 mt-1">You can use this email to sign in to your account</p>
+                        {alternativeEmailError && (
+                          <p className="text-sm text-red-600 mt-1">
+                            {alternativeEmailError}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-1">
+                          You can use this email to sign in to your account
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -3432,18 +3892,32 @@ export default function StudentDashboardPage() {
 
                   {/* Profile Settings */}
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-3">Profile Settings</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-3">
+                      Profile Settings
+                    </h4>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <Label className="text-sm font-medium">Profile Visibility</Label>
-                          <p className="text-xs text-gray-500">Make your profile visible to employers</p>
+                          <Label className="text-sm font-medium">
+                            Profile Visibility
+                          </Label>
+                          <p className="text-xs text-gray-500">
+                            Make your profile visible to employers
+                          </p>
                         </div>
                         <input
                           type="checkbox"
                           checked={settings?.profileVisibility || false}
                           onChange={(e) =>
                             setSettings((prev) => ({
+                              notifications: {
+                                email: false,
+                                jobRecommendations: false,
+                                applicationUpdates: false,
+                              },
+                              preferredJobTypes: [],
+                              preferredLocations: [],
+                              shiftPreference: "flexible",
                               ...prev,
                               profileVisibility: e.target.checked,
                             }))
@@ -3458,20 +3932,32 @@ export default function StudentDashboardPage() {
 
                   {/* Notification Settings */}
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-3">Notification Settings</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-3">
+                      Notification Settings
+                    </h4>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <Label className="text-sm font-medium">Email Notifications</Label>
-                          <p className="text-xs text-gray-500">Receive notifications via email</p>
+                          <Label className="text-sm font-medium">
+                            Email Notifications
+                          </Label>
+                          <p className="text-xs text-gray-500">
+                            Receive notifications via email
+                          </p>
                         </div>
                         <input
                           type="checkbox"
                           checked={settings?.notifications?.email || false}
                           onChange={(e) =>
                             setSettings((prev) => ({
+                              profileVisibility: false,
+                              preferredJobTypes: [],
+                              preferredLocations: [],
+                              shiftPreference: "flexible",
                               ...prev,
                               notifications: {
+                                jobRecommendations: false,
+                                applicationUpdates: false,
                                 ...prev?.notifications,
                                 email: e.target.checked,
                               },
@@ -3482,17 +3968,30 @@ export default function StudentDashboardPage() {
                       </div>
                       <div className="flex items-center justify-between">
                         <div>
-                          <Label className="text-sm font-medium">Job Recommendations</Label>
-                          <p className="text-xs text-gray-500">Get personalized job recommendations</p>
+                          <Label className="text-sm font-medium">
+                            Job Recommendations
+                          </Label>
+                          <p className="text-xs text-gray-500">
+                            Get personalized job recommendations
+                          </p>
                         </div>
                         <input
                           type="checkbox"
-                          checked={settings?.notifications?.jobRecommendations || false}
+                          checked={
+                            settings?.notifications?.jobRecommendations || false
+                          }
                           onChange={(e) =>
                             setSettings((prev) => ({
+                              profileVisibility: false,
+                              preferredJobTypes: [],
+                              preferredLocations: [],
+                              shiftPreference: "flexible",
                               ...prev,
                               notifications: {
-                                ...prev?.notifications,
+                                email: prev?.notifications?.email || false,
+                                applicationUpdates:
+                                  prev?.notifications?.applicationUpdates ||
+                                  false,
                                 jobRecommendations: e.target.checked,
                               },
                             }))
@@ -3502,17 +4001,30 @@ export default function StudentDashboardPage() {
                       </div>
                       <div className="flex items-center justify-between">
                         <div>
-                          <Label className="text-sm font-medium">Application Updates</Label>
-                          <p className="text-xs text-gray-500">Get updates on your job applications</p>
+                          <Label className="text-sm font-medium">
+                            Application Updates
+                          </Label>
+                          <p className="text-xs text-gray-500">
+                            Get updates on your job applications
+                          </p>
                         </div>
                         <input
                           type="checkbox"
-                          checked={settings?.notifications?.applicationUpdates || false}
+                          checked={
+                            settings?.notifications?.applicationUpdates || false
+                          }
                           onChange={(e) =>
                             setSettings((prev) => ({
+                              profileVisibility: false,
+                              preferredJobTypes: [],
+                              preferredLocations: [],
+                              shiftPreference: "flexible",
                               ...prev,
                               notifications: {
-                                ...prev?.notifications,
+                                email: prev?.notifications?.email || false,
+                                jobRecommendations:
+                                  prev?.notifications?.jobRecommendations ||
+                                  false,
                                 applicationUpdates: e.target.checked,
                               },
                             }))
@@ -3527,10 +4039,15 @@ export default function StudentDashboardPage() {
 
                   {/* Job Preferences */}
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-3">Job Preferences</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-3">
+                      Job Preferences
+                    </h4>
                     <div className="space-y-4">
                       <div>
-                        <Label htmlFor="shift-preference" className="text-sm font-medium">
+                        <Label
+                          htmlFor="shift-preference"
+                          className="text-sm font-medium"
+                        >
                           Shift Preference
                         </Label>
                         <select
@@ -3539,6 +4056,14 @@ export default function StudentDashboardPage() {
                           value={settings?.shiftPreference || "flexible"}
                           onChange={(e) =>
                             setSettings((prev) => ({
+                              profileVisibility: false,
+                              notifications: {
+                                email: false,
+                                jobRecommendations: false,
+                                applicationUpdates: false,
+                              },
+                              preferredJobTypes: [],
+                              preferredLocations: [],
                               ...prev,
                               shiftPreference: e.target.value,
                             }))
@@ -3554,7 +4079,10 @@ export default function StudentDashboardPage() {
                   </div>
 
                   <div className="flex justify-end">
-                    <Button onClick={handleSaveSettings} disabled={isUpdatingSettings}>
+                    <Button
+                      onClick={handleSaveSettings}
+                      disabled={isUpdatingSettings}
+                    >
                       {isUpdatingSettings ? "Saving..." : "Save Settings"}
                     </Button>
                   </div>
@@ -3565,5 +4093,5 @@ export default function StudentDashboardPage() {
         )}
       </main>
     </div>
-  )
+  );
 }

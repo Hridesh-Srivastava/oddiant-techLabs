@@ -1131,7 +1131,7 @@ export default function EducationalQualificationsForm({
                 </Select>
               </div>
 
-              <div className="space-y-2 relative" ref={(el) => (dropdownRefs.current[index] = el)}>
+              <div className="space-y-2 relative" ref={(el) => { dropdownRefs.current[index] = el }}>
                 <Label htmlFor={`degree-${index}`}>
                   Degree/Course <span className="text-red-500">*</span>
                 </Label>

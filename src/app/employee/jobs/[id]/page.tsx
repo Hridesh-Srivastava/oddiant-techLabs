@@ -131,7 +131,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
       router.push("/employee/dashboard?tab=jobs")
     } catch (error) {
       console.error("Error deleting job posting:", error)
-      toast.error(`Failed to delete job posting: ${error.message}`)
+      toast.error(`Failed to delete job posting: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsDeleting(false)
       setShowDeleteDialog(false)

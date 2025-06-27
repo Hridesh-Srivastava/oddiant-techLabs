@@ -1428,7 +1428,7 @@ export default function TestPreviewPage() {
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-4">
-                          <CameraVideo cameraManager={cameraManager} context="test" />
+                          <CameraVideo cameraManager={cameraManager as any} context="test" />
                           <div className="flex items-center justify-between">
                             <p className="text-xs text-muted-foreground">
                               Webcam:{" "}
@@ -1705,7 +1705,7 @@ export default function TestPreviewPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <CameraVideo cameraManager={cameraManager} context="system" />
+                      <CameraVideo cameraManager={cameraManager as any} context="system" />
 
                       <div className="space-y-4">
                         <div className="flex items-center justify-between p-3 border rounded-md">

@@ -337,13 +337,14 @@ export async function generateAssessmentResultExcel(
       configSheet.addRow({ config, value })
     })
 
-    // Generate buffer
+    // Generate buffer - Fixed TypeScript error
     console.log("Generating Assessment Excel buffer...")
-    const buffer = await workbook.xlsx.writeBuffer()
+    const uint8Array = await workbook.xlsx.writeBuffer()
+    const buffer = Buffer.from(uint8Array)
     console.log("Assessment Excel generation complete, buffer size:", buffer.length)
 
     return buffer
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in Assessment Excel generation:", error)
     throw new Error(`Failed to generate Assessment Excel file: ${error.message}`)
   }
@@ -392,10 +393,12 @@ export async function createFallbackAssessmentExcel(result: AssessmentResultData
       worksheet.addRow({ field, value })
     })
 
-    const buffer = await workbook.xlsx.writeBuffer()
-    console.log("Fallback Assessment Excel file created successfully")
+    // Generate buffer - Fixed TypeScript error
+    const uint8Array = await workbook.xlsx.writeBuffer()
+    const buffer = Buffer.from(uint8Array)
+    console.log("Fallback Assessment Excel file created successfully, buffer size:", buffer.length)
     return buffer
-  } catch (fallbackError) {
+  } catch (fallbackError: any) {
     console.error("Error creating fallback Assessment Excel:", fallbackError)
     throw new Error(`Failed to create fallback Assessment Excel: ${fallbackError.message}`)
   }

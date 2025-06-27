@@ -32,7 +32,7 @@ export default function Home() {
 
   // Typed.js setup
   const typedElement = useRef(null)
-  const typed = useRef(null)
+  const typed = useRef<Typed | null>(null)
 
   useEffect(() => {
     if (typedElement.current && isMounted) {

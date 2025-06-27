@@ -85,9 +85,10 @@ export async function generateExcel(newSubmissions: ContactSubmission[]): Promis
     // Format date column
     worksheet.getColumn("createdAt").numFmt = "yyyy-mm-dd hh:mm:ss"
 
-    // Save the workbook to a buffer
+    // Save the workbook to a buffer - Fixed TypeScript error
     console.log("Generating Excel buffer...")
-    const buffer = await workbook.xlsx.writeBuffer()
+    const uint8Array = await workbook.xlsx.writeBuffer()
+    const buffer = Buffer.from(uint8Array)
 
     try {
       // Save the Excel file to the file system (for backup purposes)
@@ -169,8 +170,9 @@ async function createFallbackExcel(submissions: ContactSubmission[]): Promise<Bu
     // Format date column
     worksheet.getColumn("createdAt").numFmt = "yyyy-mm-dd hh:mm:ss"
 
-    // Generate buffer directly without saving to file
-    const buffer = await workbook.xlsx.writeBuffer()
+    // Generate buffer directly without saving to file - Fixed TypeScript error
+    const uint8Array = await workbook.xlsx.writeBuffer()
+    const buffer = Buffer.from(uint8Array)
     console.log("Fallback Excel file created successfully")
     return buffer
   } catch (fallbackError) {

@@ -52,7 +52,6 @@ function Careers() {
         />
 
         <select
-          placeholder="Job Type"
           className="w-full md:w-1/5 border rounded-lg p-2 m-2 bg-[rgb(249,249,249)] placeholder:text-black"
         >
           <option value="">Job Type</option>
@@ -92,7 +91,6 @@ function Careers() {
         </div>
 
         <select
-          placeholder="Job Experience"
           className="w-full md:w-1/5 border rounded-lg p-2 m-2 bg-[rgb(249,249,249)] placeholder:text-black"
         >
           <option value="">Experience</option>

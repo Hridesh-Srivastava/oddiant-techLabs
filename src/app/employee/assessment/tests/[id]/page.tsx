@@ -215,10 +215,10 @@ export default function TestDetailsPage() {
 
       if (data.success && data.results) {
         // Filter results for this specific test
-        const testResults = data.results.filter((result: ResultData) => {
+        const testResults = (data.results || []).filter((result: ResultData) => {
           // Handle both string and ObjectId comparisons
-          const resultTestId = result.testId?.toString()
-          const currentTestId = testId?.toString()
+         const resultTestId = result.testId ? result.testId.toString() : ''
+          const currentTestId = testId ? testId.toString() : ''
           return resultTestId === currentTestId
         })
 
@@ -229,7 +229,7 @@ export default function TestDetailsPage() {
 
         // Count pending results - using the same logic as the API
         const pendingResults = testResults.filter((result: ResultData) => {
-          const isUndeclared = !result.resultsDeclared || result.resultsDeclared === false
+          const isUndeclared = !result.resultsDeclared
           console.log(
             `Frontend: Result ${result.candidateEmail}: declared=${result.resultsDeclared}, isUndeclared=${isUndeclared}`,
           )
@@ -281,7 +281,7 @@ export default function TestDetailsPage() {
         // Filter invitations for this test
         const testInvitations = invitationsData.invitations.filter((inv: any) => {
           const invTestId = inv.testId?.toString()
-          const currentTestId = testId?.toString()
+          const currentTestId = testId ? testId.toString() : ''
           return invTestId === currentTestId
         })
 
@@ -350,15 +350,15 @@ export default function TestDetailsPage() {
 
       // Convert map to array and sort by status priority
       const candidatesArray = Array.from(candidateMap.values()).sort((a, b) => {
-        const statusPriority = {
-          Completed: 1,
-          Passed: 2,
-          Failed: 3,
-          Invited: 4,
-          Expired: 5,
-          Cancelled: 6,
-        }
-        return statusPriority[a.status] - statusPriority[b.status]
+        const statusPriority: Record<string, number> = {
+  Completed: 1,
+  Passed: 2,
+  Failed: 3,
+  Invited: 4,
+  Expired: 5,
+  Cancelled: 6,
+}
+return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
       })
 
       console.log(`Total candidates for test: ${candidatesArray.length}`)
@@ -514,7 +514,7 @@ export default function TestDetailsPage() {
 
       // Double-check pending results count before API call
       const actualPendingResults = results.filter((result) => {
-        const isUndeclared = !result.resultsDeclared || result.resultsDeclared === false
+        const isUndeclared = !result.resultsDeclared
         console.log(
           `Frontend check: ${result.candidateEmail} - declared: ${result.resultsDeclared}, isUndeclared: ${isUndeclared}`,
         )
@@ -695,7 +695,7 @@ export default function TestDetailsPage() {
     }
   }
 
-  const getCandidateStatusColor = (status: string) => {
+  const getCandidateStatusColor = (status: string): string => {
     switch (status) {
       case "Passed":
         return "bg-green-100 text-green-800 hover:bg-green-100"

@@ -549,16 +549,21 @@ if (data.student.gender) {
     // Handle nested properties
     if (name.includes(".")) {
       const [parent, child] = name.split(".");
-      setFormData((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          [parent]: {
-            ...prev[parent as keyof StudentData],
-            [child]: value,
-          },
-        };
-      });
+   setFormData((prev) => {
+  if (!prev) return prev;
+  const parentValue = prev[parent as keyof StudentData];
+  const existingObject = (parentValue && typeof parentValue === 'object' && !Array.isArray(parentValue)) 
+    ? parentValue as Record<string, any>
+    : {};
+  
+  return {
+    ...prev,
+    [parent]: {
+      ...existingObject,
+      [child]: value,
+    },
+  };
+});
     } else {
       setFormData((prev) => {
         if (!prev) return prev;
@@ -576,15 +581,20 @@ if (data.student.gender) {
     if (name.includes(".")) {
       const [parent, child] = name.split(".");
       setFormData((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          [parent]: {
-            ...prev[parent as keyof StudentData],
-            [child]: checked,
-          },
-        };
-      });
+  if (!prev) return prev;
+  const parentValue = prev[parent as keyof StudentData];
+  const existingObject = (parentValue && typeof parentValue === 'object' && !Array.isArray(parentValue)) 
+    ? parentValue as Record<string, any>
+    : {};
+  
+  return {
+    ...prev,
+    [parent]: {
+      ...existingObject,
+      [child]: checked,
+    },
+  };
+});
     } else {
       setFormData((prev) => {
         if (!prev) return prev;
@@ -604,15 +614,20 @@ if (data.student.gender) {
     if (name.includes(".")) {
       const [parent, child] = name.split(".");
       setFormData((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          [parent]: {
-            ...prev[parent as keyof StudentData],
-            [child]: value,
-          },
-        };
-      });
+  if (!prev) return prev;
+  const parentValue = prev[parent as keyof StudentData];
+  const existingObject = (parentValue && typeof parentValue === 'object' && !Array.isArray(parentValue)) 
+    ? parentValue as Record<string, any>
+    : {};
+  
+  return {
+    ...prev,
+    [parent]: {
+      ...existingObject,
+      [child]: value,
+    },
+  };
+});
     } else {
       setFormData((prev) => {
         if (!prev) return prev;

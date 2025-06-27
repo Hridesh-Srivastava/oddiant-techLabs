@@ -323,7 +323,7 @@ export default function ContactCandidatePage({ params }: { params: Promise<{ id:
               </CardHeader>
               <CardContent className="space-y-4">
                 {!twilioConfigured && (
-                  <Alert variant="warning" className="mb-4">
+                 <Alert variant="destructive" className="mb-4">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
                       Twilio is not fully configured. SMS will be logged but not actually sent.

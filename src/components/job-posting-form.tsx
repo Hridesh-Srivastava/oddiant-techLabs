@@ -693,6 +693,7 @@ interface JobPostingFormProps {
   isEditing?: boolean
   isSubmitting?: boolean
   onSubmit?: (data: any) => Promise<void>
+  initialData?: any
 }
 
 const JobPostingForm: React.FC<JobPostingFormProps> = ({
@@ -700,6 +701,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
   isEditing = false,
   isSubmitting = false,
   onSubmit,
+  initialData,
 }) => {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -741,8 +743,11 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
   useEffect(() => {
     if (jobId && isEditing) {
       fetchJobDetails()
-    }
-  }, [jobId, isEditing])
+    } else if (initialData && !isEditing) {
+    // Populate form with initialData for new job creation
+    populateFormWithData(initialData)
+  }
+  }, [jobId, isEditing, initialData])
 
   useEffect(() => {
     // Filter locations based on search term
@@ -823,6 +828,27 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
       setIsLoading(false)
     }
   }
+
+  const populateFormWithData = (data: any) => {
+  setJobTitle(data.jobTitle || "")
+  setJobLocation(data.jobLocation || "")
+  setExperienceRange(data.experienceRange || "")
+  setJobType(data.jobType || "")
+  setSalaryRange(data.salaryRange || "")
+  setIndustry(data.industry || "")
+  setDepartment(data.department || "")
+  setSkills(data.skills || [])
+  setJobDescription(data.jobDescription || "")
+  setEducationalPreference(data.educationalPreference || "")
+  setShiftPreference(data.shiftPreference || [])
+  setGenderPreference(data.genderPreference || [])
+  setAssetsRequirement(data.assetsRequirement || { wifi: false, laptop: false, vehicle: false })
+  setCompanyName(data.companyName || "")
+  setAboutCompany(data.aboutCompany || "")
+  setWebsiteLink(data.websiteLink || "")
+  setQuestions(data.questions || [])
+  setAnswers(data.answers || [])
+}
 
   // Check for inappropriate content in job description
   const checkForInappropriateContent = (text: string) => {

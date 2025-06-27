@@ -20,22 +20,23 @@ export default function ATSPage() {
   const [activeTab, setActiveTab] = useState("resumes")
   const [resumes, setResumes] = useState(dummyResumes)
   const [filteredResumes, setFilteredResumes] = useState(dummyResumes)
-  const [selectedResume, setSelectedResume] = useState(null)
+ const [selectedResume, setSelectedResume] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [filters, setFilters] = useState({
-    mandatoryKeywords: [],
-    preferredKeywords: [],
+    mandatoryKeywords: [] as string[],
+    preferredKeywords: [] as string[],
     location: "",
     state: "",
-    educationLevel: [],
+    educationLevel: [] as string[],
     gender: "",
     experienceRange: [0, 20],
     salaryRange: [0, 200000],
     industry: "",
     ageRange: [18, 65],
-    notKeywords: [],
+    notKeywords: [] as string[],
+    atsScore: 0,
   })
   const [showFilters, setShowFilters] = useState(false)
   const [highlightKeywords, setHighlightKeywords] = useState(true)
@@ -157,17 +158,18 @@ export default function ATSPage() {
 
   const resetFilters = () => {
     setFilters({
-      mandatoryKeywords: [],
-      preferredKeywords: [],
+      mandatoryKeywords: [] as string[],
+      preferredKeywords: [] as string[],
       location: "",
       state: "",
-      educationLevel: [],
+      educationLevel: [] as string[],
       gender: "",
       experienceRange: [0, 20],
       salaryRange: [0, 200000],
       industry: "",
       ageRange: [18, 65],
-      notKeywords: [],
+      notKeywords: [] as string[],
+      atsScore: 0,
     })
 
     setFilteredResumes(resumes)
@@ -234,7 +236,7 @@ export default function ATSPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <FilterPanel filters={filters} setFilters={setFilters} applyFilters={applyFilters} />
+                 <FilterPanel filters={filters} setFilters={setFilters} applyFilters={applyFilters} resetFilters={resetFilters} />
                 </CardContent>
               </Card>
             </div>

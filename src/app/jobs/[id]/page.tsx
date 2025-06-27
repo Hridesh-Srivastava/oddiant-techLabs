@@ -153,9 +153,9 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case "open":
-        return "success"
+        return "default"
       case "hold":
-        return "warning"
+        return "secondary"
       case "closed":
         return "destructive"
       default:

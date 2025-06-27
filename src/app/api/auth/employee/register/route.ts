@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       const kycDocuments: Record<string, any> = {}
 
       // Function to safely process file upload
-      const processFileUpload = async (fileField: string, file: File | null, folder: string, resourceType = "auto") => {
+      const processFileUpload = async (fileField: string, file: File | null, folder: string, resourceType: "video" | "image" | "auto" | "raw" = "auto") => {
         if (!file || file.size === 0) {
           return null
         }

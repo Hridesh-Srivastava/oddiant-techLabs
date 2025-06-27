@@ -11,7 +11,7 @@ const TOKEN_EXPIRATION = "1d"
 // Add the auth function that was missing
 export async function auth() {
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const token = cookieStore.get("auth_token")?.value
 
     if (!token) {
@@ -63,8 +63,8 @@ export function verifyToken(token: string): { userId: string; userType: string }
 }
 
 // Set JWT token in cookies
-export function setAuthCookie(token: string): void {
-  cookies().set({
+export async function setAuthCookie(token: string): Promise<void> {
+  (await cookies()).set({
     name: "auth_token",
     value: token,
     httpOnly: true,
@@ -76,8 +76,8 @@ export function setAuthCookie(token: string): void {
 }
 
 // Clear auth cookie
-export function clearAuthCookie(): void {
-  cookies().delete("auth_token")
+export async function clearAuthCookie(): Promise<void> {
+  (await cookies()).delete("auth_token")
 }
 
 // Get user ID from request

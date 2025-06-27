@@ -8,7 +8,7 @@ interface CameraManager {
   error: string | null
   startCamera: () => Promise<MediaStream | null>
   stopCamera: () => void
-  restartCamera: () => Promise<void>
+  restartCamera: () => Promise<MediaStream | null>
   assignToVideo: (video: HTMLVideoElement, context: string) => Promise<void>
 }
 

@@ -86,7 +86,7 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
         percentage: "",
       },
     ],
-    certifications: [],
+    certifications: [] as string[],
 
     // Experience
     totalExperience: "",

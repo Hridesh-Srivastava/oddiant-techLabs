@@ -339,12 +339,13 @@ export function AdvancedCodeEditor({
       }
 
       // Handle Tab key for indentation
-      if (e.key === "Tab" && textareaRef.current === document.activeElement) {
-        e.preventDefault()
-        const textarea = textareaRef.current
-        const start = textarea.selectionStart
-        const end = textarea.selectionEnd
-        const spaces = "  " // 2 spaces
+     if (e.key === "Tab" && textareaRef.current === document.activeElement) {
+  e.preventDefault()
+  const textarea = textareaRef.current
+  if (!textarea) return
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+  const spaces = "  " // 2 spaces
 
         const newValue = code.substring(0, start) + spaces + code.substring(end)
         setCode(newValue)

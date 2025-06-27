@@ -54,12 +54,13 @@ interface EmployeeData {
   lastName: string
   email: string
   alternativeEmail?: string
-  designation: string
-  companyName: string
-  companyLocation: string
-  phone: string
-  profileCompleted: boolean
+  designation?: string
+  companyName?: string
+  companyLocation?: string
+  phone?: string
+  profileCompleted?: boolean
   avatar?: string
+  companyId?: string
   notificationSettings?: {
     emailNotifications: boolean
     applicationUpdates: boolean
@@ -71,18 +72,29 @@ interface Candidate {
   _id: string
   name: string
   email: string
+  emailAddress?: string
   role: string
   status: string
   avatar?: string
   appliedDate: string
   skills: string[]
   location: string
+  currentCity?: string
+  city?: string
+  currentState?: string
   yearsOfExperience: number
   currentPosition: string
+  designation?: string
   content: string
+  profileOutline?: string
+  summary?: string
+  aboutMe?: string
+  description?: string
   firstName: string
   lastName: string
+  middleName?: string
   phone: string
+  mobileNumber?: string
   website: string
   experience: any[]
   education: any[]
@@ -292,17 +304,17 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
   const [atsIsLoading, setAtsIsLoading] = useState(true)
   const [atsIsExporting, setAtsIsExporting] = useState(false)
   const [atsFilters, setAtsFilters] = useState({
-    mandatoryKeywords: [],
-    preferredKeywords: [],
+    mandatoryKeywords: [] as string[],
+    preferredKeywords: [] as string[],
     location: "",
     state: "",
-    educationLevel: [],
+    educationLevel: [] as string[],
     gender: "",
     experienceRange: [0, 20],
     salaryRange: [0, 200000],
     industry: "",
     ageRange: [18, 65],
-    notKeywords: [],
+    notKeywords: [] as string[],
     atsScore: 0,
     assets: {
       bike: false,
@@ -840,8 +852,8 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
 
       console.log(`✅ ATS Data Processing Complete:`)
       console.log(`- Total formatted resumes: ${formattedResumes.length}`)
-      console.log(`- From students collection: ${formattedResumes.filter((r) => r.source === "students").length}`)
-      console.log(`- From candidates collection: ${formattedResumes.filter((r) => r.source === "candidates").length}`)
+      console.log(`- From students collection: ${formattedResumes.filter((r: any) => r.source === "students").length}`)
+      console.log(`- From candidates collection: ${formattedResumes.filter((r: any) => r.source === "candidates").length}`)
       console.log(`- Sample formatted data:`, formattedResumes.slice(0, 1))
 
       setAtsResumes(formattedResumes)
@@ -1559,7 +1571,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
         // For now, we'll just sort by the number of preferred keywords matched
         filtered.sort((a, b) => {
           const aMatches = atsFilters.preferredKeywords.filter((keyword) => {
-            if (!keyword) return false
+            if (!keyword || typeof keyword !== 'string') return false
             return a.content.toLowerCase().includes(keyword.toLowerCase())
           }).length
 
@@ -1760,8 +1772,8 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
   const resetAtsFilters = () => {
     // Create a completely fresh default state object
     const defaultFilters = {
-      mandatoryKeywords: [],
-      preferredKeywords: [],
+      mandatoryKeywords: [] as string[],
+      preferredKeywords: [] as string[],
       location: "",
       state: "",
       educationLevel: [],
@@ -1770,7 +1782,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
       salaryRange: [0, 200000],
       industry: "",
       ageRange: [18, 65],
-      notKeywords: [],
+      notKeywords: [] as string[],
       atsScore: 0,
       assets: {
         bike: false,
@@ -2516,7 +2528,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
               </CardHeader>
               <CardContent>
                 <div className="mb-4">
-                  <CandidatesFilterBar candidates={candidates} onFilterChange={setFilteredCandidates} />
+                 <CandidatesFilterBar candidates={candidates} onFilterChange={(filtered) => setFilteredCandidates(filtered as Candidate[])} />
                 </div>
 
                 {filteredCandidates.length > 0 ? (
@@ -3375,11 +3387,10 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                         candidates={atsFilteredResumes}
                         isLoading={atsIsLoading}
                         onSelectCandidate={(candidate) => {
-                          setAtsSelectedResume(candidate)
+                          setAtsSelectedResume(candidate as Candidate)
                         }}
                         selectedCandidateId={atsSelectedResume?._id || null}
                         showViewButton={true}
-                        highlightKeywords={atsHighlightKeywords}
                       />
                     </div>
                   </div>

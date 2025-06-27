@@ -35,7 +35,7 @@ export default function CreateTestPage() {
       title: "Multiple Choice Questions",
       duration: 30,
       questionType: "Multiple Choice",
-      questions: [],
+      questions: [] as any[],
     },
   ])
 
@@ -50,7 +50,7 @@ export default function CreateTestPage() {
     points: 10,
     codeLanguage: "javascript",
     codeTemplate: "",
-    testCases: [],
+    testCases: [] as any[],
     maxWords: 500,
   })
 
@@ -81,7 +81,7 @@ export default function CreateTestPage() {
       title: `Section ${sections.length + 1}`,
       duration: 30,
       questionType: "Multiple Choice",
-      questions: [],
+      questions: [] as any[],
     }
 
     setSections((prev) => [...prev, newSection])
@@ -112,7 +112,7 @@ export default function CreateTestPage() {
         points: 10,
         codeLanguage: "javascript",
         codeTemplate: "",
-        testCases: [],
+        testCases: [] as any[],
         maxWords: 500,
       })
     } else if (section?.questionType === "Coding") {
@@ -147,7 +147,7 @@ function solution() {
         points: 15,
         codeLanguage: "javascript",
         codeTemplate: "",
-        testCases: [],
+        testCases: [] as any[],
         maxWords: 500,
       })
     }
@@ -280,8 +280,8 @@ function solution() {
       }
     }
 
-    setSections((prev) =>
-      prev.map((section) => {
+    setSections((prev: any) =>
+      prev.map((section: any) => {
         if (section.id === sectionId) {
           const questionToAdd = {
             id: `question-${section.questions.length + 1}`,
@@ -639,7 +639,7 @@ function solution() {
                           Questions ({section.questions.length})
                         </h4>
                         <div className="space-y-2">
-                          {section.questions.map((question, qIndex) => (
+                          {section.questions.map((question: any, qIndex: number) => (
                             <div key={question.id} className="p-3 border rounded-md bg-gray-50">
                               <p className="font-medium">
                                 {qIndex + 1}. {question.text}
@@ -794,7 +794,6 @@ function solution() {
                                   value={newQuestion.codeTemplate}
                                   onChange={(value) => handleQuestionChange("codeTemplate", value)}
                                   language={newQuestion.codeLanguage}
-                                  height="200px"
                                   showConsole={false}
                                 />
                               </div>
@@ -807,7 +806,7 @@ function solution() {
                                   </button>
                                 </div>
 
-                                {newQuestion.testCases.map((testCase, index) => (
+                                {newQuestion.testCases.map((testCase: any, index: number) => (
                                   <div key={index} className="p-3 border rounded-md bg-white">
                                     <div className="flex justify-between items-center mb-2">
                                       <span className="text-sm font-medium">Test Case {index + 1}</span>

@@ -12,7 +12,7 @@ cloudinary.config({
 // Function to safely upload to Cloudinary with better error handling
 export async function uploadToCloudinary(
   file: Buffer,
-  options: { folder: string; resource_type?: string },
+  options: { folder: string; resource_type?: "video" | "image" | "auto" | "raw" },
 ): Promise<{ url: string; public_id: string; format?: string; resource_type?: string }> {
   try {
     // Generate a random filename to avoid ENAMETOOLONG errors
@@ -22,7 +22,7 @@ export async function uploadToCloudinary(
     const uploadOptions = {
       folder: options.folder,
       public_id: randomFileName,
-      resource_type: options.resource_type || "auto",
+      resource_type: (options.resource_type || "auto") as "video" | "image" | "auto" | "raw",
       timeout: 60000, // 60 second timeout
     }
 

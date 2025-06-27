@@ -82,7 +82,7 @@ export default function ScheduleInterviewPage() {
 
         // Set preselected candidate if provided
         if (candidateIdParam) {
-          const candidate = formattedCandidates.find((c) => c.id === candidateIdParam)
+          const candidate = formattedCandidates.find((c: Candidate) => c.id === candidateIdParam)
           if (candidate) {
             setFormData((prev) => ({
               ...prev,
