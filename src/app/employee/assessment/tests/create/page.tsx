@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { toast, Toaster } from "sonner"
 import { Pencil, Plus, Trash2, ArrowLeft, Save } from "lucide-react"
@@ -15,7 +14,7 @@ export default function CreateTestPage() {
   const [testDetails, setTestDetails] = useState({
     name: "",
     description: "",
-    duration: 120,
+    duration: 120, // Single total duration
     passingScore: 70,
     instructions: "",
     type: "Frontend",
@@ -33,7 +32,6 @@ export default function CreateTestPage() {
     {
       id: "section-1",
       title: "Multiple Choice Questions",
-      duration: 30,
       questionType: "Multiple Choice",
       questions: [] as any[],
     },
@@ -54,123 +52,124 @@ export default function CreateTestPage() {
     maxWords: 500,
   })
 
-  const handleTestDetailsChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
-  ) => {
-    const { name, value } = e.target
-    setTestDetails((prev) => ({
-      ...prev,
-      [name]: name === "duration" || name === "passingScore" ? Number.parseInt(value) : value,
-    }))
-  }
+  const handleTestDetailsChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+      const { name, value } = e.target
+      setTestDetails((prev) => ({
+        ...prev,
+        [name]: name === "duration" || name === "passingScore" ? Number.parseInt(value) : value,
+      }))
+    },
+    [],
+  )
 
-  const handleTestSettingsChange = (setting: string, value: boolean) => {
+  const handleTestSettingsChange = useCallback((setting: string, value: boolean) => {
     setTestSettings((prev) => ({
       ...prev,
       [setting]: value,
     }))
-  }
+  }, [])
 
-  const handleSectionChange = (sectionId: string, field: string, value: string | number) => {
+  const handleSectionChange = useCallback((sectionId: string, field: string, value: string) => {
     setSections((prev) => prev.map((section) => (section.id === sectionId ? { ...section, [field]: value } : section)))
-  }
+  }, [])
 
-  const addSection = () => {
+  const addSection = useCallback(() => {
     const newSection = {
-      id: `section-${sections.length + 1}`,
+      id: `section-${Date.now()}`,
       title: `Section ${sections.length + 1}`,
-      duration: 30,
       questionType: "Multiple Choice",
       questions: [] as any[],
     }
-
     setSections((prev) => [...prev, newSection])
-  }
+  }, [sections.length])
 
-  const removeSection = (sectionId: string) => {
+  const removeSection = useCallback((sectionId: string) => {
     setSections((prev) => prev.filter((section) => section.id !== sectionId))
-  }
+  }, [])
 
-  const handleEditInstructions = () => {
+  const handleEditInstructions = useCallback(() => {
     setShowInstructionsEditor(true)
-  }
+  }, [])
 
-  const handleSaveInstructions = () => {
+  const handleSaveInstructions = useCallback(() => {
     setShowInstructionsEditor(false)
-  }
+  }, [])
 
-  const handleAddQuestion = (sectionId: string) => {
-    const section = sections.find((s) => s.id === sectionId)
-    setShowAddQuestionForm(sectionId)
+  const handleAddQuestion = useCallback(
+    (sectionId: string) => {
+      const section = sections.find((s) => s.id === sectionId)
+      setShowAddQuestionForm(sectionId)
 
-    if (section?.questionType === "Multiple Choice") {
-      setNewQuestion({
-        text: "",
-        type: "Multiple Choice",
-        options: ["", ""],
-        correctAnswer: "", // Initialize as empty string
-        points: 10,
-        codeLanguage: "javascript",
-        codeTemplate: "",
-        testCases: [] as any[],
-        maxWords: 500,
-      })
-    } else if (section?.questionType === "Coding") {
-      setNewQuestion({
-        text: "",
-        type: "Coding",
-        options: [],
-        correctAnswer: "",
-        points: 20,
-        codeLanguage: "javascript",
-        codeTemplate: `// Write your solution here
+      if (section?.questionType === "Multiple Choice") {
+        setNewQuestion({
+          text: "",
+          type: "Multiple Choice",
+          options: ["", ""],
+          correctAnswer: "",
+          points: 10,
+          codeLanguage: "javascript",
+          codeTemplate: "",
+          testCases: [] as any[],
+          maxWords: 500,
+        })
+      } else if (section?.questionType === "Coding") {
+        setNewQuestion({
+          text: "",
+          type: "Coding",
+          options: [],
+          correctAnswer: "",
+          points: 20,
+          codeLanguage: "javascript",
+          codeTemplate: `// Write your solution here
 function solution() {
     // Your code here
     return "Hello World";
 }`,
-        testCases: [
-          {
-            id: "1",
-            input: "",
-            expectedOutput: "Hello World",
-            isHidden: false,
-          },
-        ],
-        maxWords: 500,
-      })
-    } else {
-      setNewQuestion({
-        text: "",
-        type: "Written Answer",
-        options: [],
-        correctAnswer: "",
-        points: 15,
-        codeLanguage: "javascript",
-        codeTemplate: "",
-        testCases: [] as any[],
-        maxWords: 500,
-      })
-    }
-  }
+          testCases: [
+            {
+              id: "1",
+              input: "",
+              expectedOutput: "Hello World",
+              isHidden: false,
+            },
+          ],
+          maxWords: 500,
+        })
+      } else {
+        setNewQuestion({
+          text: "",
+          type: "Written Answer",
+          options: [],
+          correctAnswer: "",
+          points: 15,
+          codeLanguage: "javascript",
+          codeTemplate: "",
+          testCases: [] as any[],
+          maxWords: 500,
+        })
+      }
+    },
+    [sections],
+  )
 
-  const handleQuestionChange = (field: string, value: string | string[] | any[] | number) => {
+  const handleQuestionChange = useCallback((field: string, value: string | string[] | any[] | number) => {
     setNewQuestion((prev) => ({
       ...prev,
       [field]: value,
     }))
-  }
+  }, [])
 
-  const handleOptionChange = (index: number, value: string) => {
+  const handleOptionChange = useCallback((index: number, value: string) => {
     setNewQuestion((prev) => {
       const newOptions = [...prev.options]
       newOptions[index] = value
 
-      // If the current correct answer is being changed and it was the correct answer, clear it
       if (prev.correctAnswer === prev.options[index] && value !== prev.options[index]) {
         return {
           ...prev,
           options: newOptions,
-          correctAnswer: "", // Clear correct answer if the option text changes
+          correctAnswer: "",
         }
       }
 
@@ -179,33 +178,37 @@ function solution() {
         options: newOptions,
       }
     })
-  }
+  }, [])
 
-  const addOption = () => {
+  const addOption = useCallback(() => {
     setNewQuestion((prev) => ({
       ...prev,
       options: [...prev.options, ""],
     }))
-  }
+  }, [])
 
-  const removeOption = (index: number) => {
-    if (newQuestion.options.length <= 2) {
-      toast.error("At least 2 options are required")
-      return
-    }
-
-    setNewQuestion((prev) => {
-      const newOptions = prev.options.filter((_, i) => i !== index)
-      const correctAnswer = prev.correctAnswer === prev.options[index] ? "" : prev.correctAnswer
-      return {
-        ...prev,
-        options: newOptions,
-        correctAnswer,
+  const removeOption = useCallback(
+    (index: number) => {
+      if (newQuestion.options.length <= 2) {
+        toast.error("At least 2 options are required")
+        return
       }
-    })
-  }
 
-  const addTestCase = () => {
+      setNewQuestion((prev) => {
+        const newOptions = prev.options.filter((_, i) => i !== index)
+        const correctAnswer = prev.correctAnswer === prev.options[index] ? "" : prev.correctAnswer
+
+        return {
+          ...prev,
+          options: newOptions,
+          correctAnswer,
+        }
+      })
+    },
+    [newQuestion.options.length],
+  )
+
+  const addTestCase = useCallback(() => {
     const newTestCase = {
       id: (newQuestion.testCases.length + 1).toString(),
       input: "",
@@ -216,101 +219,111 @@ function solution() {
       ...prev,
       testCases: [...prev.testCases, newTestCase],
     }))
-  }
+  }, [newQuestion.testCases.length])
 
-  const removeTestCase = (index: number) => {
+  const removeTestCase = useCallback((index: number) => {
     setNewQuestion((prev) => ({
       ...prev,
       testCases: prev.testCases.filter((_, i) => i !== index),
     }))
-  }
+  }, [])
 
-  const handleTestCaseChange = (index: number, field: string, value: string | boolean) => {
+  const handleTestCaseChange = useCallback((index: number, field: string, value: string | boolean) => {
     setNewQuestion((prev) => ({
       ...prev,
       testCases: prev.testCases.map((tc, i) => (i === index ? { ...tc, [field]: value } : tc)),
     }))
-  }
+  }, [])
 
-  const handleSaveQuestion = (sectionId: string) => {
-    if (!newQuestion.text.trim()) {
-      toast.error("Question text is required")
-      return
-    }
+  // FIXED: Enhanced code template change handler
+  const handleCodeTemplateChange = useCallback((value: string) => {
+    setNewQuestion((prev) => ({
+      ...prev,
+      codeTemplate: value,
+    }))
+  }, [])
 
-    if (newQuestion.type === "Multiple Choice") {
-      const filledOptions = newQuestion.options.filter((opt) => opt.trim() !== "")
-      if (filledOptions.length < 2) {
-        toast.error("At least 2 options are required")
+  const handleSaveQuestion = useCallback(
+    (sectionId: string) => {
+      if (!newQuestion.text.trim()) {
+        toast.error("Question text is required")
         return
       }
 
-      // Enhanced validation for correct answer
-      if (!newQuestion.correctAnswer || !newQuestion.correctAnswer.trim()) {
-        toast.error("Please select a correct answer by clicking the radio button")
-        return
-      }
-
-      if (!filledOptions.includes(newQuestion.correctAnswer)) {
-        toast.error("The selected correct answer is not valid. Please select from the available options.")
-        return
-      }
-
-      console.log("✅ MCQ Validation passed:")
-      console.log("- Question:", newQuestion.text)
-      console.log("- Options:", filledOptions)
-      console.log("- Correct Answer:", newQuestion.correctAnswer)
-    }
-
-    if (newQuestion.type === "Coding") {
-      if (!newQuestion.codeTemplate.trim()) {
-        toast.error("Code template is required for coding questions")
-        return
-      }
-      if (newQuestion.testCases.length === 0) {
-        toast.error("At least one test case is required for coding questions")
-        return
-      }
-    }
-
-    if (newQuestion.type === "Written Answer") {
-      if (!newQuestion.maxWords || newQuestion.maxWords < 50) {
-        toast.error("Maximum words must be at least 50")
-        return
-      }
-    }
-
-    setSections((prev: any) =>
-      prev.map((section: any) => {
-        if (section.id === sectionId) {
-          const questionToAdd = {
-            id: `question-${section.questions.length + 1}`,
-            ...newQuestion,
-            options:
-              newQuestion.type === "Multiple Choice"
-                ? newQuestion.options.filter((opt) => opt.trim() !== "")
-                : newQuestion.options,
-            // CRITICAL: Ensure correctAnswer is always properly set
-            correctAnswer:
-              newQuestion.type === "Multiple Choice" ? newQuestion.correctAnswer : newQuestion.correctAnswer || "",
-          }
-
-          console.log("💾 Saving question with correctAnswer:", questionToAdd.correctAnswer)
-
-          return {
-            ...section,
-            questions: [...section.questions, questionToAdd],
-          }
+      if (newQuestion.type === "Multiple Choice") {
+        const filledOptions = newQuestion.options.filter((opt) => opt.trim() !== "")
+        if (filledOptions.length < 2) {
+          toast.error("At least 2 options are required")
+          return
         }
-        return section
-      }),
-    )
 
-    setShowAddQuestionForm(null)
-    toast.success("Question added successfully")
-  }
+        if (!newQuestion.correctAnswer || !newQuestion.correctAnswer.trim()) {
+          toast.error("Please select a correct answer by clicking the radio button")
+          return
+        }
 
-  const handleSaveTest = async () => {
+        if (!filledOptions.includes(newQuestion.correctAnswer)) {
+          toast.error("The selected correct answer is not valid. Please select from the available options.")
+          return
+        }
+      }
+
+      if (newQuestion.type === "Coding") {
+        if (!newQuestion.codeTemplate.trim()) {
+          toast.error("Code template is required for coding questions")
+          return
+        }
+
+        if (newQuestion.testCases.length === 0) {
+          toast.error("At least one test case is required for coding questions")
+          return
+        }
+      }
+
+      if (newQuestion.type === "Written Answer") {
+        if (!newQuestion.maxWords || newQuestion.maxWords < 50) {
+          toast.error("Maximum words must be at least 50")
+          return
+        }
+      }
+
+      setSections((prev: any) =>
+        prev.map((section: any) => {
+          if (section.id === sectionId) {
+            // FIXED: Generate unique question ID using timestamp and random number
+            const uniqueQuestionId = `question-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+            const questionToAdd = {
+              id: uniqueQuestionId,
+              ...newQuestion,
+              options:
+                newQuestion.type === "Multiple Choice"
+                  ? newQuestion.options.filter((opt) => opt.trim() !== "")
+                  : newQuestion.options,
+              correctAnswer:
+                newQuestion.type === "Multiple Choice" ? newQuestion.correctAnswer : newQuestion.correctAnswer || "",
+              // FIXED: Ensure code template is properly saved
+              codeTemplate: newQuestion.type === "Coding" ? newQuestion.codeTemplate : undefined,
+            }
+
+            console.log("Adding question with codeTemplate:", questionToAdd.codeTemplate)
+
+            return {
+              ...section,
+              questions: [...section.questions, questionToAdd],
+            }
+          }
+          return section
+        }),
+      )
+
+      setShowAddQuestionForm(null)
+      toast.success("Question added successfully")
+    },
+    [newQuestion],
+  )
+
+  const handleSaveTest = useCallback(async () => {
     try {
       setIsSaving(true)
 
@@ -346,12 +359,10 @@ function solution() {
         }
       }
 
-      const totalDuration = sections.reduce((sum, section) => sum + section.duration, 0)
-
       const testData = {
         name: testDetails.name,
         description: testDetails.description,
-        duration: totalDuration,
+        duration: testDetails.duration, // Single total duration
         passingScore: testDetails.passingScore,
         instructions: testDetails.instructions,
         type: testDetails.type,
@@ -360,7 +371,7 @@ function solution() {
         status: "Draft",
       }
 
-      console.log("Sending test data to API:", JSON.stringify(testData, null, 2))
+      console.log("Saving test data:", testData)
 
       const response = await fetch("/api/assessment/tests", {
         method: "POST",
@@ -376,7 +387,6 @@ function solution() {
       }
 
       const data = await response.json()
-
       toast.success("Test created successfully")
       router.push(`/employee/assessment/tests/${data.testId}`)
     } catch (error: any) {
@@ -385,9 +395,9 @@ function solution() {
     } finally {
       setIsSaving(false)
     }
-  }
+  }, [testDetails, sections, testSettings, router])
 
-  const handlePreviewTest = () => {
+  const handlePreviewTest = useCallback(() => {
     if (!testDetails.name.trim()) {
       toast.error("Test name is required")
       return
@@ -408,12 +418,16 @@ function solution() {
     )
 
     window.open("/employee/assessment/tests/preview", "_blank")
-  }
+  }, [testDetails, testSettings, sections])
+
+  // Memoized calculations to prevent unnecessary re-renders
+  const totalQuestions = useMemo(() => {
+    return sections.reduce((total, section) => total + section.questions.length, 0)
+  }, [sections])
 
   return (
     <AssessmentLayout>
       <Toaster position="top-center" />
-
       <div className="flex items-center mb-6">
         <button onClick={() => router.back()} className="mr-4 flex items-center text-gray-600 hover:text-gray-900">
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -485,10 +499,12 @@ function solution() {
                     id="duration"
                     name="duration"
                     type="number"
+                    min="1"
                     value={testDetails.duration}
                     onChange={handleTestDetailsChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
                   />
+                  <p className="text-xs text-gray-500">Total time allocated for the entire test</p>
                 </div>
 
                 <div className="space-y-2">
@@ -499,6 +515,8 @@ function solution() {
                     id="passing-score"
                     name="passingScore"
                     type="number"
+                    min="0"
+                    max="100"
                     value={testDetails.passingScore}
                     onChange={handleTestDetailsChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
@@ -510,7 +528,6 @@ function solution() {
                 <label htmlFor="instructions" className="block text-sm font-medium text-gray-700">
                   Test Instructions
                 </label>
-
                 {showInstructionsEditor ? (
                   <div className="space-y-2">
                     <textarea
@@ -596,41 +613,20 @@ function solution() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label
-                          htmlFor={`section-duration-${section.id}`}
-                          className="block text-sm font-medium text-gray-700"
-                        >
-                          Duration (minutes)
-                        </label>
-                        <input
-                          id={`section-duration-${section.id}`}
-                          type="number"
-                          value={section.duration}
-                          onChange={(e) => handleSectionChange(section.id, "duration", Number.parseInt(e.target.value))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label
-                          htmlFor={`section-type-${section.id}`}
-                          className="block text-sm font-medium text-gray-700"
-                        >
-                          Question Type
-                        </label>
-                        <select
-                          id={`section-type-${section.id}`}
-                          value={section.questionType}
-                          onChange={(e) => handleSectionChange(section.id, "questionType", e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                        >
-                          <option value="Multiple Choice">Multiple Choice</option>
-                          <option value="Written Answer">Written Answer</option>
-                          <option value="Coding">Coding</option>
-                        </select>
-                      </div>
+                    <div className="space-y-2">
+                      <label htmlFor={`section-type-${section.id}`} className="block text-sm font-medium text-gray-700">
+                        Question Type
+                      </label>
+                      <select
+                        id={`section-type-${section.id}`}
+                        value={section.questionType}
+                        onChange={(e) => handleSectionChange(section.id, "questionType", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                      >
+                        <option value="Multiple Choice">Multiple Choice</option>
+                        <option value="Written Answer">Written Answer</option>
+                        <option value="Coding">Coding</option>
+                      </select>
                     </div>
 
                     {section.questions.length > 0 && (
@@ -705,7 +701,6 @@ function solution() {
                                     onChange={() => {
                                       if (option.trim()) {
                                         handleQuestionChange("correctAnswer", option)
-                                        console.log("🎯 Setting correct answer to:", option)
                                       }
                                     }}
                                     className="h-4 w-4 text-black focus:ring-black border-gray-300"
@@ -792,7 +787,7 @@ function solution() {
                                 <label className="block text-sm font-medium text-gray-700">Code Template</label>
                                 <AdvancedCodeEditor
                                   value={newQuestion.codeTemplate}
-                                  onChange={(value) => handleQuestionChange("codeTemplate", value)}
+                                  onChange={handleCodeTemplateChange}
                                   language={newQuestion.codeLanguage}
                                   showConsole={false}
                                 />
@@ -805,7 +800,6 @@ function solution() {
                                     + Add Test Case
                                   </button>
                                 </div>
-
                                 {newQuestion.testCases.map((testCase: any, index: number) => (
                                   <div key={index} className="p-3 border rounded-md bg-white">
                                     <div className="flex justify-between items-center mb-2">
@@ -819,7 +813,6 @@ function solution() {
                                         </button>
                                       )}
                                     </div>
-
                                     <div className="grid grid-cols-2 gap-2 mb-2">
                                       <div>
                                         <label className="block text-xs font-medium text-gray-600">Input</label>
@@ -846,7 +839,6 @@ function solution() {
                                         />
                                       </div>
                                     </div>
-
                                     <div className="flex items-center space-x-2">
                                       <input
                                         type="checkbox"
@@ -869,6 +861,7 @@ function solution() {
                             <label className="block text-sm font-medium text-gray-700">Points</label>
                             <input
                               type="number"
+                              min="1"
                               value={newQuestion.points}
                               onChange={(e) => handleQuestionChange("points", Number.parseInt(e.target.value) || 1)}
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
@@ -1009,6 +1002,28 @@ function solution() {
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow-sm">
+            <h2 className="text-lg font-medium mb-4">Test Summary</h2>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Total Duration:</span>
+                <span className="font-medium">{testDetails.duration} minutes</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Total Sections:</span>
+                <span className="font-medium">{sections.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Total Questions:</span>
+                <span className="font-medium">{totalQuestions}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Passing Score:</span>
+                <span className="font-medium">{testDetails.passingScore}%</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm">
             <h2 className="text-lg font-medium mb-4">Actions</h2>
             <div className="space-y-4">
               <button
@@ -1028,7 +1043,6 @@ function solution() {
                   </>
                 )}
               </button>
-
               <button
                 onClick={handlePreviewTest}
                 className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"

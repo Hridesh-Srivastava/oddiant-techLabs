@@ -1,11 +1,10 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { toast, Toaster } from "sonner"
-import { Search, Copy, Send, X, Upload, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, Send, Upload, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -32,7 +31,6 @@ interface TestData {
 export default function InvitationsPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
-
   const [isLoading, setIsLoading] = useState(true)
   const [invitations, setInvitations] = useState<InvitationData[]>([])
   const [filteredInvitations, setFilteredInvitations] = useState<InvitationData[]>([])
@@ -49,6 +47,9 @@ export default function InvitationsPage() {
   const [selectedTest, setSelectedTest] = useState("")
   const [emails, setEmails] = useState("")
   const [isSending, setIsSending] = useState(false)
+
+  // Resend invitation state
+  const [resendingInvitations, setResendingInvitations] = useState<Set<string>>(new Set())
 
   // Test links
   const [testLinks, setTestLinks] = useState<
@@ -73,7 +74,6 @@ export default function InvitationsPage() {
   const fetchInvitations = async () => {
     try {
       setIsLoading(true)
-
       const response = await fetch("/api/assessment/invitations", {
         method: "GET",
         headers: {
@@ -88,7 +88,6 @@ export default function InvitationsPage() {
       }
 
       const data = await response.json()
-
       if (data.success) {
         setInvitations(data.invitations || [])
       } else {
@@ -119,7 +118,6 @@ export default function InvitationsPage() {
       }
 
       const data = await response.json()
-
       if (data.success) {
         setAvailableTests(data.tests || [])
       } else {
@@ -203,7 +201,6 @@ export default function InvitationsPage() {
       }
 
       const data = await response.json()
-
       toast.success(`Invitations sent to ${emailList.length} candidates`)
 
       // Reset form
@@ -217,6 +214,45 @@ export default function InvitationsPage() {
       toast.error(error.message || "Failed to send invitations")
     } finally {
       setIsSending(false)
+    }
+  }
+
+  // FIXED: Implement proper resend invitation functionality
+  const handleResendInvitation = async (invitationId: string) => {
+    try {
+      // Add to resending set to show loading state
+      setResendingInvitations((prev) => new Set(prev).add(invitationId))
+
+      const response = await fetch(`/api/assessment/invitations/${invitationId}/resend`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || "Failed to resend invitation")
+      }
+
+      const data = await response.json()
+      if (data.success) {
+        toast.success("Invitation resent successfully")
+        // Refresh invitations to get updated data
+        fetchInvitations()
+      } else {
+        throw new Error(data.message || "Failed to resend invitation")
+      }
+    } catch (error: any) {
+      console.error("Error resending invitation:", error)
+      toast.error(error.message || "Failed to resend invitation")
+    } finally {
+      // Remove from resending set
+      setResendingInvitations((prev) => {
+        const newSet = new Set(prev)
+        newSet.delete(invitationId)
+        return newSet
+      })
     }
   }
 
@@ -259,7 +295,6 @@ export default function InvitationsPage() {
 
       // Add to test links
       const selectedTestData = availableTests.find((test) => test._id === selectedTest)
-
       if (selectedTestData) {
         setTestLinks((prev) => [
           ...prev,
@@ -296,7 +331,6 @@ export default function InvitationsPage() {
 
       // Remove from state
       setTestLinks((prev) => prev.filter((link) => link.id !== linkId))
-
       toast.success("Link deleted successfully")
     } catch (error: any) {
       console.error("Error deleting link:", error)
@@ -338,7 +372,6 @@ export default function InvitationsPage() {
 
         // Extract emails from the data
         const extractedEmails: string[] = []
-
         jsonData.forEach((row: any) => {
           // Look for email in any field of the row
           Object.values(row).forEach((value) => {
@@ -356,7 +389,6 @@ export default function InvitationsPage() {
         // Update the emails state with the extracted emails
         const uniqueEmails = [...new Set(extractedEmails)]
         setEmails(uniqueEmails.join(", "))
-
         toast.success(`${uniqueEmails.length} email addresses imported`)
 
         // Reset the file input
@@ -380,7 +412,6 @@ export default function InvitationsPage() {
     <AssessmentLayout>
       <div className="container py-6">
         <Toaster position="top-center" />
-
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Invitations</h1>
           <Button onClick={handleSendInvitations} disabled={isSending || !selectedTest || !emails.trim()}>
@@ -463,12 +494,17 @@ export default function InvitationsPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => {
-                                    // Resend invitation
-                                    toast.info("Resending invitation...")
-                                  }}
+                                  onClick={() => handleResendInvitation(invitation._id)}
+                                  disabled={resendingInvitations.has(invitation._id)}
                                 >
-                                  Resend
+                                  {resendingInvitations.has(invitation._id) ? (
+                                    <>
+                                      <div className="animate-spin mr-2 h-3 w-3 border-2 border-t-transparent border-current rounded-full"></div>
+                                      Resending...
+                                    </>
+                                  ) : (
+                                    "Resend"
+                                  )}
                                 </Button>
                               </td>
                             </tr>
@@ -490,7 +526,7 @@ export default function InvitationsPage() {
                             size="sm"
                             onClick={handlePreviousPage}
                             disabled={currentPage === 1}
-                            className="flex items-center"
+                            className="flex items-center bg-transparent"
                           >
                             <ChevronLeft className="h-4 w-4 mr-1" />
                             Previous
@@ -505,7 +541,7 @@ export default function InvitationsPage() {
                             size="sm"
                             onClick={handleNextPage}
                             disabled={currentPage === totalPages}
-                            className="flex items-center"
+                            className="flex items-center bg-transparent"
                           >
                             Next
                             <ChevronRight className="h-4 w-4 ml-1" />

@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { toast, Toaster } from "sonner"
@@ -38,7 +37,7 @@ interface TestData {
   passingScore: number
   instructions: string
   type: string
-  _shuffled?: boolean // Add this flag
+  _shuffled?: boolean
   settings: {
     shuffleQuestions: boolean
     preventTabSwitching: boolean
@@ -70,14 +69,27 @@ interface QuestionData {
   maxWords?: number
 }
 
-// Add a global store for test case results per question
-const questionTestCaseResults: Record<string, any[]> = {}
+// FIXED: Updated interface for code submissions
+interface CodeSubmission {
+  code: string
+  language: string
+  timestamp: Date
+  results: any[]
+  allPassed: boolean
+  passedCount: number
+  totalCount: number
+}
+
+// FIXED: Store code submissions per question instead of individual test case results
+const questionCodeSubmissions: Record<string, CodeSubmission[]> = {}
+const testSessionKey = typeof window !== "undefined" ? window.location.pathname : "default"
 
 export default function TakeTestPage() {
   const router = useRouter()
   const params = useParams()
   const token = params.token as string
 
+  const [code, setCode] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [invitation, setInvitation] = useState<InvitationData | null>(null)
   const [test, setTest] = useState<TestData | null>(null)
@@ -135,7 +147,7 @@ export default function TakeTestPage() {
   const [webcamStatus, setWebcamStatus] = useState<"inactive" | "requesting" | "active" | "error">("inactive")
   const [webcamError, setWebcamError] = useState<string | null>(null)
   const [webcamRetryCount, setWebcamRetryCount] = useState(0)
-  const [webcamEnabled, setWebcamEnabled] = useState(true) // New state to control webcam functionality
+  const [webcamEnabled, setWebcamEnabled] = useState(true)
 
   // Refs for visibility tracking with better cleanup
   const visibilityRef = useRef(true)
@@ -145,7 +157,7 @@ export default function TakeTestPage() {
   const webcamInitializedRef = useRef(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const webcamRetryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const componentMountedRef = useRef(true) // Track component mount status
+  const componentMountedRef = useRef(true)
 
   // Enhanced webcam management with separate refs for different contexts
   const mainVideoRef = useRef<HTMLVideoElement | null>(null)
@@ -156,23 +168,18 @@ export default function TakeTestPage() {
   // Cleanup function to stop all webcam streams
   const cleanupWebcam = useCallback(() => {
     try {
-      // Stop main stream
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach((track) => {
           track.stop()
         })
         mediaStreamRef.current = null
       }
-
-      // Stop modal stream
       if (modalStreamRef.current) {
         modalStreamRef.current.getTracks().forEach((track) => {
           track.stop()
         })
         modalStreamRef.current = null
       }
-
-      // Clear all video elements
       if (videoRef.current) {
         videoRef.current.srcObject = null
       }
@@ -182,13 +189,10 @@ export default function TakeTestPage() {
       if (systemCheckVideoRef.current) {
         systemCheckVideoRef.current.srcObject = null
       }
-
-      // Clear retry timeout
       if (webcamRetryTimeoutRef.current) {
         clearTimeout(webcamRetryTimeoutRef.current)
         webcamRetryTimeoutRef.current = null
       }
-
       setWebcamStatus("inactive")
       webcamInitializedRef.current = false
       setWebcamError(null)
@@ -197,16 +201,26 @@ export default function TakeTestPage() {
     }
   }, [])
 
-  // Function to handle test case results from code editor with proper isolation
-  const handleTestCaseResults = useCallback(
-    (questionId: string, results: any[]) => {
-      console.log(`Storing test case results for question ${questionId}:`, results)
-      // Store with both question ID and section-question key for better isolation
+  // FIXED: Updated function to handle code submissions instead of individual test case results
+  const handleCodeSubmissions = useCallback(
+    (questionId: string, submissions: CodeSubmission[]) => {
+      console.log(`Storing code submissions for question ${questionId}:`, submissions)
       const currentQuestionData = test?.sections[currentSection]?.questions[currentQuestion]
       if (currentQuestionData && currentQuestionData.id === questionId) {
         const questionKey = `${test.sections[currentSection].id}-${questionId}`
-        questionTestCaseResults[questionKey] = results
-        questionTestCaseResults[questionId] = results // Keep both for compatibility
+        const sessionQuestionKey = `${testSessionKey}-${questionKey}`
+
+        // Store submissions
+        questionCodeSubmissions[sessionQuestionKey] = [...submissions]
+        questionCodeSubmissions[questionKey] = [...submissions]
+        questionCodeSubmissions[questionId] = [...submissions]
+
+        // Also store in localStorage as backup
+        try {
+          localStorage.setItem(`submissions_${sessionQuestionKey}`, JSON.stringify(submissions))
+        } catch (e) {
+          console.warn("Failed to store in localStorage:", e)
+        }
       }
     },
     [test, currentSection, currentQuestion],
@@ -218,18 +232,35 @@ export default function TakeTestPage() {
 
       setIsSubmitting(true)
 
-      // Validate coding questions have been executed
+      // FIXED: Updated validation for coding questions - check if code has been executed
       const codingQuestionsValidation = test.sections.some((section) => {
         return section.questions.some((question) => {
           if (question.type === "Coding") {
             const questionKey = `${section.id}-${question.id}`
-            const storedResults = questionTestCaseResults[questionKey] || questionTestCaseResults[question.id]
+            const sessionQuestionKey = `${testSessionKey}-${questionKey}`
 
-            // Check if user has written code but not executed test cases
+            let storedSubmissions =
+              questionCodeSubmissions[sessionQuestionKey] ||
+              questionCodeSubmissions[questionKey] ||
+              questionCodeSubmissions[question.id]
+
+            // Fallback to localStorage if not in memory
+            if (!storedSubmissions || storedSubmissions.length === 0) {
+              try {
+                const stored = localStorage.getItem(`submissions_${sessionQuestionKey}`)
+                if (stored) {
+                  storedSubmissions = JSON.parse(stored)
+                }
+              } catch (e) {
+                console.warn("Failed to load from localStorage during submission:", e)
+              }
+            }
+
+            // Check if user has written code but not executed it
             const userCode = answers[questionKey] as string
             const hasCode = userCode && userCode.trim() !== "" && userCode.trim() !== question.codeTemplate?.trim()
 
-            if (hasCode && (!storedResults || storedResults.length === 0)) {
+            if (hasCode && (!storedSubmissions || storedSubmissions.length === 0)) {
               toast.error(
                 `Please run your code for coding questions to execute test cases before submitting. Check Question: "${question.text.substring(0, 50)}..."`,
               )
@@ -263,6 +294,7 @@ export default function TakeTestPage() {
           totalPoints += question.points
           const questionKey = `${section.id}-${question.id}`
           const userAnswer = answers[questionKey]
+
           let isCorrect = false
           let codingTestResults:
             | { input: string; expectedOutput: string; actualOutput: string; passed: boolean }[]
@@ -270,88 +302,82 @@ export default function TakeTestPage() {
 
           // Enhanced scoring logic for different question types
           if (question.type === "Multiple Choice") {
-            // More robust MCQ evaluation with detailed logging
             const userAnswerStr = String(userAnswer || "").trim()
             const correctAnswerStr = String(question.correctAnswer || "").trim()
 
             console.log(`=== MCQ Evaluation for Question ${question.id} ===`)
             console.log(`Question Text: "${question.text}"`)
-            console.log(`User Answer Raw:`, userAnswer)
             console.log(`User Answer String: "${userAnswerStr}"`)
-            console.log(`Correct Answer Raw:`, question.correctAnswer)
             console.log(`Correct Answer String: "${correctAnswerStr}"`)
-            console.log(`Options:`, question.options)
 
-            // Check if user provided an answer and it matches the correct answer
             if (userAnswerStr && userAnswerStr.length > 0 && correctAnswerStr && correctAnswerStr.length > 0) {
-              // Try exact match first
               if (userAnswerStr === correctAnswerStr) {
                 isCorrect = true
                 earnedPoints += question.points
                 console.log(`✅ EXACT MATCH - ${question.points} points awarded`)
+              } else if (userAnswerStr.toLowerCase() === correctAnswerStr.toLowerCase()) {
+                isCorrect = true
+                earnedPoints += question.points
+                console.log(`✅ CASE-INSENSITIVE MATCH - ${question.points} points awarded`)
               } else {
-                // Try case-insensitive match
-                if (userAnswerStr.toLowerCase() === correctAnswerStr.toLowerCase()) {
+                const userOptionIndex = question.options?.findIndex((opt) => opt.trim() === userAnswerStr)
+                const correctOptionIndex = question.options?.findIndex((opt) => opt.trim() === correctAnswerStr)
+                if (userOptionIndex !== -1 && correctOptionIndex !== -1 && userOptionIndex === correctOptionIndex) {
                   isCorrect = true
                   earnedPoints += question.points
-                  console.log(`✅ CASE-INSENSITIVE MATCH - ${question.points} points awarded`)
+                  console.log(`✅ OPTION INDEX MATCH - ${question.points} points awarded`)
                 } else {
-                  // Try to find the answer in options and match by index
-                  const userOptionIndex = question.options?.findIndex((opt) => opt.trim() === userAnswerStr)
-                  const correctOptionIndex = question.options?.findIndex((opt) => opt.trim() === correctAnswerStr)
-
-                  if (userOptionIndex !== -1 && correctOptionIndex !== -1 && userOptionIndex === correctOptionIndex) {
-                    isCorrect = true
-                    earnedPoints += question.points
-                    console.log(`✅ OPTION INDEX MATCH - ${question.points} points awarded`)
-                  } else {
-                    console.log(`❌ NO MATCH FOUND - 0 points`)
-                    console.log(`User option index: ${userOptionIndex}, Correct option index: ${correctOptionIndex}`)
-                  }
+                  console.log(`❌ NO MATCH FOUND - 0 points`)
                 }
               }
             } else {
               console.log(`❌ EMPTY ANSWER - 0 points`)
-              console.log(`User answer empty: ${!userAnswerStr || userAnswerStr.length === 0}`)
-              console.log(`Correct answer empty: ${!correctAnswerStr || correctAnswerStr.length === 0}`)
             }
-            console.log(`=== End MCQ Evaluation ===`)
           } else if (question.type === "Coding") {
-            // For coding questions, get stored test case results with proper question isolation
+            // FIXED: For coding questions, get the latest submission results
             const questionKey = `${section.id}-${question.id}`
-            const storedResults = questionTestCaseResults[questionKey] || questionTestCaseResults[question.id]
+            const sessionQuestionKey = `${testSessionKey}-${questionKey}`
 
-            if (storedResults && storedResults.length > 0) {
-              // Convert stored results to the expected format
-              codingTestResults = storedResults.map((result) => {
-                if (result.result) {
-                  return {
-                    input: result.result.input || "",
-                    expectedOutput: result.result.expectedOutput || "",
-                    actualOutput: result.result.actualOutput || "",
-                    passed: result.result.passed || false,
-                  }
-                } else {
-                  return {
-                    input: result.input || "",
-                    expectedOutput: result.expectedOutput || "",
-                    actualOutput: result.actualOutput || "",
-                    passed: result.passed || false,
-                  }
+            let storedSubmissions =
+              questionCodeSubmissions[sessionQuestionKey] ||
+              questionCodeSubmissions[questionKey] ||
+              questionCodeSubmissions[question.id]
+
+            // Fallback to localStorage if not in memory
+            if (!storedSubmissions || storedSubmissions.length === 0) {
+              try {
+                const stored = localStorage.getItem(`submissions_${sessionQuestionKey}`)
+                if (stored) {
+                  storedSubmissions = JSON.parse(stored)
                 }
-              })
+              } catch (e) {
+                console.warn("Failed to load from localStorage during submission:", e)
+              }
+            }
 
-              // Award points if all test cases pass
-              if (codingTestResults.every((result) => result.passed)) {
+            if (storedSubmissions && storedSubmissions.length > 0) {
+              // Get the latest submission (most recent)
+              const latestSubmission = storedSubmissions[storedSubmissions.length - 1]
+
+              // Convert submission results to the expected format
+              codingTestResults = latestSubmission.results.map((result: any) => ({
+                input: result.input || "",
+                expectedOutput: result.expectedOutput || "",
+                actualOutput: result.actualOutput || "",
+                passed: result.passed || false,
+              }))
+
+              // Award points if all test cases pass in the latest submission
+              if (latestSubmission.allPassed) {
                 isCorrect = true
                 earnedPoints += question.points
               }
 
               console.log(
-                `Coding Question ${question.id}: Using stored results - ${codingTestResults.length} test cases`,
+                `Coding Question ${question.id}: Using latest submission - ${latestSubmission.passedCount}/${latestSubmission.totalCount} test cases passed`,
               )
             } else {
-              // Fallback: create placeholder results if no stored results
+              // Fallback: create placeholder results if no submissions
               codingTestResults =
                 question.testCases?.map((testCase) => ({
                   input: testCase.input,
@@ -359,8 +385,7 @@ export default function TakeTestPage() {
                   actualOutput: "Not executed",
                   passed: false,
                 })) || null
-
-              console.log(`Coding Question ${question.id}: No stored results found, using placeholder`)
+              console.log(`Coding Question ${question.id}: No submissions found, using placeholder`)
             }
           } else if (question.type === "Written Answer") {
             // Written answers are not automatically graded
@@ -383,7 +408,7 @@ export default function TakeTestPage() {
           console.log(
             `Question ${question.id} (${question.type}): ${isCorrect ? "CORRECT" : "INCORRECT"} - ${
               isCorrect ? question.points : 0
-            }/${question.points} points`,
+            }/${question.points}`,
           )
         })
       })
@@ -473,7 +498,6 @@ export default function TakeTestPage() {
       try {
         setWebcamStatus("requesting")
         setWebcamError(null)
-
         // Stop any existing modal stream
         if (modalStreamRef.current) {
           modalStreamRef.current.getTracks().forEach((track) => track.stop())
@@ -507,7 +531,6 @@ export default function TakeTestPage() {
         // Wait for video element to be available with timeout
         let retryCount = 0
         const maxRetries = 20
-
         while (!targetVideoRef.current && retryCount < maxRetries && componentMountedRef.current) {
           await new Promise((resolve) => setTimeout(resolve, 100))
           retryCount++
@@ -518,6 +541,7 @@ export default function TakeTestPage() {
         }
 
         const video = targetVideoRef.current!
+
         video.srcObject = stream
         video.muted = true
         video.playsInline = true
@@ -541,6 +565,7 @@ export default function TakeTestPage() {
                 reject(new Error("Component unmounted during video load"))
                 return
               }
+
               await video.play()
               console.log("Modal webcam started successfully")
               resolve()
@@ -576,7 +601,6 @@ export default function TakeTestPage() {
         }
 
         console.error("Error starting modal webcam:", error)
-
         let errorMessage = "Failed to access webcam"
         if (error instanceof Error) {
           if (error.name === "NotAllowedError") {
@@ -663,7 +687,6 @@ export default function TakeTestPage() {
         }
 
         const data = await uploadResponse.json()
-
         if (!data.success) {
           console.warn("Upload response indicates failure, but continuing...")
           toast.warning("Image captured but upload failed. You can continue with the test.")
@@ -690,7 +713,6 @@ export default function TakeTestPage() {
 
       setIsCapturingFace(forFace)
       setShowCameraModal(true)
-
       // Start webcam after modal is rendered
       setTimeout(() => {
         if (componentMountedRef.current && webcamEnabled) {
@@ -814,10 +836,14 @@ export default function TakeTestPage() {
         // Wait for video element to be available
         let retryCount = 0
         const maxRetries = 10
-
         while (!videoRef.current && retryCount < maxRetries && componentMountedRef.current) {
           await new Promise((resolve) => setTimeout(resolve, 100))
           retryCount++
+        }
+
+        if (!videoRef.current) {
+          console.warn("Video element still not available, skipping webcam start")
+          return
         }
 
         if (!isVideoElementAvailable(videoRef.current)) {
@@ -854,6 +880,7 @@ export default function TakeTestPage() {
               reject(new Error("Component unmounted during video load"))
               return
             }
+
             await video.play()
             resolve()
           } catch (err) {
@@ -896,7 +923,6 @@ export default function TakeTestPage() {
       }
 
       console.error("Error starting webcam:", error)
-
       let errorMessage = "Failed to access webcam"
       if (error instanceof Error) {
         if (error.name === "NotAllowedError") {
@@ -934,7 +960,7 @@ export default function TakeTestPage() {
 
       // Auto-retry with exponential backoff (max 3 retries) only if webcam is still enabled
       if (webcamRetryCount < 3 && webcamEnabled && !testCompleted && !testTerminated) {
-        const retryDelay = Math.min(1000 * Math.pow(2, webcamRetryCount), 5000)
+        const retryDelay = Math.min(2000 * Math.pow(2, webcamRetryCount), 8000)
         webcamRetryTimeoutRef.current = setTimeout(() => {
           if (componentMountedRef.current && webcamEnabled) {
             console.log(`Retrying webcam start (attempt ${webcamRetryCount + 1})`)
@@ -952,6 +978,97 @@ export default function TakeTestPage() {
     testTerminated,
     isVideoElementAvailable,
   ])
+
+  // Load persisted code when question changes - FIXED to prevent infinite loop
+  useEffect(() => {
+    const currentQuestionData = test?.sections[currentSection]?.questions[currentQuestion]
+    if (currentQuestionData?.type === "Coding") {
+      const questionKey = `${test.sections[currentSection].id}-${currentQuestionData.id}`
+      const enhancedStorageKey = `${testSessionKey}-${questionKey}`
+
+      console.log(`=== Loading code for Section ${currentSection}, Question ${currentQuestion} ===`)
+      console.log(`Question Key: ${questionKey}`)
+
+      let loadedCode: string | null = null
+
+      // First try localStorage with enhanced key
+      try {
+        const stored = localStorage.getItem(`code_${enhancedStorageKey}`)
+        if (stored !== null) {
+          loadedCode = stored
+          console.log(`Loaded from localStorage: ${stored.substring(0, 50)}...`)
+        }
+      } catch (e) {
+        console.warn("Failed to load from localStorage:", e)
+      }
+
+      // If no localStorage, try answers state
+      if (loadedCode === null) {
+        const currentAnswer = answers[questionKey] as string
+        if (currentAnswer !== undefined && currentAnswer !== null) {
+          loadedCode = currentAnswer
+          console.log(`Loaded from answers state: ${currentAnswer.substring(0, 50)}...`)
+        }
+      }
+
+      // If still no code, use template
+      if (loadedCode === null) {
+        loadedCode = currentQuestionData.codeTemplate || ""
+        console.log(`Using template: ${loadedCode.substring(0, 50)}...`)
+      }
+
+      // Only update if different to prevent loops
+      if (code !== loadedCode) {
+        setCode(loadedCode)
+      }
+
+      // Always ensure answers state is updated
+      setAnswers((prev) => ({
+        ...prev,
+        [questionKey]: loadedCode,
+      }))
+    } else {
+      // Reset code state for non-coding questions
+      if (code !== "") {
+        setCode("")
+      }
+    }
+  }, [currentSection, currentQuestion, test?.sections]) // REMOVED problematic dependencies
+
+  const handleAnswer = useCallback(
+    (questionKey: string, answer: string | string[]) => {
+      const currentQuestionData = test?.sections[currentSection]?.questions[currentQuestion]
+      if (currentQuestionData) {
+        // Only update if the answer is actually different
+        setAnswers((prev) => {
+          if (prev[questionKey] === answer) {
+            return prev // No change, prevent re-render
+          }
+          return {
+            ...prev,
+            [questionKey]: answer,
+          }
+        })
+
+        // Persist code to localStorage for coding questions
+        if (currentQuestionData.type === "Coding" && typeof answer === "string") {
+          try {
+            const enhancedStorageKey = `${testSessionKey}-${questionKey}`
+            localStorage.setItem(`code_${enhancedStorageKey}`, answer)
+            console.log(`Saved code for question ${questionKey}`)
+
+            // Only update local code state if this is the current question
+            if (questionKey === getCurrentQuestionKey() && code !== answer) {
+              setCode(answer as string)
+            }
+          } catch (e) {
+            console.warn("Failed to store code in localStorage:", e)
+          }
+        }
+      }
+    },
+    [test, currentSection, currentQuestion, testSessionKey], // Removed 'code' dependency
+  )
 
   useEffect(() => {
     // Set component as mounted
@@ -977,7 +1094,6 @@ export default function TakeTestPage() {
     // Enhanced tab switching detection with proper debouncing
     const handleVisibilityChange = () => {
       const now = Date.now()
-
       if (document.hidden && activeTab === "test" && !testTerminated && now - lastTabSwitchTime > 2000) {
         setLastTabSwitchTime(now)
         setTabSwitchCount((prev) => {
@@ -995,7 +1111,6 @@ export default function TakeTestPage() {
 
     const handleWindowBlur = () => {
       const now = Date.now()
-
       if (activeTab === "test" && !testTerminated && now - lastTabSwitchTime > 2000) {
         setLastTabSwitchTime(now)
         setTabSwitchCount((prev) => {
@@ -1017,10 +1132,8 @@ export default function TakeTestPage() {
     return () => {
       // Mark component as unmounted
       componentMountedRef.current = false
-
       // Stop all camera streams
       cleanupWebcam()
-
       // Remove event listeners
       document.removeEventListener("visibilitychange", handleVisibilityChange)
       window.removeEventListener("blur", handleWindowBlur)
@@ -1040,7 +1153,6 @@ export default function TakeTestPage() {
     if (test) {
       // Only initialize timer once when test is first loaded
       setTimeLeft(test.duration * 60)
-
       // Initialize answers with unique keys - only once
       const initialAnswers: Record<string, string | string[]> = {}
       test.sections.forEach((section) => {
@@ -1086,7 +1198,6 @@ export default function TakeTestPage() {
 
   useEffect(() => {
     let timer: NodeJS.Timeout
-
     if (timeLeft > 0 && activeTab === "test" && !testCompleted && !testTerminated) {
       timer = setTimeout(() => {
         setTimeLeft((prev) => prev - 1)
@@ -1121,7 +1232,6 @@ export default function TakeTestPage() {
   const fetchInvitation = async () => {
     try {
       setIsLoading(true)
-
       // Check if this is a preview mode (employee testing the system)
       const isPreview =
         window.location.pathname.includes("/preview/") || window.location.search.includes("preview=true")
@@ -1139,7 +1249,6 @@ export default function TakeTestPage() {
           status: "Active",
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         }
-
         setInvitation(mockInvitation)
         await fetchTest(mockInvitation.testId)
         setIsLoading(false)
@@ -1160,7 +1269,6 @@ export default function TakeTestPage() {
         // If validation fails, try to fetch test directly using token as testId
         console.log("Invitation validation failed, trying direct test access...")
         await fetchTest(token)
-
         // Create a mock invitation for direct test access
         const mockInvitation = {
           _id: `direct-${token}`,
@@ -1172,17 +1280,14 @@ export default function TakeTestPage() {
           status: "Active",
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         }
-
         setInvitation(mockInvitation)
         setIsLoading(false)
         return
       }
 
       const data = await response.json()
-
       if (data.success) {
         setInvitation(data.invitation)
-
         // If invitation is valid and not completed, fetch the test
         if (data.invitation.status !== "Completed" && data.invitation.status !== "Expired") {
           await fetchTest(data.invitation.testId)
@@ -1191,7 +1296,6 @@ export default function TakeTestPage() {
         // Fallback to direct test access
         console.log("Invitation data invalid, trying direct test access...")
         await fetchTest(token)
-
         const mockInvitation = {
           _id: `direct-${token}`,
           email: "direct-access@test.com",
@@ -1202,17 +1306,14 @@ export default function TakeTestPage() {
           status: "Active",
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         }
-
         setInvitation(mockInvitation)
       }
     } catch (error) {
       console.error("Error validating invitation:", error)
-
       // Final fallback - try direct test access
       try {
         console.log("Final fallback: trying direct test access...")
         await fetchTest(token)
-
         const mockInvitation = {
           _id: `direct-${token}`,
           email: "direct-access@test.com",
@@ -1223,7 +1324,6 @@ export default function TakeTestPage() {
           status: "Active",
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         }
-
         setInvitation(mockInvitation)
         toast.success("Test loaded successfully")
       } catch (testError) {
@@ -1251,7 +1351,6 @@ export default function TakeTestPage() {
       }
 
       const data = await response.json()
-
       if (data.success) {
         setTest(data.test)
       } else {
@@ -1281,7 +1380,6 @@ export default function TakeTestPage() {
       }
 
       const data = await response.json()
-
       if (data.success) {
         setTestResult(data.result)
       } else {
@@ -1303,22 +1401,9 @@ export default function TakeTestPage() {
 
     setActiveTab("test")
     setStartTime(new Date())
-
     // Ensure webcam is started only if enabled
     if (!webcamInitializedRef.current && webcamEnabled) {
       startWebcam()
-    }
-  }
-
-  const handleAnswer = (questionId: string, answer: string | string[]) => {
-    // Use the current section and question to create a unique key
-    const currentQuestionData = test?.sections[currentSection]?.questions[currentQuestion]
-    if (currentQuestionData) {
-      const questionKey = `${test.sections[currentSection].id}-${currentQuestionData.id}`
-      setAnswers((prev) => ({
-        ...prev,
-        [questionKey]: answer,
-      }))
     }
   }
 
@@ -1332,7 +1417,28 @@ export default function TakeTestPage() {
 
   const getCurrentAnswer = () => {
     const questionKey = getCurrentQuestionKey()
-    return answers[questionKey] || ""
+    let answer = answers[questionKey] || ""
+
+    // For coding questions, try to load from localStorage if answer is empty
+    const currentQuestionData = test?.sections[currentSection]?.questions[currentQuestion]
+    if (currentQuestionData?.type === "Coding" && (answer === "" || answer === null || answer === undefined)) {
+      try {
+        const enhancedStorageKey = `${testSessionKey}-${questionKey}`
+        const stored = localStorage.getItem(`code_${enhancedStorageKey}`)
+        if (stored) {
+          answer = stored
+          // Update the answers state with the loaded code
+          setAnswers((prev) => ({
+            ...prev,
+            [questionKey]: stored,
+          }))
+        }
+      } catch (e) {
+        console.warn("Failed to load code from localStorage:", e)
+      }
+    }
+
+    return answer
   }
 
   const getCurrentQuestionId = () => {
@@ -1378,7 +1484,6 @@ export default function TakeTestPage() {
       section.questions.forEach((question) => {
         const questionKey = `${section.id}-${question.id}`
         const answer = answers[questionKey]
-
         if (answer && (typeof answer === "string" ? answer.trim() !== "" : answer.length > 0)) {
           answeredQuestions++
         }
@@ -1405,7 +1510,6 @@ export default function TakeTestPage() {
   }
 
   // ID verification functions
-
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -1428,7 +1532,6 @@ export default function TakeTestPage() {
       reader.onload = async (e) => {
         const imageDataUrl = e.target?.result as string
         setIdCardImage(imageDataUrl)
-
         // Upload to server
         await uploadImageToServer(imageDataUrl, "id_card")
         toast.success("ID Card uploaded successfully")
@@ -1443,7 +1546,6 @@ export default function TakeTestPage() {
   // Verification flow functions
   const completeSystemCheck = () => {
     const allChecksPass = Object.values(systemChecks).every((check) => check)
-
     if (allChecksPass) {
       setVerificationStep("id")
       setShowSystemCheck(false)
@@ -1458,7 +1560,6 @@ export default function TakeTestPage() {
       toast.error("Please enter your student ID")
       return
     }
-
     if (!idCardImage && !faceImage) {
       toast.error("Please capture at least your face or upload an ID card")
       return
@@ -1478,10 +1579,8 @@ export default function TakeTestPage() {
     setVerificationStep("complete")
     setShowRules(false)
     setVerificationComplete(true)
-
     // Store verification status
     localStorage.setItem(`verification_${token}`, "complete")
-
     // Start the test
     setActiveTab("test")
     setStartTime(new Date())
@@ -1637,6 +1736,16 @@ export default function TakeTestPage() {
     }
     return newArray
   }
+
+  // Add this useEffect for cleanup
+  useEffect(() => {
+    return () => {
+      // Cleanup function to prevent memory leaks
+      if (webcamRetryTimeoutRef.current) {
+        clearTimeout(webcamRetryTimeoutRef.current)
+      }
+    }
+  }, [])
 
   // Test termination check
   if (testTerminated) {
@@ -1794,14 +1903,12 @@ export default function TakeTestPage() {
   return (
     <div className="min-h-screen bg-background">
       <Toaster position="top-center" />
-
       <div className="container mx-auto py-4 px-4 max-w-7xl">
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold mb-2">
             {isPreviewMode ? "Test Preview: " : ""}
             {test.name}
           </h1>
-
           {isPreviewMode && (
             <div className="flex flex-wrap gap-2 mb-4">
               <Button
@@ -2028,31 +2135,53 @@ export default function TakeTestPage() {
                               </Card>
                             </div>
 
-                            {/* Code Editor - Enhanced with Better Heights and Scrolling */}
+                            {/* Code Editor - Restored original responsive UI */}
                             <div className="w-full">
                               {test.settings.allowCodeEditor ? (
-                                <div
-                                  className="border rounded-lg overflow-hidden"
-                                  style={{
-                                    height: "700px", // Fixed height for better consistency
-                                  }}
-                                >
+                                <div className="border rounded-lg overflow-hidden">
                                   <AdvancedCodeEditor
-                                    value={
-                                      (getCurrentAnswer() as string) ||
-                                      test.sections[currentSection].questions[currentQuestion].codeTemplate ||
-                                      ""
-                                    }
-                                    onChange={(value) => handleAnswer(getCurrentQuestionKey(), value)}
+                                    key={`${currentSection}-${currentQuestion}-${getCurrentQuestionKey()}`}
+                                    value={code}
+                                    onChange={(value) => {
+                                      // Only update if value is different
+                                      if (value !== code) {
+                                        setCode(value)
+                                        handleAnswer(getCurrentQuestionKey(), value)
+                                      }
+                                    }}
                                     language={
                                       test.sections[currentSection].questions[currentQuestion].codeLanguage ||
                                       "javascript"
                                     }
                                     showConsole={true}
                                     testCases={test.sections[currentSection].questions[currentQuestion].testCases || []}
-                                    className="h-full"
+                                    className="w-full"
                                     questionId={getCurrentQuestionId()}
-                                    onTestCaseResults={handleTestCaseResults}
+                                    onTestCaseResults={handleCodeSubmissions}
+                                    initialTestCaseResults={(() => {
+                                      const currentQuestionData =
+                                        test?.sections[currentSection]?.questions[currentQuestion]
+                                      if (!currentQuestionData) return []
+
+                                      const questionKey = `${test.sections[currentSection].id}-${currentQuestionData.id}`
+                                      const sessionQuestionKey = `${testSessionKey}-${questionKey}`
+
+                                      let results = questionCodeSubmissions[sessionQuestionKey] || []
+
+                                      if (results.length === 0) {
+                                        try {
+                                          const stored = localStorage.getItem(`submissions_${sessionQuestionKey}`)
+                                          if (stored) {
+                                            results = JSON.parse(stored)
+                                            questionCodeSubmissions[sessionQuestionKey] = results
+                                          }
+                                        } catch (e) {
+                                          console.warn("Failed to load submissions from localStorage:", e)
+                                        }
+                                      }
+
+                                      return results
+                                    })()}
                                   />
                                 </div>
                               ) : (
@@ -2062,15 +2191,16 @@ export default function TakeTestPage() {
                                   </CardHeader>
                                   <CardContent>
                                     <textarea
-                                      rows={25} // Increased rows for better visibility
+                                      rows={20}
                                       placeholder="// Write your code here"
                                       className="w-full p-3 font-mono text-sm bg-slate-900 text-slate-100 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-                                      value={
-                                        (getCurrentAnswer() as string) ||
-                                        test.sections[currentSection].questions[currentQuestion].codeTemplate ||
-                                        ""
-                                      }
-                                      onChange={(e) => handleAnswer(getCurrentQuestionKey(), e.target.value)}
+                                      value={code}
+                                      onChange={(e) => {
+                                        if (e.target.value !== code) {
+                                          setCode(e.target.value)
+                                          handleAnswer(getCurrentQuestionKey(), e.target.value)
+                                        }
+                                      }}
                                     />
                                   </CardContent>
                                 </Card>
@@ -2133,7 +2263,6 @@ export default function TakeTestPage() {
                                         .filter((word) => word.length > 0)
                                       const maxWords =
                                         test.sections[currentSection].questions[currentQuestion].maxWords || 500
-
                                       if (words.length <= maxWords) {
                                         handleAnswer(getCurrentQuestionKey(), e.target.value)
                                       } else {
@@ -2169,7 +2298,7 @@ export default function TakeTestPage() {
                             variant="outline"
                             onClick={handlePrevQuestion}
                             disabled={currentSection === 0 && currentQuestion === 0}
-                            className="w-full sm:w-auto"
+                            className="w-full sm:w-auto bg-transparent"
                           >
                             Previous Question
                           </Button>
@@ -2227,7 +2356,6 @@ export default function TakeTestPage() {
                                     (typeof answers[questionKey] === "string"
                                       ? (answers[questionKey] as string).trim() !== ""
                                       : (answers[questionKey] as string[]).length > 0)
-
                                   return (
                                     <button
                                       key={question.id}
@@ -2266,7 +2394,6 @@ export default function TakeTestPage() {
                               className="w-full h-full object-cover"
                               style={{ transform: "scaleX(-1)" }}
                             />
-
                             {/* Webcam Status Overlay */}
                             {webcamStatus !== "active" && (
                               <div className="absolute inset-0 flex items-center justify-center bg-black/80 text-white text-center p-2">
@@ -2307,7 +2434,6 @@ export default function TakeTestPage() {
                               </div>
                             )}
                           </div>
-
                           {/* Webcam Status Indicator */}
                           <div className="flex items-center justify-between">
                             <p className="text-xs text-muted-foreground">
@@ -2339,7 +2465,11 @@ export default function TakeTestPage() {
                       {test.settings.allowCalculator && (
                         <div className="space-y-2">
                           <h4 className="text-sm font-medium">Calculator</h4>
-                          <Button variant="outline" className="w-full" onClick={() => setShowCalculator(true)}>
+                          <Button
+                            variant="outline"
+                            className="w-full bg-transparent"
+                            onClick={() => setShowCalculator(true)}
+                          >
                             <Calculator className="h-4 w-4 mr-2" />
                             Scientific Calculator
                           </Button>
@@ -2348,7 +2478,7 @@ export default function TakeTestPage() {
 
                       {/* Submit Button */}
                       <div className="pt-4 border-t">
-                        {/* Add validation warning for coding questions */}
+                        {/* FIXED: Updated validation warning for coding questions */}
                         {test.sections.some((section) =>
                           section.questions.some((q) => {
                             if (q.type === "Coding") {
@@ -2356,9 +2486,9 @@ export default function TakeTestPage() {
                               const userCode = answers[questionKey] as string
                               const hasCode =
                                 userCode && userCode.trim() !== "" && userCode.trim() !== q.codeTemplate?.trim()
-                              const storedResults =
-                                questionTestCaseResults[questionKey] || questionTestCaseResults[q.id]
-                              return hasCode && (!storedResults || storedResults.length === 0)
+                              const storedSubmissions =
+                                questionCodeSubmissions[questionKey] || questionCodeSubmissions[q.id]
+                              return hasCode && (!storedSubmissions || storedSubmissions.length === 0)
                             }
                             return false
                           }),
@@ -2369,7 +2499,6 @@ export default function TakeTestPage() {
                             </p>
                           </div>
                         )}
-
                         <Button
                           className="w-full"
                           variant="destructive"
@@ -2701,7 +2830,6 @@ export default function TakeTestPage() {
 
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium">Exam Rules</h3>
-
                     <div className="space-y-2 p-4 border rounded-md">
                       <p className="font-medium">During this exam:</p>
                       <ul className="list-disc pl-5 space-y-1 text-muted-foreground">

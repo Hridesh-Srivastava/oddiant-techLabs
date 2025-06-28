@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -27,9 +27,6 @@ import {
   Terminal,
   TestTube,
   Loader2,
-  ChevronLeft,
-  ChevronRight,
-  RotateCw,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -55,13 +52,17 @@ interface TestCaseResult {
   actualOutput: string
   expectedOutput: string
   executionTime: number
+  input: string
 }
 
-interface TestCaseExecution {
-  testCaseId: string
-  testCaseIndex: number
-  result: TestCaseResult
+interface CodeSubmission {
+  code: string
+  language: string
   timestamp: Date
+  results: TestCaseResult[]
+  allPassed: boolean
+  passedCount: number
+  totalCount: number
 }
 
 interface CodeEditorProps {
@@ -74,10 +75,9 @@ interface CodeEditorProps {
   testCases?: TestCase[]
   onRunCode?: (code: string, language: string, input?: string) => Promise<ExecutionResult>
   className?: string
-  // Add props for persistence
   questionId?: string
-  onTestCaseResults?: (questionId: string, results: TestCaseExecution[]) => void
-  initialTestCaseResults?: TestCaseExecution[]
+  onTestCaseResults?: (questionId: string, results: CodeSubmission[]) => void
+  initialTestCaseResults?: CodeSubmission[]
 }
 
 const SUPPORTED_LANGUAGES = [
@@ -257,23 +257,39 @@ export function AdvancedCodeEditor({
   const [currentLanguage, setCurrentLanguage] = useState(language)
   const [lineNumbers, setLineNumbers] = useState(true)
 
-  // Add this new state for question-specific test case storage
-  const [questionTestCaseResults, setQuestionTestCaseResults] = useState<Record<string, TestCaseExecution[]>>({})
-
-  // Enhanced state for persistent test case execution
-  const [currentTestCaseIndex, setCurrentTestCaseIndex] = useState(0)
-  const [testCaseExecutions, setTestCaseExecutions] = useState<TestCaseExecution[]>(initialTestCaseResults)
-  const [executionMode, setExecutionMode] = useState<"single" | "all">("single")
-  const [currentExecutingTestCase, setCurrentExecutingTestCase] = useState<number | null>(null)
+  // Store all code submissions for this question
+  const [codeSubmissions, setCodeSubmissions] = useState<CodeSubmission[]>(initialTestCaseResults)
+  const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(questionId || null)
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const lineNumbersRef = useRef<HTMLDivElement>(null)
 
-  // Get current language configuration
-  const currentLang = SUPPORTED_LANGUAGES.find((lang) => lang.value === currentLanguage) || SUPPORTED_LANGUAGES[0]
+  // FIXED: Memoize current language configuration to prevent recalculation
+  const currentLang = useMemo(
+    () => SUPPORTED_LANGUAGES.find((lang) => lang.value === currentLanguage) || SUPPORTED_LANGUAGES[0],
+    [currentLanguage],
+  )
 
-  // Initialize with template if no value provided
+  // FIXED: Memoize execution stats to prevent recalculation
+  const executionStats = useMemo(() => {
+    const latestSubmission = codeSubmissions[codeSubmissions.length - 1]
+    return latestSubmission
+      ? {
+          total: latestSubmission.totalCount,
+          passed: latestSubmission.passedCount,
+          failed: latestSubmission.totalCount - latestSubmission.passedCount,
+          allPassed: latestSubmission.allPassed,
+        }
+      : {
+          total: testCases.length,
+          passed: 0,
+          failed: 0,
+          allPassed: false,
+        }
+  }, [codeSubmissions, testCases.length])
+
+  // FIXED: Initialize with template only once when component mounts
   useEffect(() => {
     if (!value && !code) {
       const template = currentLang.template
@@ -282,36 +298,74 @@ export function AdvancedCodeEditor({
         onChange(template)
       }
     }
-  }, [])
+  }, []) // Empty dependency array - only run once
 
-  // Load initial test case results when component mounts or questionId changes
+  // FIXED: Sync with parent value prop when it changes (but prevent loops)
   useEffect(() => {
-    if (questionId && initialTestCaseResults.length > 0) {
-      setTestCaseExecutions(initialTestCaseResults)
+    if (value !== undefined && value !== code) {
+      setCode(value)
     }
-  }, [questionId, initialTestCaseResults])
+  }, [value]) // Only depend on value, not code
 
-  // Persist test case results when they change
+  // FIXED: Handle question changes properly without causing loops
   useEffect(() => {
-    if (questionId && onTestCaseResults && testCaseExecutions.length > 0) {
-      onTestCaseResults(questionId, testCaseExecutions)
-    }
-  }, [questionId, testCaseExecutions, onTestCaseResults])
+    if (questionId !== currentQuestionId) {
+      setCurrentQuestionId(questionId || null)
 
-  // Update line numbers when code changes
+      if (questionId) {
+        // Only update if initialTestCaseResults is different
+        setCodeSubmissions((prev) => {
+          const newResults = initialTestCaseResults || []
+          // Compare arrays to prevent unnecessary updates
+          if (JSON.stringify(prev) !== JSON.stringify(newResults)) {
+            return [...newResults]
+          }
+          return prev
+        })
+        setExecutionResult(null)
+      } else {
+        setCodeSubmissions([])
+        setExecutionResult(null)
+      }
+    }
+  }, [questionId, currentQuestionId]) // Removed initialTestCaseResults from deps
+
+  // FIXED: Update initial test case results only when they actually change
+  useEffect(() => {
+    if (questionId && JSON.stringify(initialTestCaseResults) !== JSON.stringify(codeSubmissions)) {
+      setCodeSubmissions([...initialTestCaseResults])
+    }
+  }, [questionId, initialTestCaseResults]) // Only depend on the full array
+
+  // FIXED: Persist code submissions with proper dependency management
+  useEffect(() => {
+    if (questionId && onTestCaseResults && codeSubmissions.length > 0 && questionId === currentQuestionId) {
+      // Use a timeout to prevent immediate re-renders
+      const timeoutId = setTimeout(() => {
+        onTestCaseResults(questionId, [...codeSubmissions])
+      }, 0)
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [questionId, onTestCaseResults, currentQuestionId, codeSubmissions]) // Only depend on the full array
+
+  // FIXED: Update line numbers with proper dependency management
   useEffect(() => {
     if (lineNumbersRef.current && textareaRef.current) {
       const lines = code.split("\n").length
       const lineNumbersContent = Array.from({ length: lines }, (_, i) => i + 1).join("\n")
-      lineNumbersRef.current.textContent = lineNumbersContent
-    }
-  }, [code])
 
-  // Sync scroll between textarea and line numbers
+      // Only update if content actually changed
+      if (lineNumbersRef.current.textContent !== lineNumbersContent) {
+        lineNumbersRef.current.textContent = lineNumbersContent
+      }
+    }
+  }, [code.split("\n").length]) // Only depend on line count, not full code
+
+  // FIXED: Sync scroll between textarea and line numbers
   useEffect(() => {
     const textarea = textareaRef.current
     const lineNumbersDiv = lineNumbersRef.current
-
     if (!textarea || !lineNumbersDiv) return
 
     const handleScroll = () => {
@@ -320,136 +374,24 @@ export function AdvancedCodeEditor({
 
     textarea.addEventListener("scroll", handleScroll)
     return () => textarea.removeEventListener("scroll", handleScroll)
-  }, [])
+  }, [lineNumbers]) // Only re-attach when lineNumbers setting changes
 
-  // Handle keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        switch (e.key) {
-          case "s":
-            e.preventDefault()
-            handleDownload()
-            break
-          case "Enter":
-            e.preventDefault()
-            handleRunCode()
-            break
-        }
-      }
+  // FIXED: Memoize keyboard shortcut handlers
+  const handleDownload = useCallback(() => {
+    const filename = `solution.${currentLang.extension}`
+    const blob = new Blob([code], { type: "text/plain" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    toast.success(`Code downloaded as ${filename}`)
+  }, [code, currentLang.extension])
 
-      // Handle Tab key for indentation
-     if (e.key === "Tab" && textareaRef.current === document.activeElement) {
-  e.preventDefault()
-  const textarea = textareaRef.current
-  if (!textarea) return
-  const start = textarea.selectionStart
-  const end = textarea.selectionEnd
-  const spaces = "  " // 2 spaces
-
-        const newValue = code.substring(0, start) + spaces + code.substring(end)
-        setCode(newValue)
-        if (onChange) {
-          onChange(newValue)
-        }
-
-        setTimeout(() => {
-          textarea.selectionStart = textarea.selectionEnd = start + 2
-        }, 0)
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown)
-    return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [code, onChange])
-
-  const handleLanguageChange = useCallback(
-    (newLanguage: string) => {
-      const newLangConfig = SUPPORTED_LANGUAGES.find((lang) => lang.value === newLanguage)
-      if (!newLangConfig) return
-
-      setCurrentLanguage(newLanguage)
-
-      if (onLanguageChange) {
-        onLanguageChange(newLanguage)
-      }
-
-      // Change template if current code is empty or matches current template
-      const currentTemplate = currentLang.template
-      const newTemplate = newLangConfig.template
-
-      if (!code.trim() || code === currentTemplate) {
-        setCode(newTemplate)
-        if (onChange) {
-          onChange(newTemplate)
-        }
-        toast.success(`Switched to ${newLangConfig.label}`)
-      }
-    },
-    [currentLanguage, code, onChange, onLanguageChange, currentLang.template],
-  )
-
-  const handleCodeChange = (newCode: string) => {
-    setCode(newCode)
-    if (onChange) {
-      onChange(newCode)
-    }
-  }
-
-  const executeTestCase = async (testCaseIndex: number): Promise<TestCaseResult> => {
-    const testCase = testCases[testCaseIndex]
-
-    if (onRunCode) {
-      const result = await onRunCode(code, currentLanguage, testCase.input)
-      return {
-        testCaseId: testCase.id,
-        passed: result.output.trim() === testCase.expectedOutput.trim(),
-        actualOutput: result.output,
-        expectedOutput: testCase.expectedOutput,
-        executionTime: result.executionTime || 0,
-      }
-    } else {
-      const response = await fetch("/api/code/execute", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          code,
-          language: currentLang.pistonLang,
-          version: currentLang.version,
-          input: testCase.input,
-          testCases: [testCase], // Only send current test case
-        }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
-        throw new Error(errorData.error || `HTTP ${response.status}`)
-      }
-
-      const result = await response.json()
-
-      return {
-        testCaseId: testCase.id,
-        passed: result.output?.trim() === testCase.expectedOutput.trim(),
-        actualOutput: result.output || "",
-        expectedOutput: testCase.expectedOutput,
-        executionTime: result.executionTime || 0,
-      }
-    }
-  }
-
-  // Add this useEffect after the existing useEffects (around line 150)
-  useEffect(() => {
-    if (questionId) {
-      const currentQuestionKey = questionId
-      const currentQuestionResults = questionTestCaseResults[currentQuestionKey] || []
-      setTestCaseExecutions(currentQuestionResults)
-    }
-  }, [questionId, questionTestCaseResults])
-
-  const handleRunCode = async () => {
+  const handleRunCode = useCallback(async () => {
     if (!code.trim()) {
       toast.error("Please write some code first")
       return
@@ -462,7 +404,6 @@ export function AdvancedCodeEditor({
       if (testCases.length === 0) {
         // Run with custom input if no test cases
         let result: ExecutionResult
-
         if (onRunCode) {
           result = await onRunCode(code, currentLanguage, customInput)
         } else {
@@ -490,18 +431,17 @@ export function AdvancedCodeEditor({
         setExecutionResult(result)
         setActiveTab("output")
       } else {
-        // Get current question-specific results
-        const currentQuestionKey = questionId || "default"
-        const currentQuestionResults = questionTestCaseResults[currentQuestionKey] || []
+        // Execute ALL test cases with the same code
+        const allResults: TestCaseResult[] = []
+        let lastRawResult: ExecutionResult | null = null
 
-        if (executionMode === "single") {
-          // Execute current test case only
-          setCurrentExecutingTestCase(currentTestCaseIndex)
+        // Execute the same code against ALL test cases
+        for (let i = 0; i < testCases.length; i++) {
+          const testCase = testCases[i]
 
-          // Execute the specific test case
           let rawResult: ExecutionResult
           if (onRunCode) {
-            rawResult = await onRunCode(code, currentLanguage, testCases[currentTestCaseIndex].input)
+            rawResult = await onRunCode(code, currentLanguage, testCase.input)
           } else {
             const response = await fetch("/api/code/execute", {
               method: "POST",
@@ -512,7 +452,7 @@ export function AdvancedCodeEditor({
                 code,
                 language: currentLang.pistonLang,
                 version: currentLang.version,
-                input: testCases[currentTestCaseIndex].input,
+                input: testCase.input,
               }),
             })
 
@@ -524,163 +464,52 @@ export function AdvancedCodeEditor({
             rawResult = await response.json()
           }
 
-          // Set the raw execution result for the Output tab
-          setExecutionResult(rawResult)
+          // Store the last execution result for the Output tab
+          lastRawResult = rawResult
 
-          // Create test case result for this specific test case
-          const testCaseResult: TestCaseResult = {
-            testCaseId: testCases[currentTestCaseIndex].id,
-            passed: rawResult.output?.trim() === testCases[currentTestCaseIndex].expectedOutput.trim(),
+          const result: TestCaseResult = {
+            testCaseId: testCase.id,
+            passed: rawResult.output?.trim() === testCase.expectedOutput.trim(),
             actualOutput: rawResult.output || "",
-            expectedOutput: testCases[currentTestCaseIndex].expectedOutput,
+            expectedOutput: testCase.expectedOutput,
             executionTime: rawResult.executionTime || 0,
+            input: testCase.input,
           }
 
-          // Create execution record
-          const execution: TestCaseExecution = {
-            testCaseId: testCases[currentTestCaseIndex].id,
-            testCaseIndex: currentTestCaseIndex,
-            result: testCaseResult,
-            timestamp: new Date(),
-          }
-
-          // Update question-specific results
-          const updatedQuestionResults = [
-            ...currentQuestionResults.filter((exec) => exec.testCaseIndex !== currentTestCaseIndex),
-            execution,
-          ].sort((a, b) => a.testCaseIndex - b.testCaseIndex)
-
-          setQuestionTestCaseResults((prev) => ({
-            ...prev,
-            [currentQuestionKey]: updatedQuestionResults,
-          }))
-
-          // Update the main testCaseExecutions for display
-          setTestCaseExecutions(updatedQuestionResults)
-
-          // Store results in parent component if available
-          if (onChange && questionId) {
-            // Create coding test results array for this question
-            const codingResults = testCases.map((testCase, index) => {
-              const execution = updatedQuestionResults.find((exec) => exec.testCaseIndex === index)
-              if (execution) {
-                return {
-                  input: testCase.input,
-                  expectedOutput: execution.result.expectedOutput,
-                  actualOutput: execution.result.actualOutput,
-                  passed: execution.result.passed,
-                }
-              }
-              return {
-                input: testCase.input,
-                expectedOutput: testCase.expectedOutput,
-                actualOutput: "Not executed",
-                passed: false,
-              }
-            })
-
-            // Update the question's test case results
-            if (typeof onChange === "function") {
-              // This is a bit of a hack, but we need to store the results somewhere accessible
-              // We'll store it in a global variable or pass it through a callback
-              console.log(`Storing coding results for question ${questionId}:`, codingResults)
-            }
-          }
-
-          // Move to next test case for next execution
-          setCurrentTestCaseIndex((prev) => (prev + 1) % testCases.length)
-
-          toast.success(
-            `Test Case ${currentTestCaseIndex + 1} ${testCaseResult.passed ? "Passed" : "Failed"} - Next: Test Case ${((currentTestCaseIndex + 1) % testCases.length) + 1}`,
-          )
-        } else {
-          // Execute all test cases
-          const allResults: TestCaseResult[] = []
-          let lastRawResult: ExecutionResult | null = null
-          const newExecutions: TestCaseExecution[] = []
-
-          for (let i = 0; i < testCases.length; i++) {
-            setCurrentExecutingTestCase(i)
-
-            // Get raw output for each test case
-            let rawResult: ExecutionResult
-            if (onRunCode) {
-              rawResult = await onRunCode(code, currentLanguage, testCases[i].input)
-            } else {
-              const response = await fetch("/api/code/execute", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  code,
-                  language: currentLang.pistonLang,
-                  version: currentLang.version,
-                  input: testCases[i].input,
-                }),
-              })
-
-              if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
-                throw new Error(errorData.error || `HTTP ${response.status}`)
-              }
-
-              rawResult = await response.json()
-            }
-
-            // Store the last execution result for the Output tab
-            lastRawResult = rawResult
-
-            const result: TestCaseResult = {
-              testCaseId: testCases[i].id,
-              passed: rawResult.output?.trim() === testCases[i].expectedOutput.trim(),
-              actualOutput: rawResult.output || "",
-              expectedOutput: testCases[i].expectedOutput,
-              executionTime: rawResult.executionTime || 0,
-            }
-
-            allResults.push(result)
-
-            // Add to execution history
-            const execution: TestCaseExecution = {
-              testCaseId: testCases[i].id,
-              testCaseIndex: i,
-              result,
-              timestamp: new Date(),
-            }
-
-            newExecutions.push(execution)
-          }
-
-          // Update question-specific results
-          setQuestionTestCaseResults((prev) => ({
-            ...prev,
-            [currentQuestionKey]: newExecutions,
-          }))
-
-          // Update display results
-          setTestCaseExecutions(newExecutions)
-
-          // Set the last execution result for the Output tab
-          if (lastRawResult) {
-            setExecutionResult(lastRawResult)
-          }
-
-          const passedCount = allResults.filter((r) => r.passed).length
-          toast.success(`All test cases executed: ${passedCount}/${testCases.length} passed`)
-
-          // Switch to test cases tab for "all" mode
-          setActiveTab("testcases")
+          allResults.push(result)
         }
+
+        // Create a new code submission record
+        const submission: CodeSubmission = {
+          code: code,
+          language: currentLanguage,
+          timestamp: new Date(),
+          results: allResults,
+          allPassed: allResults.every((r) => r.passed),
+          passedCount: allResults.filter((r) => r.passed).length,
+          totalCount: allResults.length,
+        }
+
+        // Add to submissions history
+        setCodeSubmissions((prev) => [...prev, submission])
+
+        // Set the last execution result for the Output tab
+        if (lastRawResult) {
+          setExecutionResult(lastRawResult)
+        }
+
+        const passedCount = allResults.filter((r) => r.passed).length
+        toast.success(`Code executed against all test cases: ${passedCount}/${testCases.length} passed`)
+
+        // Switch to test cases tab to show results
+        setActiveTab("testcases")
       }
     } catch (error) {
       console.error("Execution error:", error)
-
       let errorMessage = "Failed to execute code. Please try again."
       if (error instanceof Error) {
         errorMessage = error.message
       }
-
       setExecutionResult({
         success: false,
         output: "",
@@ -689,17 +518,93 @@ export function AdvancedCodeEditor({
       toast.error("Code execution failed")
     } finally {
       setIsRunning(false)
-      setCurrentExecutingTestCase(null)
     }
-  }
+  }, [code, currentLanguage, customInput, testCases, onRunCode, currentLang.pistonLang, currentLang.version])
 
-  const handleStopExecution = () => {
+  // FIXED: Handle keyboard shortcuts with proper dependencies
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case "s":
+            e.preventDefault()
+            handleDownload()
+            break
+          case "Enter":
+            e.preventDefault()
+            handleRunCode()
+            break
+        }
+      }
+      // Handle Tab key for indentation
+      if (e.key === "Tab" && textareaRef.current === document.activeElement) {
+        e.preventDefault()
+        const textarea = textareaRef.current
+        if (!textarea) return
+
+        const start = textarea.selectionStart
+        const end = textarea.selectionEnd
+        const spaces = "  " // 2 spaces
+
+        const newValue = code.substring(0, start) + spaces + code.substring(end)
+        setCode(newValue)
+        if (onChange) {
+          onChange(newValue)
+        }
+        setTimeout(() => {
+          textarea.selectionStart = textarea.selectionEnd = start + 2
+        }, 0)
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [handleDownload, handleRunCode, code, onChange])
+
+  // FIXED: Memoize language change handler
+  const handleLanguageChange = useCallback(
+    (newLanguage: string) => {
+      const newLangConfig = SUPPORTED_LANGUAGES.find((lang) => lang.value === newLanguage)
+      if (!newLangConfig) return
+
+      setCurrentLanguage(newLanguage)
+      if (onLanguageChange) {
+        onLanguageChange(newLanguage)
+      }
+
+      // Change template if current code is empty or matches current template
+      const currentTemplate = currentLang.template
+      const newTemplate = newLangConfig.template
+
+      if (!code.trim() || code === currentTemplate) {
+        setCode(newTemplate)
+        if (onChange) {
+          onChange(newTemplate)
+        }
+        toast.success(`Switched to ${newLangConfig.label}`)
+      }
+    },
+    [currentLang.template, code, onChange, onLanguageChange],
+  )
+
+  // FIXED: Memoize code change handler
+  const handleCodeChange = useCallback(
+    (newCode: string) => {
+      setCode(newCode)
+      if (onChange) {
+        onChange(newCode)
+      }
+    },
+    [onChange],
+  )
+
+  // FIXED: Memoize other handlers
+  const handleStopExecution = useCallback(() => {
     setIsRunning(false)
-    setCurrentExecutingTestCase(null)
     toast.info("Execution stopped")
-  }
+  }, [])
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     const template = currentLang.template
     setCode(template)
     if (onChange) {
@@ -707,119 +612,94 @@ export function AdvancedCodeEditor({
     }
     setExecutionResult(null)
     setCustomInput("")
-    setTestCaseExecutions([])
-    setCurrentTestCaseIndex(0)
+    setCodeSubmissions([])
     toast.success("Code reset to template")
-  }
+  }, [currentLang.template, onChange])
 
-  const handleResetTestCases = () => {
-    setTestCaseExecutions([])
-    setCurrentTestCaseIndex(0)
+  const handleResetTestCases = useCallback(() => {
+    setCodeSubmissions([])
     toast.success("Test case progress reset")
-  }
+  }, [])
 
-  const handleDownload = () => {
-    const filename = `solution.${currentLang.extension}`
-    const blob = new Blob([code], { type: "text/plain" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = filename
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    toast.success(`Code downloaded as ${filename}`)
-  }
-
-  const handleUpload = () => {
+  const handleUpload = useCallback(() => {
     fileInputRef.current?.click()
-  }
+  }, [])
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const handleFileUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
 
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      const content = event.target?.result as string
-      setCode(content)
-      if (onChange) {
-        onChange(content)
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        const content = event.target?.result as string
+        setCode(content)
+        if (onChange) {
+          onChange(content)
+        }
+        toast.success("File uploaded successfully")
       }
-      toast.success("File uploaded successfully")
-    }
-    reader.readAsText(file)
-  }
+      reader.readAsText(file)
+    },
+    [onChange],
+  )
 
-  const handleCopyCode = () => {
+  const handleCopyCode = useCallback(() => {
     navigator.clipboard.writeText(code)
     toast.success("Code copied to clipboard")
-  }
+  }, [code])
 
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen)
-  }
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen((prev) => !prev)
+  }, [])
 
-  const navigateTestCase = (direction: "prev" | "next") => {
-    if (direction === "prev") {
-      setCurrentTestCaseIndex((prev) => (prev - 1 + testCases.length) % testCases.length)
-    } else {
-      setCurrentTestCaseIndex((prev) => (prev + 1) % testCases.length)
+  // FIXED: Memoize fullscreen styles
+  const fullscreenStyles = useMemo(
+    () =>
+      isFullscreen
+        ? {
+            position: "fixed" as const,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: "100vw",
+            height: "100vh",
+            zIndex: 9999,
+            backgroundColor: "hsl(var(--background))",
+            padding: "1rem",
+          }
+        : {},
+    [isFullscreen],
+  )
+
+  // FIXED: Memoize card height calculation
+  const cardHeight = useMemo(() => {
+    if (isFullscreen) return "calc(100vh - 2rem)"
+    if (typeof window !== "undefined") {
+      if (window.innerWidth >= 1024) return "800px"
+      if (window.innerWidth >= 640) return "700px"
     }
-  }
-
-  const jumpToTestCase = (index: number) => {
-    setCurrentTestCaseIndex(index)
-  }
-
-  // Get execution stats
-  const executionStats = {
-    total: testCases.length,
-    executed: testCaseExecutions.length,
-    passed: testCaseExecutions.filter((exec) => exec.result.passed).length,
-    failed: testCaseExecutions.filter((exec) => exec.result.passed === false).length,
-  }
-
-  // Fullscreen styles with proper viewport dimensions
-  const fullscreenStyles = isFullscreen
-    ? {
-        position: "fixed" as const,
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        width: "100vw",
-        height: "100vh",
-        zIndex: 9999,
-        backgroundColor: "hsl(var(--background))",
-        padding: "1rem",
-      }
-    : {}
+    return "600px"
+  }, [isFullscreen])
 
   return (
     <div className={className} style={fullscreenStyles}>
-      <Card
-        className="w-full h-full flex flex-col overflow-hidden"
-        style={{
-          height: isFullscreen
-            ? "calc(100vh - 2rem)"
-            : window.innerWidth >= 1024
-              ? "800px"
-              : window.innerWidth >= 640
-                ? "700px"
-                : "600px",
-        }}
-      >
+      <Card className="w-full h-full flex flex-col overflow-hidden" style={{ height: cardHeight }}>
         <CardHeader className="pb-2 sm:pb-3 flex-shrink-0">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-base sm:text-lg flex items-center gap-2">
               <Terminal className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="hidden sm:inline">Advanced Code Editor</span>
-              <span className="sm:hidden">Code Editor</span>
+              <span className="hidden sm:inline">Code Editor</span>
+              <span className="sm:hidden">Editor</span>
+              {questionId && (
+                <Badge variant="outline" className="text-xs">
+                  Q: {questionId}
+                </Badge>
+              )}
             </CardTitle>
+
             <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-              {/* Make buttons smaller on mobile */}
               <select
                 value={currentLanguage}
                 onChange={(e) => handleLanguageChange(e.target.value)}
@@ -831,18 +711,6 @@ export function AdvancedCodeEditor({
                   </option>
                 ))}
               </select>
-
-              {/* Execution Mode Toggle */}
-              {testCases.length > 0 && (
-                <select
-                  value={executionMode}
-                  onChange={(e) => setExecutionMode(e.target.value as "single" | "all")}
-                  className="px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  <option value="single">Single</option>
-                  <option value="all">All Tests</option>
-                </select>
-              )}
 
               <Button
                 variant="outline"
@@ -859,23 +727,18 @@ export function AdvancedCodeEditor({
                 ) : (
                   <>
                     <Play className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                    <span className="hidden sm:inline">
-                      {executionMode === "single" && testCases.length > 0
-                        ? `Run Test ${currentTestCaseIndex + 1}`
-                        : "Run"}
-                    </span>
+                    <span className="hidden sm:inline">Run All Tests</span>
                     <span className="sm:hidden">Run</span>
                   </>
                 )}
               </Button>
 
-              {/* Rest of buttons with responsive sizing */}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleReset}
                 disabled={readOnly}
-                className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2"
+                className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 bg-transparent"
               >
                 <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                 <span className="hidden sm:inline">Reset</span>
@@ -886,9 +749,9 @@ export function AdvancedCodeEditor({
                   variant="outline"
                   size="sm"
                   onClick={handleResetTestCases}
-                  className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2"
+                  className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 bg-transparent"
                 >
-                  <RotateCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <TestTube className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   <span className="hidden md:inline">Reset Tests</span>
                   <span className="md:hidden">Reset</span>
                 </Button>
@@ -898,7 +761,7 @@ export function AdvancedCodeEditor({
                 variant="outline"
                 size="sm"
                 onClick={handleCopyCode}
-                className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2"
+                className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 bg-transparent"
               >
                 <Copy className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                 <span className="hidden sm:inline">Copy</span>
@@ -908,7 +771,7 @@ export function AdvancedCodeEditor({
                 variant="outline"
                 size="sm"
                 onClick={handleDownload}
-                className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2"
+                className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 bg-transparent"
               >
                 <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                 <span className="hidden sm:inline">Save</span>
@@ -919,7 +782,7 @@ export function AdvancedCodeEditor({
                   variant="outline"
                   size="sm"
                   onClick={handleUpload}
-                  className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2"
+                  className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 bg-transparent"
                 >
                   <Upload className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   <span className="hidden sm:inline">Load</span>
@@ -935,7 +798,12 @@ export function AdvancedCodeEditor({
                 <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
 
-              <Button variant="outline" size="sm" onClick={toggleFullscreen} className="px-2 sm:px-3 py-1 sm:py-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleFullscreen}
+                className="px-2 sm:px-3 py-1 sm:py-2 bg-transparent"
+              >
                 {isFullscreen ? (
                   <Minimize2 className="h-3 w-3 sm:h-4 sm:w-4" />
                 ) : (
@@ -945,84 +813,72 @@ export function AdvancedCodeEditor({
             </div>
           </div>
 
-          {/* Test Case Navigation */}
+          {/* Test Case Status Summary */}
           {testCases.length > 0 && (
             <div className="mt-4 p-4 border rounded-md bg-muted/50">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => navigateTestCase("prev")} disabled={isRunning}>
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <span className="text-sm font-medium">
-                      Test Case {currentTestCaseIndex + 1} of {testCases.length}
-                    </span>
-                    <Button variant="outline" size="sm" onClick={() => navigateTestCase("next")} disabled={isRunning}>
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
+                    <span className="text-sm font-medium">Test Cases:</span>
+                    <Badge variant="outline">
+                      {executionStats.passed}/{executionStats.total}
+                    </Badge>
                   </div>
-
-                  {currentExecutingTestCase !== null && (
+                  {isRunning && (
                     <div className="flex items-center gap-2 text-sm text-blue-600">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Executing Test Case {currentExecutingTestCase + 1}
+                      Running all test cases...
                     </div>
                   )}
                 </div>
 
                 <div className="flex items-center gap-4 text-sm">
                   <div className="flex items-center gap-2">
-                    <span>Progress:</span>
-                    <Badge variant="outline">
-                      {executionStats.executed}/{executionStats.total}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2">
                     <Badge variant="default" className="bg-green-500">
                       ✓ {executionStats.passed}
                     </Badge>
                     <Badge variant="destructive">✗ {executionStats.failed}</Badge>
                   </div>
+                  {codeSubmissions.length > 0 && (
+                    <Badge variant={executionStats.allPassed ? "default" : "secondary"}>
+                      {executionStats.allPassed ? "All Passed" : "Some Failed"}
+                    </Badge>
+                  )}
                 </div>
               </div>
 
-              {/* Test Case Quick Navigation */}
-              <div className="mt-3 flex flex-wrap gap-1">
-                {testCases.map((_, index) => {
-                  const execution = testCaseExecutions.find((exec) => exec.testCaseIndex === index)
-                  const isActive = index === currentTestCaseIndex
-                  const isExecuting = currentExecutingTestCase === index
-
-                  return (
-                    <Button
-                      key={index}
-                      variant={isActive ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => jumpToTestCase(index)}
-                      disabled={isRunning}
-                      className={`w-8 h-8 p-0 ${
-                        execution
-                          ? execution.result.passed
-                            ? "border-green-500 bg-green-50 text-green-700"
-                            : "border-red-500 bg-red-50 text-red-700"
-                          : ""
-                      } ${isExecuting ? "animate-pulse" : ""}`}
-                    >
-                      {isExecuting ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : execution ? (
-                        execution.result.passed ? (
-                          "✓"
-                        ) : (
-                          "✗"
-                        )
-                      ) : (
-                        index + 1
-                      )}
-                    </Button>
-                  )
-                })}
-              </div>
+              {/* Show sample test cases (non-hidden ones) */}
+              {testCases.filter((tc) => !tc.isHidden).length > 0 && (
+                <div className="mt-3">
+                  <div className="text-sm font-medium mb-2">Sample Test Cases:</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {testCases
+                      .filter((tc) => !tc.isHidden)
+                      .slice(0, 2)
+                      .map((testCase, index) => (
+                        <div
+                          key={`testcase-${testCase.id || index}-${index}`}
+                          className="p-3 bg-background rounded border"
+                        >
+                          <div className="space-y-2">
+                            <div>
+                              <span className="font-medium text-xs">Input:</span>
+                              <pre className="mt-1 text-xs text-muted-foreground bg-muted p-2 rounded overflow-x-auto max-h-20">
+                                {testCase.input || "No input"}
+                              </pre>
+                            </div>
+                            <div>
+                              <span className="font-medium text-xs">Expected Output:</span>
+                              <pre className="mt-1 text-xs text-muted-foreground bg-muted p-2 rounded overflow-x-auto max-h-20">
+                                {testCase.expectedOutput}
+                              </pre>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1043,7 +899,6 @@ export function AdvancedCodeEditor({
                     <option value="20">20px</option>
                   </select>
                 </div>
-
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Line Numbers</Label>
                   <select
@@ -1055,7 +910,6 @@ export function AdvancedCodeEditor({
                     <option value="false">Hide</option>
                   </select>
                 </div>
-
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Language Info</Label>
                   <div className="text-sm text-muted-foreground">
@@ -1073,7 +927,11 @@ export function AdvancedCodeEditor({
             <div
               className="border rounded-md overflow-hidden bg-slate-900 flex-1"
               style={{
-                height: showConsole ? (window.innerWidth >= 1024 ? "100%" : "60%") : "100%",
+                height: showConsole
+                  ? typeof window !== "undefined" && window.innerWidth >= 1024
+                    ? "100%"
+                    : "60%"
+                  : "100%",
                 minHeight: "300px",
               }}
             >
@@ -1091,7 +949,6 @@ export function AdvancedCodeEditor({
                     }}
                   />
                 )}
-
                 {/* Code Textarea */}
                 <div className="flex-1 relative">
                   <textarea
@@ -1101,7 +958,7 @@ export function AdvancedCodeEditor({
                     readOnly={readOnly}
                     className="w-full h-full p-2 sm:p-4 bg-slate-900 text-slate-100 font-mono resize-none border-none outline-none"
                     style={{
-                      fontSize: `${Math.max(12, fontSize - (window.innerWidth < 640 ? 2 : 0))}px`,
+                      fontSize: `${Math.max(12, fontSize - (typeof window !== "undefined" && window.innerWidth < 640 ? 2 : 0))}px`,
                       lineHeight: "1.5",
                       tabSize: 2,
                     }}
@@ -1117,9 +974,9 @@ export function AdvancedCodeEditor({
               <div
                 className="border rounded-md overflow-hidden flex flex-col bg-background"
                 style={{
-                  height: window.innerWidth >= 1024 ? "100%" : "35%",
+                  height: typeof window !== "undefined" && window.innerWidth >= 1024 ? "100%" : "35%",
                   minHeight: "250px",
-                  width: window.innerWidth >= 1024 ? "45%" : "100%",
+                  width: typeof window !== "undefined" && window.innerWidth >= 1024 ? "45%" : "100%",
                 }}
               >
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
@@ -1140,10 +997,10 @@ export function AdvancedCodeEditor({
                         >
                           <TestTube className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                           <span className="hidden sm:inline">
-                            Test Cases ({executionStats.executed}/{executionStats.total})
+                            Test Results ({executionStats.passed}/{executionStats.total})
                           </span>
                           <span className="sm:hidden">
-                            Tests ({executionStats.executed}/{executionStats.total})
+                            Tests ({executionStats.passed}/{executionStats.total})
                           </span>
                         </TabsTrigger>
                       )}
@@ -1157,7 +1014,7 @@ export function AdvancedCodeEditor({
                           {isRunning ? (
                             <div className="flex items-center space-x-2">
                               <Loader2 className="h-4 w-4 animate-spin" />
-                              <span>Executing code...</span>
+                              <span>Executing code against all test cases...</span>
                             </div>
                           ) : executionResult ? (
                             <div className="space-y-3">
@@ -1187,7 +1044,6 @@ export function AdvancedCodeEditor({
                                   </div>
                                 )}
                               </div>
-
                               {executionResult.error && (
                                 <div className="text-red-600 bg-red-50 dark:bg-red-950/20 p-3 rounded border border-red-200 dark:border-red-800">
                                   <div className="text-sm font-medium mb-1">Error:</div>
@@ -1196,7 +1052,6 @@ export function AdvancedCodeEditor({
                                   </pre>
                                 </div>
                               )}
-
                               {executionResult.output && (
                                 <div>
                                   <div className="text-sm font-medium mb-2">Output:</div>
@@ -1205,7 +1060,6 @@ export function AdvancedCodeEditor({
                                   </pre>
                                 </div>
                               )}
-
                               {!executionResult.output && !executionResult.error && (
                                 <div className="text-muted-foreground text-xs sm:text-sm">
                                   No output generated. Make sure your code produces output (e.g., console.log, print,
@@ -1215,7 +1069,7 @@ export function AdvancedCodeEditor({
                             </div>
                           ) : (
                             <div className="text-muted-foreground text-xs sm:text-sm">
-                              Click "Run" to execute your code or use Ctrl+Enter
+                              Click "Run All Tests" to execute your code against all test cases
                             </div>
                           )}
                         </div>
@@ -1226,124 +1080,92 @@ export function AdvancedCodeEditor({
                       <TabsContent value="testcases" className="m-0 h-full">
                         <ScrollArea className="h-full">
                           <div className="p-2 sm:p-4 space-y-3 sm:space-y-4">
-                            {/* Current Test Case Display */}
-                            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md p-3 sm:p-4">
-                              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                                <h3 className="font-semibold text-blue-900 dark:text-blue-100 text-sm sm:text-base">
-                                  Current Test Case {currentTestCaseIndex + 1}
-                                </h3>
-                                <Badge variant="outline" className="border-blue-300 text-xs">
-                                  {executionMode === "single" ? "Next to Execute" : "Selected"}
-                                </Badge>
+                            {codeSubmissions.length === 0 ? (
+                              <div className="text-muted-foreground text-xs sm:text-sm text-center py-6 sm:py-8">
+                                No code submissions yet. Click "Run All Tests" to execute your code against all test
+                                cases.
                               </div>
-
-                              <div className="space-y-3 text-xs sm:text-sm">
-                                {!testCases[currentTestCaseIndex]?.isHidden && (
-                                  <>
-                                    <div>
-                                      <span className="font-medium">Input:</span>
-                                      <pre className="mt-1 p-2 bg-background rounded text-xs overflow-x-auto border max-h-20 sm:max-h-32">
-                                        {testCases[currentTestCaseIndex]?.input === ""
-                                          ? "(empty input)"
-                                          : testCases[currentTestCaseIndex]?.input}
-                                      </pre>
+                            ) : (
+                              <div className="space-y-4">
+                                {codeSubmissions.map((submission, submissionIndex) => (
+                                  <div
+                                    key={`submission-${submissionIndex}-${submission.timestamp.getTime()}`}
+                                    className="border rounded-md p-3 sm:p-4 bg-muted/50"
+                                  >
+                                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                                      <h3 className="font-semibold text-sm sm:text-base">
+                                        Submission #{submissionIndex + 1}
+                                      </h3>
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant={submission.allPassed ? "default" : "secondary"}>
+                                          {submission.passedCount}/{submission.totalCount} Passed
+                                        </Badge>
+                                        <span className="text-xs text-muted-foreground">
+                                          {new Date(submission.timestamp).toLocaleTimeString()}
+                                        </span>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <span className="font-medium">Expected Output:</span>
-                                      <pre className="mt-1 p-2 bg-background rounded text-xs overflow-x-auto border max-h-20 sm:max-h-32">
-                                        {testCases[currentTestCaseIndex]?.expectedOutput}
-                                      </pre>
-                                    </div>
-                                  </>
-                                )}
 
-                                {testCases[currentTestCaseIndex]?.isHidden && (
-                                  <div className="text-muted-foreground">
-                                    🔒 This is a hidden test case. Input and expected output are not shown.
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Execution History */}
-                            <div>
-                              <h3 className="font-semibold mb-3 text-sm sm:text-base">Execution History</h3>
-                              {testCaseExecutions.length === 0 ? (
-                                <div className="text-muted-foreground text-xs sm:text-sm text-center py-6 sm:py-8">
-                                  No test cases executed yet. Click "Run" to start testing.
-                                </div>
-                              ) : (
-                                <div className="space-y-2 sm:space-y-3">
-                                  {testCaseExecutions
-                                    .sort((a, b) => a.testCaseIndex - b.testCaseIndex)
-                                    .map((execution, index) => (
-                                      <div
-                                        key={`${execution.testCaseId}-${execution.timestamp.getTime()}`}
-                                        className="border rounded-md p-2 sm:p-3 bg-muted/50"
-                                      >
-                                        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                                          <span className="font-medium text-xs sm:text-sm">
-                                            Test Case {execution.testCaseIndex + 1}
-                                          </span>
-                                          <div className="flex items-center gap-2">
+                                    <div className="space-y-2 sm:space-y-3">
+                                      {submission.results.map((result, resultIndex) => (
+                                        <div
+                                          key={`result-${result.testCaseId}-${resultIndex}-${submissionIndex}`}
+                                          className="border rounded-md p-2 sm:p-3 bg-background"
+                                        >
+                                          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                                            <span className="font-medium text-xs sm:text-sm">
+                                              Test Case {resultIndex + 1}
+                                            </span>
                                             <Badge
-                                              variant={execution.result.passed ? "default" : "destructive"}
+                                              variant={result.passed ? "default" : "destructive"}
                                               className="text-xs"
                                             >
-                                              {execution.result.passed ? "✓ Passed" : "✗ Failed"}
+                                              {result.passed ? "✓ Passed" : "✗ Failed"}
                                             </Badge>
-                                            <span className="text-xs text-muted-foreground">
-                                              {execution.timestamp.toLocaleTimeString()}
-                                            </span>
-                                          </div>
-                                        </div>
-
-                                        <div className="space-y-2 text-xs">
-                                          {!testCases[execution.testCaseIndex]?.isHidden && (
-                                            <>
-                                              <div>
-                                                <span className="font-medium">Input:</span>
-                                                <pre className="mt-1 p-2 bg-background rounded text-xs overflow-x-auto border max-h-16 sm:max-h-24">
-                                                  {testCases[execution.testCaseIndex]?.input === ""
-                                                    ? "(empty input)"
-                                                    : testCases[execution.testCaseIndex]?.input}
-                                                </pre>
-                                              </div>
-                                              <div>
-                                                <span className="font-medium">Expected Output:</span>
-                                                <pre className="mt-1 p-2 bg-background rounded text-xs overflow-x-auto border max-h-16 sm:max-h-24">
-                                                  {execution.result.expectedOutput}
-                                                </pre>
-                                              </div>
-                                            </>
-                                          )}
-
-                                          <div>
-                                            <span className="font-medium">Your Output:</span>
-                                            <pre
-                                              className={`mt-1 p-2 rounded text-xs overflow-x-auto border max-h-16 sm:max-h-24 ${
-                                                execution.result.passed
-                                                  ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
-                                                  : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
-                                              }`}
-                                            >
-                                              {execution.result.actualOutput === ""
-                                                ? "(empty output)"
-                                                : execution.result.actualOutput}
-                                            </pre>
                                           </div>
 
-                                          {execution.result.executionTime && (
-                                            <div className="text-xs text-muted-foreground">
-                                              Execution time: {execution.result.executionTime}ms
+                                          <div className="space-y-2 text-xs">
+                                            {!testCases[resultIndex]?.isHidden && (
+                                              <>
+                                                <div>
+                                                  <span className="font-medium">Input:</span>
+                                                  <pre className="mt-1 p-2 bg-muted rounded text-xs overflow-x-auto border max-h-16 sm:max-h-24">
+                                                    {result.input === "" ? "(empty input)" : result.input}
+                                                  </pre>
+                                                </div>
+                                                <div>
+                                                  <span className="font-medium">Expected Output:</span>
+                                                  <pre className="mt-1 p-2 bg-muted rounded text-xs overflow-x-auto border max-h-16 sm:max-h-24">
+                                                    {result.expectedOutput}
+                                                  </pre>
+                                                </div>
+                                              </>
+                                            )}
+                                            <div>
+                                              <span className="font-medium">Your Output:</span>
+                                              <pre
+                                                className={`mt-1 p-2 rounded text-xs overflow-x-auto border max-h-16 sm:max-h-24 ${
+                                                  result.passed
+                                                    ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+                                                    : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+                                                }`}
+                                              >
+                                                {result.actualOutput === "" ? "(empty output)" : result.actualOutput}
+                                              </pre>
                                             </div>
-                                          )}
+                                            {result.executionTime && (
+                                              <div className="text-xs text-muted-foreground">
+                                                Execution time: {result.executionTime}ms
+                                              </div>
+                                            )}
+                                          </div>
                                         </div>
-                                      </div>
-                                    ))}
-                                </div>
-                              )}
-                            </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </ScrollArea>
                       </TabsContent>
@@ -1366,10 +1188,11 @@ export function AdvancedCodeEditor({
                 <span className="hidden md:inline">Language: {currentLang.label}</span>
                 {testCases.length > 0 && (
                   <span>
-                    Next: {currentTestCaseIndex + 1}/{testCases.length}
+                    Tests: {executionStats.passed}/{executionStats.total}
                   </span>
                 )}
               </div>
+
               <div className="flex items-center space-x-2">
                 <Cpu className="h-3 w-3" />
                 <span>{isRunning ? "Running..." : "Ready"}</span>

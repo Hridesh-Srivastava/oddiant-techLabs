@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -37,7 +37,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
-import { CandidateSelectionProvider } from "@/components/candidate-selection-context"
 import { useCandidateSelection } from "@/components/candidate-selection-context"
 import { CandidatesFilterBar } from "@/components/candidates/candidates-filter-bar"
 import AvatarUpload from "@/components/avatar-upload"
@@ -47,6 +46,7 @@ import type { Employee } from "@/types"
 import { FilterPanel } from "@/components/ats/filter-panel"
 import { CandidateList } from "@/components/ats/candidate-list"
 import { FilterDropdown } from "@/components/ats/filter-dropdown"
+import { CandidateSelectionProvider } from "@/components/candidate-selection-context"
 
 interface EmployeeData {
   _id: string
@@ -338,6 +338,17 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
   const [positionSort, setPositionSort] = useState<"asc" | "desc" | null>(null)
   const [statusSort, setStatusSort] = useState<"asc" | "desc" | null>(null)
   const [appliedDateSort, setAppliedDateSort] = useState<"asc" | "desc" | null>(null)
+
+  // After filteredCandidates state declaration:
+  const prevFilteredIds = useRef<string[]>([])
+  useEffect(() => {
+    const currentIds = filteredCandidates.map(c => c._id).sort().join(",")
+    const prevIds = prevFilteredIds.current.sort().join(",")
+    if (currentIds !== prevIds) {
+      clearSelectedCandidates()
+      prevFilteredIds.current = filteredCandidates.map(c => c._id)
+    }
+  }, [filteredCandidates, clearSelectedCandidates])
 
   // Effect to update the URL when tab changes
   useEffect(() => {
@@ -2012,6 +2023,9 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
     router.push("/employee/assessment/dashboard")
   }
 
+  // After filteredCandidates state declaration:
+  const handleFilterChange = useCallback((filtered: Candidate[]) => setFilteredCandidates(filtered), [])
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
@@ -2528,7 +2542,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
               </CardHeader>
               <CardContent>
                 <div className="mb-4">
-                 <CandidatesFilterBar candidates={candidates} onFilterChange={(filtered) => setFilteredCandidates(filtered as Candidate[])} />
+                 <CandidatesFilterBar candidates={candidates} onFilterChange={handleFilterChange} />
                 </div>
 
                 {filteredCandidates.length > 0 ? (
@@ -2542,9 +2556,9 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                               selectedCandidates.length === filteredCandidates.length && filteredCandidates.length > 0
                             }
                             onCheckedChange={(checked) => {
-                              if (checked) {
+                              if (checked && selectedCandidates.length !== filteredCandidates.length) {
                                 selectAllCandidates(filteredCandidates.map((c) => c._id))
-                              } else {
+                              } else if (!checked && selectedCandidates.length > 0) {
                                 clearSelectedCandidates()
                               }
                             }}
@@ -3436,14 +3450,20 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
   )
 }
 
-// Replace the existing EmployeeDashboardWrapper function with:
+// Remove CandidateSelectionProvider from EmployeeDashboardWrapper
 function EmployeeDashboardWrapper(props: any) {
   return (
-    <CandidateSelectionProvider>
-      <EmployeeDashboard userData={props.userData || null} />
-    </CandidateSelectionProvider>
+    <EmployeeDashboard userData={props.userData || null} />
   )
 }
 
-// Export the wrapped component
-export default withAuth(EmployeeDashboardWrapper)
+// Export the wrapped component, but wrap with CandidateSelectionProvider at the export level
+const WrappedDashboard = withAuth(EmployeeDashboardWrapper)
+
+export default function DashboardPage(props: any) {
+  return (
+    <CandidateSelectionProvider>
+      <WrappedDashboard {...props} />
+    </CandidateSelectionProvider>
+  )
+}

@@ -1,31 +1,15 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { toast, Toaster } from "sonner";
-import {
-  ArrowLeft,
-  Plus,
-  Trash2,
-  Save,
-  Eye,
-  Edit,
-  Code,
-  FileText,
-  CheckSquare,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useState, useEffect, useCallback, useMemo } from "react"
+import { useRouter, useParams } from "next/navigation"
+import { toast, Toaster } from "sonner"
+import { ArrowLeft, Plus, Trash2, Save, Eye, Edit, Code, FileText, CheckSquare } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Dialog,
   DialogContent,
@@ -33,85 +17,79 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { AdvancedCodeEditor } from "@/components/advanced-code-editor";
+} from "@/components/ui/dialog"
+import { AdvancedCodeEditor } from "@/components/advanced-code-editor"
 
 interface TestData {
-  _id: string;
-  name: string;
-  description: string;
-  duration: number;
-  passingScore: number;
-  instructions: string;
-  type: string;
+  _id: string
+  name: string
+  description: string
+  duration: number
+  passingScore: number
+  instructions: string
+  type: string
   settings: {
-    shuffleQuestions: boolean;
-    preventTabSwitching: boolean;
-    allowCalculator: boolean;
-    allowCodeEditor: boolean;
-    autoSubmit: boolean;
-  };
-  sections: SectionData[];
-  status: string;
-  createdAt: string;
-  updatedAt: string;
+    shuffleQuestions: boolean
+    preventTabSwitching: boolean
+    allowCalculator: boolean
+    allowCodeEditor: boolean
+    autoSubmit: boolean
+  }
+  sections: SectionData[]
+  status: string
+  createdAt: string
+  updatedAt: string
 }
 
 interface SectionData {
-  id: string;
-  title: string;
-  duration: number;
-  questionType: string;
-  questions: QuestionData[];
+  id: string
+  title: string
+  questionType: string
+  questions: QuestionData[]
 }
 
 interface QuestionData {
-  id: string;
-  text: string;
-  type: string;
-  options?: string[];
-  correctAnswer?: string | string[];
-  points: number;
-  explanation?: string;
+  id: string
+  text: string
+  type: string
+  options?: string[]
+  correctAnswer?: string | string[]
+  points: number
+  explanation?: string
   // Coding question specific fields
-  codeLanguage?: string;
-  codeTemplate?: string;
-  expectedOutput?: string;
-  testCases?: TestCase[];
-  instructions?: string;
+  codeLanguage?: string
+  codeTemplate?: string
+  expectedOutput?: string
+  testCases?: TestCase[]
+  instructions?: string
   // Written answer specific fields
-  maxWords?: number;
-  sampleAnswer?: string;
+  maxWords?: number
+  sampleAnswer?: string
+  timestamp?: number
 }
 
 interface TestCase {
-  input: string;
-  expectedOutput: string;
-  description?: string;
-  isHidden?: boolean;
-  id?: string;
+  input: string
+  expectedOutput: string
+  description?: string
+  isHidden?: boolean
+  id?: string
 }
 
 export default function EditTestPage() {
-  const router = useRouter();
-  const params = useParams();
-  const testId = params.id as string;
+  const router = useRouter()
+  const params = useParams()
+  const testId = params.id as string
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [test, setTest] = useState<TestData | null>(null);
-  const [showDeleteSectionDialog, setShowDeleteSectionDialog] = useState(false);
-  const [sectionToDelete, setSectionToDelete] = useState<string | null>(null);
-  const [showQuestionDialog, setShowQuestionDialog] = useState(false);
-  const [currentSectionIndex, setCurrentSectionIndex] = useState<number | null>(
-    null
-  );
-  const [editingQuestion, setEditingQuestion] = useState<QuestionData | null>(
-    null
-  );
-  const [editingQuestionIndex, setEditingQuestionIndex] = useState<
-    number | null
-  >(null);
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [test, setTest] = useState<TestData | null>(null)
+  const [showDeleteSectionDialog, setShowDeleteSectionDialog] = useState(false)
+  const [sectionToDelete, setSectionToDelete] = useState<string | null>(null)
+  const [showQuestionDialog, setShowQuestionDialog] = useState(false)
+  const [currentSectionIndex, setCurrentSectionIndex] = useState<number | null>(null)
+  const [editingQuestion, setEditingQuestion] = useState<QuestionData | null>(null)
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null)
 
   // Question form state
   const [questionForm, setQuestionForm] = useState<QuestionData>({
@@ -122,16 +100,11 @@ export default function EditTestPage() {
     correctAnswer: "",
     points: 1,
     explanation: "",
-  });
+  })
 
-  useEffect(() => {
-    fetchTest();
-  }, []);
-
-  const fetchTest = async () => {
+  const fetchTest = useCallback(async () => {
     try {
-      setIsLoading(true);
-
+      setIsLoading(true)
       const response = await fetch(`/api/assessment/tests/${testId}`, {
         method: "GET",
         headers: {
@@ -139,432 +112,443 @@ export default function EditTestPage() {
           Pragma: "no-cache",
           Expires: "0",
         },
-      });
+      })
 
       if (!response.ok) {
-        throw new Error("Failed to fetch test");
+        throw new Error("Failed to fetch test")
       }
 
-      const data = await response.json();
-
+      const data = await response.json()
       if (data.success) {
-        // Ensure settings have default values to prevent undefined issues
+        // FIXED: Ensure settings have proper boolean values to prevent undefined issues
         const testData = {
           ...data.test,
           settings: {
-            shuffleQuestions: data.test.settings?.shuffleQuestions ?? false,
-            preventTabSwitching:
-              data.test.settings?.preventTabSwitching ?? false,
-            allowCalculator: data.test.settings?.allowCalculator ?? false,
-            allowCodeEditor: data.test.settings?.allowCodeEditor ?? false,
-            autoSubmit: data.test.settings?.autoSubmit ?? false,
+            shuffleQuestions: Boolean(data.test.settings?.shuffleQuestions),
+            preventTabSwitching: Boolean(data.test.settings?.preventTabSwitching),
+            allowCalculator: Boolean(data.test.settings?.allowCalculator),
+            allowCodeEditor: Boolean(data.test.settings?.allowCodeEditor),
+            autoSubmit: Boolean(data.test.settings?.autoSubmit),
           },
-        };
-        setTest(testData);
-        console.log("Fetched test data:", testData); // Debug log
+        }
+        setTest(testData)
+        console.log("Fetched test data:", testData) // Debug log
       } else {
-        throw new Error(data.message || "Failed to fetch test");
+        throw new Error(data.message || "Failed to fetch test")
       }
     } catch (error) {
-      console.error("Error fetching test:", error);
-      toast.error("Failed to load test. Please try again.");
+      console.error("Error fetching test:", error)
+      toast.error("Failed to load test. Please try again.")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }, [testId])
 
-  const handleInputChange = (
-    field: string,
-    value: string | number | boolean
-  ) => {
-    if (!test) return;
+  useEffect(() => {
+    fetchTest()
+  }, [fetchTest])
 
+  // FIXED: Remove test dependency to prevent infinite loops
+  const handleInputChange = useCallback((field: string, value: string | number | boolean) => {
     if (field.startsWith("settings.")) {
-      const settingField = field.split(".")[1];
-      setTest({
-        ...test,
-        settings: {
-          ...test.settings,
-          [settingField]: value,
-        },
-      });
+      const settingField = field.split(".")[1]
+      setTest((prev) =>
+        prev
+          ? {
+              ...prev,
+              settings: {
+                ...prev.settings,
+                [settingField]: value,
+              },
+            }
+          : prev,
+      )
     } else {
-      setTest({
-        ...test,
-        [field]: value,
-      });
+      setTest((prev) =>
+        prev
+          ? {
+              ...prev,
+              [field]: value,
+            }
+          : prev,
+      )
     }
-  };
+  }, [])
 
-  // Enhanced settings change handler with debugging
-  const handleTestSettingsChange = (setting: string, value: boolean) => {
-    if (!test) return;
-
-    console.log(`Changing setting ${setting} to ${value}`); // Debug log
-
+  // FIXED: Enhanced settings change handler with proper state management
+  const handleTestSettingsChange = useCallback((setting: string, value: boolean) => {
+    console.log(`Changing setting ${setting} to ${value}`) // Debug log
     setTest((prev) => {
-      if (!prev) return prev;
-
+      if (!prev) return prev
       const updatedTest = {
         ...prev,
         settings: {
           ...prev.settings,
           [setting]: value,
         },
-      };
+      }
+      console.log("Updated test state:", updatedTest) // Debug log
+      return updatedTest
+    })
+  }, [])
 
-      console.log("Updated test state:", updatedTest); // Debug log
-      return updatedTest;
-    });
-  };
+  const handleSectionChange = useCallback((sectionIndex: number, field: string, value: string | number) => {
+    setTest((prev) => {
+      if (!prev) return prev
+      const updatedSections = [...prev.sections]
+      updatedSections[sectionIndex] = {
+        ...updatedSections[sectionIndex],
+        [field]: value,
+      }
+      return {
+        ...prev,
+        sections: updatedSections,
+      }
+    })
+  }, [])
 
-  const handleSectionChange = (
-    sectionIndex: number,
-    field: string,
-    value: string | number
-  ) => {
-    if (!test) return;
+  const handleAddSection = useCallback(() => {
+    setTest((prev) => {
+      if (!prev) return prev
+      const newSection: SectionData = {
+        id: `section-${Date.now()}`,
+        title: `Section ${prev.sections.length + 1}`,
+        questionType: "Multiple Choice",
+        questions: [],
+      }
+      return {
+        ...prev,
+        sections: [...prev.sections, newSection],
+      }
+    })
+  }, [])
 
-    const updatedSections = [...test.sections];
-    updatedSections[sectionIndex] = {
-      ...updatedSections[sectionIndex],
-      [field]: value,
-    };
+  const handleDeleteSection = useCallback((sectionId: string) => {
+    setSectionToDelete(sectionId)
+    setShowDeleteSectionDialog(true)
+  }, [])
 
-    setTest({
-      ...test,
-      sections: updatedSections,
-    });
-  };
+  const confirmDeleteSection = useCallback(() => {
+    if (!sectionToDelete) return
+    setTest((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        sections: prev.sections.filter((section) => section.id !== sectionToDelete),
+      }
+    })
+    setShowDeleteSectionDialog(false)
+    setSectionToDelete(null)
+  }, [sectionToDelete])
 
-  const handleAddSection = () => {
-    if (!test) return;
+  const handleAddQuestion = useCallback(
+    (sectionIndex: number) => {
+      setCurrentSectionIndex(sectionIndex)
+      setEditingQuestion(null)
+      setEditingQuestionIndex(null)
 
-    const newSection: SectionData = {
-      id: `section-${Date.now()}`,
-      title: `Section ${test.sections.length + 1}`,
-      duration: 15,
-      questionType: "Multiple Choice",
-      questions: [],
-    };
+      const section = test?.sections[sectionIndex]
+      const questionType = section?.questionType || "Multiple Choice"
 
-    setTest({
-      ...test,
-      sections: [...test.sections, newSection],
-    });
-  };
-
-  const handleDeleteSection = (sectionId: string) => {
-    setSectionToDelete(sectionId);
-    setShowDeleteSectionDialog(true);
-  };
-
-  const confirmDeleteSection = () => {
-    if (!test || !sectionToDelete) return;
-
-    const updatedSections = test.sections.filter(
-      (section) => section.id !== sectionToDelete
-    );
-
-    setTest({
-      ...test,
-      sections: updatedSections,
-    });
-
-    setShowDeleteSectionDialog(false);
-    setSectionToDelete(null);
-  };
-
-  const handleAddQuestion = (sectionIndex: number) => {
-    setCurrentSectionIndex(sectionIndex);
-    setEditingQuestion(null);
-    setEditingQuestionIndex(null);
-
-    const section = test?.sections[sectionIndex];
-    const questionType = section?.questionType || "Multiple Choice";
-
-    // Initialize question form based on section type
-    if (questionType === "Multiple Choice") {
-      setQuestionForm({
-        id: `question-${Date.now()}`,
-        text: "",
-        type: "Multiple Choice",
-        options: ["", ""],
-        correctAnswer: "",
-        points: 10,
-        explanation: "",
-      });
-    } else if (questionType === "Coding") {
-      setQuestionForm({
-        id: `question-${Date.now()}`,
-        text: "",
-        type: "Coding",
-        points: 20,
-        codeLanguage: "javascript",
-        codeTemplate: `// Write your solution here
+      // Initialize question form based on section type
+      if (questionType === "Multiple Choice") {
+        setQuestionForm({
+          id: `question-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${sectionIndex}`,
+          text: "",
+          type: "Multiple Choice",
+          options: ["", ""],
+          correctAnswer: "",
+          points: 10,
+          explanation: "",
+          timestamp: Date.now(),
+        })
+      } else if (questionType === "Coding") {
+        setQuestionForm({
+          id: `question-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${sectionIndex}`,
+          text: "",
+          type: "Coding",
+          points: 20,
+          codeLanguage: "javascript",
+          codeTemplate: `// Write your solution here
 function solution() {
     // Your code here
     return "Hello World";
 }`,
-        instructions: "",
-        expectedOutput: "",
-        testCases: [
-          {
-            id: "1",
-            input: "",
-            expectedOutput: "Hello World",
-            isHidden: false,
-          },
-        ],
-      });
-    } else if (questionType === "Written Answer") {
-      setQuestionForm({
-        id: `question-${Date.now()}`,
-        text: "",
-        type: "Written Answer",
-        points: 15,
-        maxWords: 500,
-        sampleAnswer: "",
-        explanation: "",
-      });
-    }
-
-    setShowQuestionDialog(true);
-  };
-
-  const handleEditQuestion = (sectionIndex: number, questionIndex: number) => {
-    const question = test?.sections[sectionIndex]?.questions[questionIndex];
-    if (!question) return;
-
-    setCurrentSectionIndex(sectionIndex);
-    setEditingQuestion(question);
-    setEditingQuestionIndex(questionIndex);
-
-    // Ensure proper structure for different question types
-    const formData = { ...question };
-
-    if (question.type === "Multiple Choice" && !formData.options) {
-      formData.options = ["", ""];
-    }
-
-    // CRITICAL: Ensure correctAnswer is properly set for MCQ when editing
-    if (question.type === "Multiple Choice") {
-      formData.correctAnswer = question.correctAnswer || "";
-      console.log("Editing MCQ with correctAnswer:", formData.correctAnswer);
-    }
-
-    if (question.type === "Coding") {
-      if (!formData.testCases) {
-        formData.testCases = [
-          {
-            id: "1",
-            input: "",
-            expectedOutput: "",
-            isHidden: false,
-          },
-        ];
+          instructions: "",
+          expectedOutput: "",
+          testCases: [
+            {
+              id: "1",
+              input: "",
+              expectedOutput: "Hello World",
+              isHidden: false,
+            },
+          ],
+          timestamp: Date.now(),
+        })
+      } else if (questionType === "Written Answer") {
+        setQuestionForm({
+          id: `question-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${sectionIndex}`,
+          text: "",
+          type: "Written Answer",
+          points: 15,
+          maxWords: 500,
+          sampleAnswer: "",
+          explanation: "",
+          timestamp: Date.now(),
+        })
       }
-      // Ensure test cases have proper structure
-      formData.testCases = formData.testCases.map((tc, index) => ({
-        ...tc,
-        id: tc.id || (index + 1).toString(),
-        isHidden: tc.isHidden || false,
-      }));
-    }
 
-    setQuestionForm(formData);
-    setShowQuestionDialog(true);
-  };
+      setShowQuestionDialog(true)
+    },
+    [test],
+  )
 
-  const handleDeleteQuestion = (
-    sectionIndex: number,
-    questionIndex: number
-  ) => {
-    if (!test) return;
+  const handleEditQuestion = useCallback(
+    (sectionIndex: number, questionIndex: number) => {
+      const question = test?.sections[sectionIndex]?.questions[questionIndex]
+      if (!question) return
 
-    const updatedSections = [...test.sections];
-    updatedSections[sectionIndex].questions.splice(questionIndex, 1);
+      setCurrentSectionIndex(sectionIndex)
+      setEditingQuestion(question)
+      setEditingQuestionIndex(questionIndex)
 
-    setTest({
-      ...test,
-      sections: updatedSections,
-    });
+      // Ensure proper structure for different question types
+      const formData = JSON.parse(JSON.stringify(question))
+      if (question.type === "Multiple Choice" && !formData.options) {
+        formData.options = ["", ""]
+      }
 
-    toast.success("Question deleted successfully");
-  };
+      // CRITICAL: Ensure correctAnswer is properly set for MCQ when editing
+      if (question.type === "Multiple Choice") {
+        formData.correctAnswer = question.correctAnswer || ""
+        console.log("Editing MCQ with correctAnswer:", formData.correctAnswer)
+      }
 
-  const handleSaveQuestion = () => {
-    if (!test || currentSectionIndex === null) return;
+      if (question.type === "Coding") {
+        if (!formData.testCases) {
+          formData.testCases = [
+            {
+              id: "1",
+              input: "",
+              expectedOutput: "",
+              isHidden: false,
+            },
+          ]
+        }
+        // Ensure test cases have proper structure
+        formData.testCases = formData.testCases.map((tc, index) => ({
+          ...tc,
+          id: tc.id || (index + 1).toString(),
+          isHidden: tc.isHidden || false,
+        }))
+      }
+
+      setQuestionForm(formData)
+      setShowQuestionDialog(true)
+    },
+    [test],
+  )
+
+  const handleDeleteQuestion = useCallback((sectionIndex: number, questionIndex: number) => {
+    setTest((prev) => {
+      if (!prev) return prev
+      const updatedSections = [...prev.sections]
+      updatedSections[sectionIndex].questions.splice(questionIndex, 1)
+      return {
+        ...prev,
+        sections: updatedSections,
+      }
+    })
+    toast.success("Question deleted successfully")
+  }, [])
+
+  // FIXED: Enhanced code template change handler
+  const handleCodeTemplateChange = useCallback((value: string) => {
+    setQuestionForm((prev) => ({
+      ...prev,
+      codeTemplate: value,
+    }))
+  }, [])
+
+  const handleSaveQuestion = useCallback(() => {
+    if (!test || currentSectionIndex === null) return
 
     // Validate question
     if (!questionForm.text.trim()) {
-      toast.error("Question text is required");
-      return;
+      toast.error("Question text is required")
+      return
     }
+
     if (questionForm.type === "Multiple Choice") {
-      const validOptions =
-        questionForm.options?.filter((opt) => opt.trim()) || [];
+      const validOptions = questionForm.options?.filter((opt) => opt.trim()) || []
       if (validOptions.length < 2) {
-        toast.error(
-          "At least 2 options are required for multiple choice questions"
-        );
-        return;
+        toast.error("At least 2 options are required for multiple choice questions")
+        return
       }
 
       // Enhanced validation for correct answer
       if (
-  !questionForm.correctAnswer ||
-  (typeof questionForm.correctAnswer === "string"
-    ? !questionForm.correctAnswer.trim()
-    : !questionForm.correctAnswer)
-) {
-        toast.error(
-          "Please select a correct answer by clicking the radio button"
-        );
-        return;
+        !questionForm.correctAnswer ||
+        (typeof questionForm.correctAnswer === "string"
+          ? !questionForm.correctAnswer.trim()
+          : !questionForm.correctAnswer)
+      ) {
+        toast.error("Please select a correct answer by clicking the radio button")
+        return
       }
 
-    const correctAnswerStr = 
-  typeof questionForm.correctAnswer === "string"
-    ? questionForm.correctAnswer
-    : Array.isArray(questionForm.correctAnswer)
-      ? questionForm.correctAnswer[0] || ""
-      : ""
+      const correctAnswerStr =
+        typeof questionForm.correctAnswer === "string"
+          ? questionForm.correctAnswer
+          : Array.isArray(questionForm.correctAnswer)
+            ? questionForm.correctAnswer[0] || ""
+            : ""
 
-if (!validOptions.includes(correctAnswerStr)) {
-  toast.error("The selected correct answer is not valid. Please select from the available options.")
-  return
-}
+      if (!validOptions.includes(correctAnswerStr)) {
+        toast.error("The selected correct answer is not valid. Please select from the available options.")
+        return
+      }
 
-      console.log("MCQ Edit Validation passed:");
-      console.log("- Question:", questionForm.text);
-      console.log("- Options:", validOptions);
-      console.log("- Correct Answer:", questionForm.correctAnswer);
+      console.log("MCQ Edit Validation passed:")
+      console.log("- Question:", questionForm.text)
+      console.log("- Options:", validOptions)
+      console.log("- Correct Answer:", questionForm.correctAnswer)
     }
 
     if (questionForm.type === "Coding") {
       if (!questionForm.codeLanguage) {
-        toast.error("Programming language is required");
-        return;
+        toast.error("Programming language is required")
+        return
       }
+
       if (!questionForm.codeTemplate?.trim()) {
-        toast.error("Code template is required for coding questions");
-        return;
+        toast.error("Code template is required for coding questions")
+        return
       }
+
       if (!questionForm.testCases || questionForm.testCases.length === 0) {
-        toast.error("At least one test case is required");
-        return;
+        toast.error("At least one test case is required")
+        return
       }
+
       // Validate test cases
       for (const testCase of questionForm.testCases) {
         if (!testCase.input.trim() && !testCase.expectedOutput.trim()) {
-          toast.error("Test cases must have input or expected output");
-          return;
+          toast.error("Test cases must have input or expected output")
+          return
         }
       }
     }
 
-    const updatedSections = [...test.sections];
+    setTest((prev) => {
+      if (!prev) return prev
+      const updatedSections = [...prev.sections]
 
-    if (editingQuestionIndex !== null) {
-      // Update existing question
-      const updatedQuestion = {
-        ...questionForm,
-        options:
-          questionForm.type === "Multiple Choice"
-            ? questionForm.options?.filter((opt) => opt.trim() !== "")
-            : questionForm.options,
-        // CRITICAL: Ensure correctAnswer is properly preserved
-        correctAnswer:
-          questionForm.type === "Multiple Choice"
-            ? questionForm.correctAnswer
-            : questionForm.correctAnswer || "",
-      };
+      if (editingQuestionIndex !== null) {
+        // Update existing question
+        const updatedQuestion = {
+          ...questionForm,
+          options:
+            questionForm.type === "Multiple Choice"
+              ? questionForm.options?.filter((opt) => opt.trim() !== "")
+              : questionForm.options,
+          // CRITICAL: Ensure correctAnswer is properly preserved
+          correctAnswer:
+            questionForm.type === "Multiple Choice" ? questionForm.correctAnswer : questionForm.correctAnswer || "",
+          // FIXED: Ensure code template is properly saved
+          codeTemplate: questionForm.type === "Coding" ? questionForm.codeTemplate : undefined,
+        }
 
-      console.log(
-        "Updating question with correctAnswer:",
-        updatedQuestion.correctAnswer
-      );
-      updatedSections[currentSectionIndex].questions[editingQuestionIndex] =
-        updatedQuestion;
-      toast.success("Question updated successfully");
-    } else {
-      // Add new question
-      const questionToAdd = {
-        ...questionForm,
-        options:
-          questionForm.type === "Multiple Choice"
-            ? questionForm.options?.filter((opt) => opt.trim() !== "")
-            : questionForm.options,
-        // CRITICAL: Ensure correctAnswer is properly set
-        correctAnswer:
-          questionForm.type === "Multiple Choice"
-            ? questionForm.correctAnswer
-            : questionForm.correctAnswer || "",
-      };
+        console.log("Updating question with correctAnswer:", updatedQuestion.correctAnswer)
+        console.log("Updating question with codeTemplate:", updatedQuestion.codeTemplate)
+        updatedSections[currentSectionIndex].questions[editingQuestionIndex] = updatedQuestion
+        toast.success("Question updated successfully")
+        setQuestionForm({
+          id: "",
+          text: "",
+          type: "Multiple Choice",
+          options: ["", "", "", ""],
+          correctAnswer: "",
+          points: 1,
+          explanation: "",
+        })
+      } else {
+        // Add new question - FIXED: Generate unique ID to prevent duplicates
+        const uniqueQuestionId = `question-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${currentSectionIndex}-${Date.now()}`
 
-      console.log(
-        "Adding question with correctAnswer:",
-        questionToAdd.correctAnswer
-      );
-      updatedSections[currentSectionIndex].questions.push(questionToAdd);
-      toast.success("Question added successfully");
-    }
+        const questionToAdd = {
+          ...questionForm,
+          id: uniqueQuestionId,
+          options:
+            questionForm.type === "Multiple Choice"
+              ? questionForm.options?.filter((opt) => opt.trim() !== "")
+              : questionForm.options,
+          // CRITICAL: Ensure correctAnswer is properly set
+          correctAnswer:
+            questionForm.type === "Multiple Choice" ? questionForm.correctAnswer : questionForm.correctAnswer || "",
+          // FIXED: Ensure code template is properly saved
+          codeTemplate: questionForm.type === "Coding" ? questionForm.codeTemplate : undefined,
+        }
 
-    setTest({
-      ...test,
-      sections: updatedSections,
-    });
+        console.log("Adding question with correctAnswer:", questionToAdd.correctAnswer)
+        console.log("Adding question with codeTemplate:", questionToAdd.codeTemplate)
+        updatedSections[currentSectionIndex].questions.push(questionToAdd)
+        toast.success("Question added successfully")
+        setQuestionForm({
+          id: "",
+          text: "",
+          type: "Multiple Choice",
+          options: ["", "", "", ""],
+          correctAnswer: "",
+          points: 1,
+          explanation: "",
+        })
+      }
 
-    setShowQuestionDialog(false);
-    setCurrentSectionIndex(null);
-    setEditingQuestion(null);
-    setEditingQuestionIndex(null);
-  };
+      return {
+        ...prev,
+        sections: updatedSections,
+      }
+    })
 
-  const handleSaveTest = async () => {
+    setShowQuestionDialog(false)
+    setCurrentSectionIndex(null)
+    setEditingQuestion(null)
+    setEditingQuestionIndex(null)
+  }, [test, currentSectionIndex, questionForm, editingQuestionIndex])
+
+  const handleSaveTest = useCallback(async () => {
     try {
-      if (!test) return;
+      if (!test) return
 
-      setIsSaving(true);
+      setIsSaving(true)
 
       // Validate test data
       if (!test.name) {
-        toast.error("Test name is required");
-        setIsSaving(false);
-        return;
+        toast.error("Test name is required")
+        return
       }
 
       if (test.duration <= 0) {
-        toast.error("Test duration must be greater than 0");
-        setIsSaving(false);
-        return;
+        toast.error("Test duration must be greater than 0")
+        return
       }
 
       if (test.passingScore < 0 || test.passingScore > 100) {
-        toast.error("Passing score must be between 0 and 100");
-        setIsSaving(false);
-        return;
+        toast.error("Passing score must be between 0 and 100")
+        return
       }
 
       // Validate sections
       for (const section of test.sections) {
         if (!section.title) {
-          toast.error("Section title is required");
-          setIsSaving(false);
-          return;
-        }
-
-        if (section.duration <= 0) {
-          toast.error(
-            `Duration for section "${section.title}" must be greater than 0`
-          );
-          setIsSaving(false);
-          return;
+          toast.error("Section title is required")
+          return
         }
       }
 
-      // Prepare the data to be sent - ensure settings are properly structured
+      // FIXED: Prepare the data to be sent - ensure settings are properly structured
       const testDataToSave = {
         ...test,
         settings: {
@@ -574,9 +558,9 @@ if (!validOptions.includes(correctAnswerStr)) {
           allowCodeEditor: Boolean(test.settings.allowCodeEditor),
           autoSubmit: Boolean(test.settings.autoSubmit),
         },
-      };
+      }
 
-      console.log("Saving test data:", testDataToSave); // Debug log
+      console.log("Saving test data:", testDataToSave) // Debug log
 
       const response = await fetch(`/api/assessment/tests/${testId}`, {
         method: "PUT",
@@ -584,33 +568,34 @@ if (!validOptions.includes(correctAnswerStr)) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(testDataToSave),
-      });
+      })
 
-      const data = await response.json();
-      console.log("Save response:", data); // Debug log
+      const data = await response.json()
+      console.log("Save response:", data) // Debug log
 
       if (response.ok && data.success) {
-        toast.success("Test updated successfully");
-
+        toast.success("Test updated successfully")
         // Force a refresh of the test data to ensure we have the latest from the database
-        await fetchTest();
-
+        await fetchTest()
         // Navigate back to the test overview
-        router.push(`/employee/assessment/tests/${testId}`);
+        router.push(`/employee/assessment/tests/${testId}`)
       } else {
-        throw new Error(data.message || "Failed to update test");
+        throw new Error(data.message || "Failed to update test")
       }
     } catch (error) {
-      console.error("Error saving test:", error);
-      toast.error(
-        (error as Error).message || "Failed to save test. Please try again."
-      );
+      console.error("Error saving test:", error)
+      toast.error((error as Error).message || "Failed to save test. Please try again.")
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
-  };
+  }, [test, testId, fetchTest, router])
 
-  const renderQuestionForm = () => {
+  // Memoized calculations to prevent unnecessary re-renders
+  const totalQuestions = useMemo(() => {
+    return test?.sections.reduce((total, section) => total + section.questions.length, 0) || 0
+  }, [test?.sections])
+
+  const renderQuestionForm = useCallback(() => {
     if (questionForm.type === "Multiple Choice") {
       return (
         <div className="space-y-4">
@@ -619,14 +604,11 @@ if (!validOptions.includes(correctAnswerStr)) {
             <Textarea
               id="question-text"
               value={questionForm.text}
-              onChange={(e) =>
-                setQuestionForm({ ...questionForm, text: e.target.value })
-              }
+              onChange={(e) => setQuestionForm({ ...questionForm, text: e.target.value })}
               placeholder="Enter your question"
               rows={3}
             />
           </div>
-
           <div>
             <Label>Options *</Label>
             <div className="space-y-2">
@@ -635,28 +617,28 @@ if (!validOptions.includes(correctAnswerStr)) {
                   <Input
                     value={option}
                     onChange={(e) => {
-                      const newOptions = [...(questionForm.options || [])];
-                      const oldValue = newOptions[index];
-                      newOptions[index] = e.target.value;
+                      const newOptions = [...(questionForm.options || [])]
+                      const oldValue = newOptions[index]
+                      newOptions[index] = e.target.value
 
-                     const currentCorrectAnswer =
-  typeof questionForm.correctAnswer === "string"
-    ? questionForm.correctAnswer
-    : Array.isArray(questionForm.correctAnswer)
-      ? questionForm.correctAnswer[0] || ""
-      : ""
+                      const currentCorrectAnswer =
+                        typeof questionForm.correctAnswer === "string"
+                          ? questionForm.correctAnswer
+                          : Array.isArray(questionForm.correctAnswer)
+                            ? questionForm.correctAnswer[0] || ""
+                            : ""
 
-if (currentCorrectAnswer === oldValue && e.target.value !== oldValue) {
+                      if (currentCorrectAnswer === oldValue && e.target.value !== oldValue) {
                         setQuestionForm({
                           ...questionForm,
                           options: newOptions,
                           correctAnswer: "",
-                        });
+                        })
                       } else {
                         setQuestionForm({
                           ...questionForm,
                           options: newOptions,
-                        });
+                        })
                       }
                     }}
                     placeholder={`Option ${index + 1}`}
@@ -665,12 +647,12 @@ if (currentCorrectAnswer === oldValue && e.target.value !== oldValue) {
                     type="radio"
                     name="correctAnswer"
                     checked={
-  (typeof questionForm.correctAnswer === "string"
-    ? questionForm.correctAnswer
-    : Array.isArray(questionForm.correctAnswer)
-      ? questionForm.correctAnswer[0] || ""
-      : "") === option && option.trim() !== ""
-}
+                      (typeof questionForm.correctAnswer === "string"
+                        ? questionForm.correctAnswer
+                        : Array.isArray(questionForm.correctAnswer)
+                          ? questionForm.correctAnswer[0] || ""
+                          : "") === option && option.trim() !== ""
+                    }
                     onChange={() =>
                       option.trim() &&
                       setQuestionForm({
@@ -687,29 +669,23 @@ if (currentCorrectAnswer === oldValue && e.target.value !== oldValue) {
                       size="sm"
                       className="text-destructive"
                       onClick={() => {
-                        if (
-                          questionForm.options &&
-                          questionForm.options.length <= 2
-                        ) {
-                          toast.error("At least 2 options are required");
-                          return;
+                        if (questionForm.options && questionForm.options.length <= 2) {
+                          toast.error("At least 2 options are required")
+                          return
                         }
-                        const newOptions =
-                          questionForm.options?.filter((_, i) => i !== index) ||
-                          [];
-                       const currentCorrectAnswer =
-  typeof questionForm.correctAnswer === "string"
-    ? questionForm.correctAnswer
-    : Array.isArray(questionForm.correctAnswer)
-      ? questionForm.correctAnswer[0] || ""
-      : ""
-
-const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correctAnswer
+                        const newOptions = questionForm.options?.filter((_, i) => i !== index) || []
+                        const currentCorrectAnswer =
+                          typeof questionForm.correctAnswer === "string"
+                            ? questionForm.correctAnswer
+                            : Array.isArray(questionForm.correctAnswer)
+                              ? questionForm.correctAnswer[0] || ""
+                              : ""
+                        const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correctAnswer
                         setQuestionForm({
                           ...questionForm,
                           options: newOptions,
                           correctAnswer,
-                        });
+                        })
                       }}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -721,44 +697,35 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  const newOptions = [...(questionForm.options || []), ""];
-                  setQuestionForm({ ...questionForm, options: newOptions });
+                  const newOptions = [...(questionForm.options || []), ""]
+                  setQuestionForm({ ...questionForm, options: newOptions })
                 }}
               >
                 + Add Option
               </Button>
-              <p className="text-sm text-muted-foreground mt-1">
-                Select the radio button next to the correct answer
-              </p>
+              <p className="text-sm text-muted-foreground mt-1">Select the radio button next to the correct answer</p>
               {questionForm.correctAnswer && (
                 <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
                   <p className="text-xs text-green-700">
                     Correct answer selected: "
                     <strong>
-  {typeof questionForm.correctAnswer === "string"
-    ? questionForm.correctAnswer
-    : Array.isArray(questionForm.correctAnswer)
-      ? questionForm.correctAnswer[0] || ""
-      : ""}
-</strong>"
+                      {typeof questionForm.correctAnswer === "string"
+                        ? questionForm.correctAnswer
+                        : Array.isArray(questionForm.correctAnswer)
+                          ? questionForm.correctAnswer[0] || ""
+                          : ""}
+                    </strong>
+                    "
                   </p>
                 </div>
               )}
-              {!questionForm.correctAnswer &&
-                questionForm.options?.some((opt) => opt.trim()) && (
-                  <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
-                    <p className="text-xs text-yellow-700">
-                      Please select the correct answer by clicking a radio
-                      button
-                    </p>
-                  </div>
-                )}
+              {!questionForm.correctAnswer && questionForm.options?.some((opt) => opt.trim()) && (
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <p className="text-xs text-yellow-700">Please select the correct answer by clicking a radio button</p>
+                </div>
+              )}
             </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Select the radio button next to the correct answer
-            </p>
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="question-points">Points</Label>
@@ -776,7 +743,6 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
               />
             </div>
           </div>
-
           <div>
             <Label htmlFor="question-explanation">Explanation (Optional)</Label>
             <Textarea
@@ -793,7 +759,7 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
             />
           </div>
         </div>
-      );
+      )
     }
 
     if (questionForm.type === "Coding") {
@@ -804,14 +770,11 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
             <Textarea
               id="question-text"
               value={questionForm.text}
-              onChange={(e) =>
-                setQuestionForm({ ...questionForm, text: e.target.value })
-              }
+              onChange={(e) => setQuestionForm({ ...questionForm, text: e.target.value })}
               placeholder="Describe the coding problem"
               rows={4}
             />
           </div>
-
           <div>
             <Label htmlFor="coding-instructions">Instructions *</Label>
             <Textarea
@@ -827,7 +790,6 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
               rows={3}
             />
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="code-language">Programming Language *</Label>
@@ -852,7 +814,6 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
                 <option value="go">Go</option>
               </select>
             </div>
-
             <div>
               <Label htmlFor="question-points">Points</Label>
               <Input
@@ -869,21 +830,17 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
               />
             </div>
           </div>
-
           <div>
             <Label htmlFor="code-template">Code Template</Label>
             <div className="mt-2">
               <AdvancedCodeEditor
                 value={questionForm.codeTemplate || ""}
-                onChange={(value) =>
-                  setQuestionForm({ ...questionForm, codeTemplate: value })
-                }
+                onChange={handleCodeTemplateChange}
                 language={questionForm.codeLanguage || "javascript"}
                 showConsole={false}
               />
             </div>
           </div>
-
           <div>
             <div className="flex justify-between items-center mb-3">
               <Label>Test Cases *</Label>
@@ -892,16 +849,13 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
                 size="sm"
                 onClick={() => {
                   const newTestCase = {
-                   id: ((questionForm.testCases?.length || 0) + 1).toString(),
+                    id: ((questionForm.testCases?.length || 0) + 1).toString(),
                     input: "",
                     expectedOutput: "",
                     isHidden: false,
-                  };
-                  const newTestCases = [
-                    ...(questionForm.testCases || []),
-                    newTestCase,
-                  ];
-                  setQuestionForm({ ...questionForm, testCases: newTestCases });
+                  }
+                  const newTestCases = [...(questionForm.testCases || []), newTestCase]
+                  setQuestionForm({ ...questionForm, testCases: newTestCases })
                 }}
               >
                 + Add Test Case
@@ -911,31 +865,24 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
               {questionForm.testCases?.map((testCase, index) => (
                 <div key={index} className="border p-4 rounded-md bg-white">
                   <div className="flex justify-between items-center mb-3">
-                    <span className="text-sm font-medium">
-                      Test Case {index + 1}
-                    </span>
-                    {questionForm.testCases &&
-                      questionForm.testCases.length > 1 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive"
-                          onClick={() => {
-                            const newTestCases =
-                              questionForm.testCases?.filter(
-                                (_, i) => i !== index
-                              ) || [];
-                            setQuestionForm({
-                              ...questionForm,
-                              testCases: newTestCases,
-                            });
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
+                    <span className="text-sm font-medium">Test Case {index + 1}</span>
+                    {questionForm.testCases && questionForm.testCases.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        onClick={() => {
+                          const newTestCases = questionForm.testCases?.filter((_, i) => i !== index) || []
+                          setQuestionForm({
+                            ...questionForm,
+                            testCases: newTestCases,
+                          })
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
-
                   <div className="grid grid-cols-2 gap-3 mb-3">
                     <div>
                       <Label htmlFor={`input-${index}`}>Input</Label>
@@ -943,14 +890,12 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
                         id={`input-${index}`}
                         value={testCase.input}
                         onChange={(e) => {
-                          const newTestCases = [
-                            ...(questionForm.testCases || []),
-                          ];
-                          newTestCases[index].input = e.target.value;
+                          const newTestCases = [...(questionForm.testCases || [])]
+                          newTestCases[index].input = e.target.value
                           setQuestionForm({
                             ...questionForm,
                             testCases: newTestCases,
-                          });
+                          })
                         }}
                         placeholder="Test input"
                         rows={2}
@@ -963,14 +908,12 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
                         id={`output-${index}`}
                         value={testCase.expectedOutput}
                         onChange={(e) => {
-                          const newTestCases = [
-                            ...(questionForm.testCases || []),
-                          ];
-                          newTestCases[index].expectedOutput = e.target.value;
+                          const newTestCases = [...(questionForm.testCases || [])]
+                          newTestCases[index].expectedOutput = e.target.value
                           setQuestionForm({
                             ...questionForm,
                             testCases: newTestCases,
-                          });
+                          })
                         }}
                         placeholder="Expected output"
                         rows={2}
@@ -978,50 +921,39 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
                       />
                     </div>
                   </div>
-
                   <div>
-                    <Label htmlFor={`description-${index}`}>
-                      Description (Optional)
-                    </Label>
+                    <Label htmlFor={`description-${index}`}>Description (Optional)</Label>
                     <Input
                       id={`description-${index}`}
                       value={testCase.description || ""}
                       onChange={(e) => {
-                        const newTestCases = [
-                          ...(questionForm.testCases || []),
-                        ];
-                        newTestCases[index].description = e.target.value;
+                        const newTestCases = [...(questionForm.testCases || [])]
+                        newTestCases[index].description = e.target.value
                         setQuestionForm({
                           ...questionForm,
                           testCases: newTestCases,
-                        });
+                        })
                       }}
                       placeholder="Test case description"
                       className="text-sm"
                     />
                   </div>
-
                   <div className="flex items-center space-x-2 mt-2">
                     <input
                       type="checkbox"
                       id={`hidden-${index}`}
                       checked={testCase.isHidden || false}
                       onChange={(e) => {
-                        const newTestCases = [
-                          ...(questionForm.testCases || []),
-                        ];
-                        newTestCases[index].isHidden = e.target.checked;
+                        const newTestCases = [...(questionForm.testCases || [])]
+                        newTestCases[index].isHidden = e.target.checked
                         setQuestionForm({
                           ...questionForm,
                           testCases: newTestCases,
-                        });
+                        })
                       }}
                       className="rounded"
                     />
-                    <label
-                      htmlFor={`hidden-${index}`}
-                      className="text-sm text-muted-foreground"
-                    >
+                    <label htmlFor={`hidden-${index}`} className="text-sm text-muted-foreground">
                       Hidden test case
                     </label>
                   </div>
@@ -1030,7 +962,7 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
             </div>
           </div>
         </div>
-      );
+      )
     }
 
     if (questionForm.type === "Written Answer") {
@@ -1041,14 +973,11 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
             <Textarea
               id="question-text"
               value={questionForm.text}
-              onChange={(e) =>
-                setQuestionForm({ ...questionForm, text: e.target.value })
-              }
+              onChange={(e) => setQuestionForm({ ...questionForm, text: e.target.value })}
               placeholder="Enter your question"
               rows={3}
             />
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="max-words">Maximum Words</Label>
@@ -1065,7 +994,6 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
                 }
               />
             </div>
-
             <div>
               <Label htmlFor="question-points">Points</Label>
               <Input
@@ -1083,27 +1011,22 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
             </div>
           </div>
         </div>
-      );
+      )
     }
 
-    return null;
-  };
+    return null
+  }, [questionForm, handleCodeTemplateChange])
 
   if (isLoading) {
     return (
       <div className="container mx-auto py-6">
         <div className="flex items-center mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => router.back()}
-            className="mr-4"
-          >
+          <Button variant="ghost" onClick={() => router.back()} className="mr-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
           <Skeleton className="h-9 w-40" />
         </div>
-
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -1120,7 +1043,6 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardHeader>
               <Skeleton className="h-7 w-32" />
@@ -1131,18 +1053,14 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
           </Card>
         </div>
       </div>
-    );
+    )
   }
 
   if (!test) {
     return (
       <div className="container mx-auto py-6">
         <div className="flex items-center mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => router.back()}
-            className="mr-4"
-          >
+          <Button variant="ghost" onClick={() => router.back()} className="mr-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
@@ -1150,44 +1068,30 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
         </div>
         <Card>
           <CardContent className="py-10 text-center">
-            <h2 className="text-xl font-medium mb-2">
-              The requested test could not be found
-            </h2>
+            <h2 className="text-xl font-medium mb-2">The requested test could not be found</h2>
             <p className="text-muted-foreground mb-6">
               The test may have been deleted or you may not have access to it.
             </p>
-            <Button onClick={() => router.push("/employee/assessment/tests")}>
-              Go to Tests
-            </Button>
+            <Button onClick={() => router.push("/employee/assessment/tests")}>Go to Tests</Button>
           </CardContent>
         </Card>
       </div>
-    );
+    )
   }
 
   return (
     <div className="container mx-auto py-6">
       <Toaster position="top-center" />
-
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center">
-          <Button
-            variant="ghost"
-            onClick={() => router.back()}
-            className="mr-4"
-          >
+          <Button variant="ghost" onClick={() => router.back()} className="mr-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
           <h1 className="text-3xl font-bold">Edit Test</h1>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() =>
-              router.push(`/employee/assessment/tests/${testId}/preview`)
-            }
-          >
+          <Button variant="outline" onClick={() => router.push(`/employee/assessment/tests/${testId}/preview`)}>
             <Eye className="h-4 w-4 mr-2" />
             Preview
           </Button>
@@ -1204,9 +1108,7 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
           <Card>
             <CardHeader>
               <CardTitle>Test Details</CardTitle>
-              <CardDescription>
-                Basic information about the test
-              </CardDescription>
+              <CardDescription>Basic information about the test</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -1219,84 +1121,62 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
                     placeholder="Enter test name"
                   />
                 </div>
-
                 <div>
                   <Label htmlFor="test-description">Description</Label>
                   <Textarea
                     id="test-description"
                     value={test.description}
-                    onChange={(e) =>
-                      handleInputChange("description", e.target.value)
-                    }
+                    onChange={(e) => handleInputChange("description", e.target.value)}
                     placeholder="Enter test description"
                     rows={3}
                   />
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="test-type">Test Type</Label>
                     <select
                       id="test-type"
                       value={test.type}
-                      onChange={(e) =>
-                        handleInputChange("type", e.target.value)
-                      }
+                      onChange={(e) => handleInputChange("type", e.target.value)}
                       className="w-full p-2 border border-gray-300 rounded-md"
                     >
-                      <option value="Assessment">Assessment</option>
-                      <option value="Quiz">Quiz</option>
-                      <option value="Exam">Exam</option>
-                      <option value="Survey">Survey</option>
+                      <option value="Frontend">Frontend</option>
+                      <option value="Backend">Backend</option>
+                      <option value="Full Stack">Full Stack</option>
+                      <option value="QA">QA</option>
+                      <option value="DevOps">DevOps</option>
+                      <option value="Data">Data</option>
                     </select>
                   </div>
-
                   <div>
-                    <Label htmlFor="test-duration">
-                      Total Duration (minutes)
-                    </Label>
+                    <Label htmlFor="test-duration">Test Duration (minutes)</Label>
                     <Input
                       id="test-duration"
                       type="number"
                       min="1"
                       value={test.duration}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "duration",
-                          Number.parseInt(e.target.value) || 0
-                        )
-                      }
+                      onChange={(e) => handleInputChange("duration", Number.parseInt(e.target.value) || 0)}
                     />
+                    <p className="text-xs text-gray-500 mt-1">Total time for the complete assessment</p>
                   </div>
-
                   <div>
-                    <Label htmlFor="test-passing-score">
-                      Passing Score (%)
-                    </Label>
+                    <Label htmlFor="test-passing-score">Passing Score (%)</Label>
                     <Input
                       id="test-passing-score"
                       type="number"
                       min="0"
                       max="100"
                       value={test.passingScore}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "passingScore",
-                          Number.parseInt(e.target.value) || 0
-                        )
-                      }
+                      onChange={(e) => handleInputChange("passingScore", Number.parseInt(e.target.value) || 0)}
                     />
                   </div>
                 </div>
-
                 <div>
                   <Label htmlFor="test-instructions">Test Instructions</Label>
                   <Textarea
                     id="test-instructions"
                     value={test.instructions}
-                    onChange={(e) =>
-                      handleInputChange("instructions", e.target.value)
-                    }
+                    onChange={(e) => handleInputChange("instructions", e.target.value)}
                     placeholder="Enter instructions for test takers"
                     rows={4}
                   />
@@ -1309,9 +1189,7 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Test Sections</CardTitle>
-                <CardDescription>
-                  Organize your test into sections
-                </CardDescription>
+                <CardDescription>Organize your test into sections</CardDescription>
               </div>
               <Button onClick={handleAddSection}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -1322,9 +1200,7 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
               <div className="space-y-6">
                 {test.sections.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-muted-foreground mb-4">
-                      No sections added yet. Add a section to get started.
-                    </p>
+                    <p className="text-muted-foreground mb-4">No sections added yet. Add a section to get started.</p>
                     <Button onClick={handleAddSection}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add Section
@@ -1345,144 +1221,74 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
                           Delete
                         </Button>
                       </div>
-
                       <div className="space-y-4">
                         <div>
-                          <Label htmlFor={`section-title-${index}`}>
-                            Section Title
-                          </Label>
+                          <Label htmlFor={`section-title-${index}`}>Section Title</Label>
                           <Input
                             id={`section-title-${index}`}
                             value={section.title}
-                            onChange={(e) =>
-                              handleSectionChange(
-                                index,
-                                "title",
-                                e.target.value
-                              )
-                            }
+                            onChange={(e) => handleSectionChange(index, "title", e.target.value)}
                             placeholder="Enter section title"
                           />
                         </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor={`section-duration-${index}`}>
-                              Duration (minutes)
-                            </Label>
-                            <Input
-                              id={`section-duration-${index}`}
-                              type="number"
-                              min="1"
-                              value={section.duration}
-                              onChange={(e) =>
-                                handleSectionChange(
-                                  index,
-                                  "duration",
-                                  Number.parseInt(e.target.value) || 0
-                                )
-                              }
-                            />
-                          </div>
-
-                          <div>
-                            <Label htmlFor={`section-type-${index}`}>
-                              Question Type
-                            </Label>
-                            <select
-                              id={`section-type-${index}`}
-                              value={section.questionType}
-                              onChange={(e) =>
-                                handleSectionChange(
-                                  index,
-                                  "questionType",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full p-2 border border-gray-300 rounded-md"
-                            >
-                              <option value="Multiple Choice">
-                                Multiple Choice
-                              </option>
-                              <option value="Written Answer">
-                                Written Answer
-                              </option>
-                              <option value="Coding">Coding</option>
-                            </select>
-                          </div>
+                        <div>
+                          <Label htmlFor={`section-type-${index}`}>Question Type</Label>
+                          <select
+                            id={`section-type-${index}`}
+                            value={section.questionType}
+                            onChange={(e) => handleSectionChange(index, "questionType", e.target.value)}
+                            className="w-full p-2 border border-gray-300 rounded-md"
+                          >
+                            <option value="Multiple Choice">Multiple Choice</option>
+                            <option value="Written Answer">Written Answer</option>
+                            <option value="Coding">Coding</option>
+                          </select>
                         </div>
-
                         <div className="border-t pt-4">
                           <div className="flex justify-between items-center mb-3">
                             <div>
-                              <span className="text-sm font-medium">
-                                Questions:{" "}
-                              </span>
+                              <span className="text-sm font-medium">Questions: </span>
                               <span className="text-sm text-muted-foreground">
-                                {section.questions.length} questions in this
-                                section
+                                {section.questions.length} questions in this section
                               </span>
                             </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleAddQuestion(index)}
-                            >
+                            <Button variant="outline" size="sm" onClick={() => handleAddQuestion(index)}>
                               <Plus className="h-4 w-4 mr-2" />
                               Add Question
                             </Button>
                           </div>
-
                           {section.questions.length > 0 && (
                             <div className="space-y-2">
                               {section.questions.map((question, qIndex) => (
                                 <div
-                                  key={question.id}
+                                  key={`${section.id}-${question.id}-${qIndex}-${question.text.substring(0, 10)}`}
                                   className="flex items-center justify-between p-3 bg-muted rounded-md"
                                 >
                                   <div className="flex items-center gap-3">
-                                    {question.type === "Multiple Choice" && (
-                                      <CheckSquare className="h-4 w-4" />
-                                    )}
-                                    {question.type === "Coding" && (
-                                      <Code className="h-4 w-4" />
-                                    )}
-                                    {question.type === "Written Answer" && (
-                                      <FileText className="h-4 w-4" />
-                                    )}
+                                    {question.type === "Multiple Choice" && <CheckSquare className="h-4 w-4" />}
+                                    {question.type === "Coding" && <Code className="h-4 w-4" />}
+                                    {question.type === "Written Answer" && <FileText className="h-4 w-4" />}
                                     <div>
                                       <p className="text-sm font-medium">
                                         Q{qIndex + 1}:{" "}
                                         {question.text.length > 50
-                                          ? `${question.text.substring(
-                                              0,
-                                              50
-                                            )}...`
+                                          ? `${question.text.substring(0, 50)}...`
                                           : question.text}
                                       </p>
                                       <p className="text-xs text-muted-foreground">
-                                        {question.type} • {question.points}{" "}
-                                        points
+                                        {question.type} • {question.points} points
                                       </p>
                                     </div>
                                   </div>
                                   <div className="flex gap-2">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() =>
-                                        handleEditQuestion(index, qIndex)
-                                      }
-                                    >
+                                    <Button variant="ghost" size="sm" onClick={() => handleEditQuestion(index, qIndex)}>
                                       <Edit className="h-4 w-4" />
                                     </Button>
                                     <Button
                                       variant="ghost"
                                       size="sm"
                                       className="text-destructive hover:text-destructive"
-                                      onClick={() =>
-                                        handleDeleteQuestion(index, qIndex)
-                                      }
+                                      onClick={() => handleDeleteQuestion(index, qIndex)}
                                     >
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
@@ -1512,27 +1318,17 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <label
-                      htmlFor="shuffle-questions"
-                      className="block text-sm font-medium text-gray-700"
-                    >
+                    <label htmlFor="shuffle-questions" className="block text-sm font-medium text-gray-700">
                       Shuffle Questions
                     </label>
-                    <p className="text-xs text-gray-500">
-                      Randomize question order for each candidate
-                    </p>
+                    <p className="text-xs text-gray-500">Randomize question order for each candidate</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
                       id="shuffle-questions"
-                      checked={test.settings.shuffleQuestions}
-                      onChange={(e) =>
-                        handleTestSettingsChange(
-                          "shuffleQuestions",
-                          e.target.checked
-                        )
-                      }
+                      checked={Boolean(test.settings.shuffleQuestions)}
+                      onChange={(e) => handleTestSettingsChange("shuffleQuestions", e.target.checked)}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
@@ -1541,27 +1337,17 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <label
-                      htmlFor="prevent-tab-switching"
-                      className="block text-sm font-medium text-gray-700"
-                    >
+                    <label htmlFor="prevent-tab-switching" className="block text-sm font-medium text-gray-700">
                       Prevent Tab Switching
                     </label>
-                    <p className="text-xs text-gray-500">
-                      Alert when candidate tries to switch tabs
-                    </p>
+                    <p className="text-xs text-gray-500">Alert when candidate tries to switch tabs</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
                       id="prevent-tab-switching"
-                      checked={test.settings.preventTabSwitching}
-                      onChange={(e) =>
-                        handleTestSettingsChange(
-                          "preventTabSwitching",
-                          e.target.checked
-                        )
-                      }
+                      checked={Boolean(test.settings.preventTabSwitching)}
+                      onChange={(e) => handleTestSettingsChange("preventTabSwitching", e.target.checked)}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
@@ -1570,27 +1356,17 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <label
-                      htmlFor="allow-calculator"
-                      className="block text-sm font-medium text-gray-700"
-                    >
+                    <label htmlFor="allow-calculator" className="block text-sm font-medium text-gray-700">
                       Allow Calculator
                     </label>
-                    <p className="text-xs text-gray-500">
-                      Provide a calculator tool for candidates
-                    </p>
+                    <p className="text-xs text-gray-500">Provide a calculator tool for candidates</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
                       id="allow-calculator"
-                      checked={test.settings.allowCalculator}
-                      onChange={(e) =>
-                        handleTestSettingsChange(
-                          "allowCalculator",
-                          e.target.checked
-                        )
-                      }
+                      checked={Boolean(test.settings.allowCalculator)}
+                      onChange={(e) => handleTestSettingsChange("allowCalculator", e.target.checked)}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
@@ -1599,27 +1375,17 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <label
-                      htmlFor="allow-code-editor"
-                      className="block text-sm font-medium text-gray-700"
-                    >
+                    <label htmlFor="allow-code-editor" className="block text-sm font-medium text-gray-700">
                       Allow Code Editor
                     </label>
-                    <p className="text-xs text-gray-500">
-                      Enable advanced code editor for coding questions
-                    </p>
+                    <p className="text-xs text-gray-500">Enable advanced code editor for coding questions</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
                       id="allow-code-editor"
-                      checked={test.settings.allowCodeEditor}
-                      onChange={(e) =>
-                        handleTestSettingsChange(
-                          "allowCodeEditor",
-                          e.target.checked
-                        )
-                      }
+                      checked={Boolean(test.settings.allowCodeEditor)}
+                      onChange={(e) => handleTestSettingsChange("allowCodeEditor", e.target.checked)}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
@@ -1628,28 +1394,68 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <label
-                      htmlFor="auto-submit"
-                      className="block text-sm font-medium text-gray-700"
-                    >
+                    <label htmlFor="auto-submit" className="block text-sm font-medium text-gray-700">
                       Auto Submit
                     </label>
-                    <p className="text-xs text-gray-500">
-                      Submit test when time expires
-                    </p>
+                    <p className="text-xs text-gray-500">Submit test when time expires</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
                       id="auto-submit"
-                      checked={test.settings.autoSubmit}
-                      onChange={(e) =>
-                        handleTestSettingsChange("autoSubmit", e.target.checked)
-                      }
+                      checked={Boolean(test.settings.autoSubmit)}
+                      onChange={(e) => handleTestSettingsChange("autoSubmit", e.target.checked)}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
                   </label>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Test Summary</CardTitle>
+              <CardDescription>Overview of test configuration</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Test Duration:</span>
+                  <span className="font-medium">{test.duration} minutes</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Sections:</span>
+                  <span className="font-medium">{test.sections.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Questions:</span>
+                  <span className="font-medium">{totalQuestions}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Passing Score:</span>
+                  <span className="font-medium">{test.passingScore}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Shuffle Questions:</span>
+                  <span className="font-medium">{test.settings.shuffleQuestions ? "Yes" : "No"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Tab Switching:</span>
+                  <span className="font-medium">{test.settings.preventTabSwitching ? "Blocked" : "Allowed"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Calculator:</span>
+                  <span className="font-medium">{test.settings.allowCalculator ? "Allowed" : "Not Allowed"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Code Editor:</span>
+                  <span className="font-medium">{test.settings.allowCodeEditor ? "Enabled" : "Disabled"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Auto Submit:</span>
+                  <span className="font-medium">{test.settings.autoSubmit ? "Yes" : "No"}</span>
                 </div>
               </div>
             </CardContent>
@@ -1668,24 +1474,17 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
       </div>
 
       {/* Delete Section Dialog */}
-      <Dialog
-        open={showDeleteSectionDialog}
-        onOpenChange={setShowDeleteSectionDialog}
-      >
+      <Dialog open={showDeleteSectionDialog} onOpenChange={setShowDeleteSectionDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Section</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this section? This will also
-              delete all questions in this section. This action cannot be
-              undone.
+              Are you sure you want to delete this section? This will also delete all questions in this section. This
+              action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteSectionDialog(false)}
-            >
+            <Button variant="outline" onClick={() => setShowDeleteSectionDialog(false)}>
               Cancel
             </Button>
             <Button variant="destructive" onClick={confirmDeleteSection}>
@@ -1699,34 +1498,22 @@ const correctAnswer = currentCorrectAnswer === option ? "" : questionForm.correc
       <Dialog open={showQuestionDialog} onOpenChange={setShowQuestionDialog}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingQuestion ? "Edit Question" : "Add Question"}
-            </DialogTitle>
+            <DialogTitle>{editingQuestion ? "Edit Question" : "Add Question"}</DialogTitle>
             <DialogDescription>
-              {questionForm.type === "Multiple Choice" &&
-                "Create a multiple choice question with options"}
-              {questionForm.type === "Coding" &&
-                "Create a coding problem with test cases"}
-              {questionForm.type === "Written Answer" &&
-                "Create a written answer question"}
+              {questionForm.type === "Multiple Choice" && "Create a multiple choice question with options"}
+              {questionForm.type === "Coding" && "Create a coding problem with test cases"}
+              {questionForm.type === "Written Answer" && "Create a written answer question"}
             </DialogDescription>
           </DialogHeader>
-
           <div className="py-4">{renderQuestionForm()}</div>
-
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowQuestionDialog(false)}
-            >
+            <Button variant="outline" onClick={() => setShowQuestionDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveQuestion}>
-              {editingQuestion ? "Update Question" : "Add Question"}
-            </Button>
+            <Button onClick={handleSaveQuestion}>{editingQuestion ? "Update Question" : "Add Question"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }
