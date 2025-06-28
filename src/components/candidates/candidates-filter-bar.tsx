@@ -10,10 +10,40 @@ interface Candidate {
   _id: string
   name: string
   email: string
+  emailAddress?: string
   role: string
   status: string
+  avatar?: string
   appliedDate: string
-  // Add other properties as needed
+  skills: string[]
+  location: string
+  currentCity?: string
+  city?: string
+  currentState?: string
+  yearsOfExperience: number
+  currentPosition: string
+  designation?: string
+  content: string
+  profileOutline?: string
+  summary?: string
+  aboutMe?: string
+  description?: string
+  firstName: string
+  lastName: string
+  middleName?: string
+  phone: string
+  mobileNumber?: string
+  website: string
+  experience: any[]
+  education: any[]
+  matchScore: number
+  gender: string
+  state: string
+  currentSalary: number
+  age: number
+  industry?: string
+  collection?: string
+  employerId: string
 }
 
 interface CandidatesFilterBarProps {

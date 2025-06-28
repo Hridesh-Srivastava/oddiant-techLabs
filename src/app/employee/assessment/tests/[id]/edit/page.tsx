@@ -337,7 +337,7 @@ function solution() {
           ]
         }
         // Ensure test cases have proper structure
-        formData.testCases = formData.testCases.map((tc, index) => ({
+        formData.testCases = formData.testCases.map((tc: TestCase, index: number) => ({
           ...tc,
           id: tc.id || (index + 1).toString(),
           isHidden: tc.isHidden || false,

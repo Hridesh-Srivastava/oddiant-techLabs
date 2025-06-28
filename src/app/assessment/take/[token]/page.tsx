@@ -982,7 +982,7 @@ export default function TakeTestPage() {
   // Load persisted code when question changes - FIXED to prevent infinite loop
   useEffect(() => {
     const currentQuestionData = test?.sections[currentSection]?.questions[currentQuestion]
-    if (currentQuestionData?.type === "Coding") {
+    if (currentQuestionData?.type === "Coding" && test) {
       const questionKey = `${test.sections[currentSection].id}-${currentQuestionData.id}`
       const enhancedStorageKey = `${testSessionKey}-${questionKey}`
 
@@ -1025,7 +1025,7 @@ export default function TakeTestPage() {
       // Always ensure answers state is updated
       setAnswers((prev) => ({
         ...prev,
-        [questionKey]: loadedCode,
+        [questionKey]: loadedCode || "",
       }))
     } else {
       // Reset code state for non-coding questions
