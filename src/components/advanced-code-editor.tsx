@@ -808,126 +808,19 @@ export function AdvancedCodeEditor({
               </Button>
             </div>
           </div>
-
-          {/* Test Case Status Summary */}
-          {testCases.length > 0 && (
-            <div className="mt-4 p-4 border rounded-md bg-muted/50">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">Test Cases:</span>
-                    <Badge variant="outline">
-                      {executionStats.passed}/{executionStats.total}
-                    </Badge>
-                  </div>
-                  {isRunning && (
-                    <div className="flex items-center gap-2 text-sm text-blue-600">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Running all test cases...
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="default" className="bg-green-500">
-                      ✓ {executionStats.passed}
-                    </Badge>
-                    <Badge variant="destructive">✗ {executionStats.failed}</Badge>
-                  </div>
-                  {codeSubmissions.length > 0 && (
-                    <Badge variant={executionStats.allPassed ? "default" : "secondary"}>
-                      {executionStats.allPassed ? "All Passed" : "Some Failed"}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              {/* Show sample test cases (non-hidden ones) */}
-              {testCases.filter((tc) => !tc.isHidden).length > 0 && (
-                <div className="mt-3">
-                  <div className="text-sm font-medium mb-2">Sample Test Cases:</div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {testCases
-                      .filter((tc) => !tc.isHidden)
-                      .slice(0, 2)
-                      .map((testCase, index) => (
-                        <div
-                          key={`testcase-${testCase.id || index}-${index}`}
-                          className="p-3 bg-background rounded border"
-                        >
-                          <div className="space-y-2">
-                            <div>
-                              <span className="font-medium text-xs">Input:</span>
-                              <pre className="mt-1 text-xs text-muted-foreground bg-muted p-2 rounded overflow-x-auto max-h-20">
-                                {testCase.input || "No input"}
-                              </pre>
-                            </div>
-                            <div>
-                              <span className="font-medium text-xs">Expected Output:</span>
-                              <pre className="mt-1 text-xs text-muted-foreground bg-muted p-2 rounded overflow-x-auto max-h-20">
-                                {testCase.expectedOutput}
-                              </pre>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {showSettings && (
-            <div className="mt-4 p-4 border rounded-md bg-muted/50">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Font Size</Label>
-                  <select
-                    value={fontSize.toString()}
-                    onChange={(e) => setFontSize(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="12">12px</option>
-                    <option value="14">14px</option>
-                    <option value="16">16px</option>
-                    <option value="18">18px</option>
-                    <option value="20">20px</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Line Numbers</Label>
-                  <select
-                    value={lineNumbers.toString()}
-                    onChange={(e) => setLineNumbers(e.target.value === "true")}
-                    className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="true">Show</option>
-                    <option value="false">Hide</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Language Info</Label>
-                  <div className="text-sm text-muted-foreground">
-                    {currentLang.label} ({currentLang.version})
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </CardHeader>
 
         <div className="flex-1 min-h-0 h-full flex flex-col lg:flex-row gap-4 overflow-hidden" style={{ width: '100%' }}>
           {/* Code Editor Section */}
           <div
-            className="border rounded-md bg-slate-900 flex-1 min-h-0 h-full overflow-hidden flex flex-col"
+            className={`border rounded-md bg-slate-900 flex-1 flex flex-col ${isFullscreen ? 'min-h-0 max-h-none h-full' : 'min-h-[400px] sm:min-h-[500px] md:min-h-[60vh] max-h-[80vh] h-full overflow-hidden'}`}
             style={{
-              minHeight: 0,
-              maxHeight: '100%',
+              minHeight: isFullscreen ? undefined : '400px',
+              maxHeight: isFullscreen ? undefined : '900px',
               width: '100%',
             }}
           >
-            <div className="flex-1 min-h-0 h-full flex flex-row overflow-hidden">
+            <div className={`flex-1 flex flex-row ${isFullscreen ? 'min-h-0 max-h-none h-full' : 'min-h-0 h-full overflow-hidden'}`}>
               {/* Line Numbers */}
               {lineNumbers && (
                 <div
@@ -942,7 +835,7 @@ export function AdvancedCodeEditor({
                 />
               )}
               {/* Code Textarea */}
-              <div className="flex-1 min-h-0 h-full overflow-auto">
+              <div className={`flex-1 ${isFullscreen ? 'overflow-auto h-full' : 'min-h-0 h-full overflow-auto'}`}> 
                 <textarea
                   ref={textareaRef}
                   value={code}
@@ -963,10 +856,10 @@ export function AdvancedCodeEditor({
 
           {/* Console Section */}
           <div
-            className="border rounded-md flex-1 min-h-0 h-full overflow-hidden flex flex-col bg-background"
+            className={`border rounded-md flex-1 flex flex-col bg-background ${isFullscreen ? 'min-h-0 max-h-none h-full' : 'min-h-[400px] sm:min-h-[500px] md:min-h-[60vh] max-h-[80vh] h-full overflow-hidden'}`}
             style={{
-              minHeight: 0,
-              maxHeight: '100%',
+              minHeight: isFullscreen ? undefined : '400px',
+              maxHeight: isFullscreen ? undefined : '900px',
               width: '100%',
               minWidth: '350px',
               maxWidth: '700px',
@@ -1081,7 +974,7 @@ export function AdvancedCodeEditor({
                           <div className="space-y-4">
                             {codeSubmissions.map((submission, submissionIndex) => (
                               <div
-                                key={`submission-${submissionIndex}-${submission.timestamp.getTime()}`}
+                                key={`submission-${submissionIndex}-${new Date(submission.timestamp).getTime()}`}
                                 className="border rounded-md p-3 sm:p-4 bg-muted/50"
                               >
                                 <div className="flex items-center justify-between mb-3 flex-wrap gap-2">

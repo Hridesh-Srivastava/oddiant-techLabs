@@ -731,21 +731,6 @@ function solution() {
               />
             </div>
           </div>
-          <div>
-            <Label htmlFor="question-explanation">Explanation (Optional)</Label>
-            <Textarea
-              id="question-explanation"
-              value={questionForm.explanation || ""}
-              onChange={(e) =>
-                setQuestionForm({
-                  ...questionForm,
-                  explanation: e.target.value,
-                })
-              }
-              placeholder="Explain why this is the correct answer"
-              rows={2}
-            />
-          </div>
         </div>
       )
     }
@@ -908,42 +893,6 @@ function solution() {
                         className="text-sm font-mono"
                       />
                     </div>
-                  </div>
-                  <div>
-                    <Label htmlFor={`description-${index}`}>Description (Optional)</Label>
-                    <Input
-                      id={`description-${index}`}
-                      value={testCase.description || ""}
-                      onChange={(e) => {
-                        const newTestCases = [...(questionForm.testCases || [])]
-                        newTestCases[index].description = e.target.value
-                        setQuestionForm({
-                          ...questionForm,
-                          testCases: newTestCases,
-                        })
-                      }}
-                      placeholder="Test case description"
-                      className="text-sm"
-                    />
-                  </div>
-                  <div className="flex items-center space-x-2 mt-2">
-                    <input
-                      type="checkbox"
-                      id={`hidden-${index}`}
-                      checked={testCase.isHidden || false}
-                      onChange={(e) => {
-                        const newTestCases = [...(questionForm.testCases || [])]
-                        newTestCases[index].isHidden = e.target.checked
-                        setQuestionForm({
-                          ...questionForm,
-                          testCases: newTestCases,
-                        })
-                      }}
-                      className="rounded"
-                    />
-                    <label htmlFor={`hidden-${index}`} className="text-sm text-muted-foreground">
-                      Hidden test case
-                    </label>
                   </div>
                 </div>
               ))}

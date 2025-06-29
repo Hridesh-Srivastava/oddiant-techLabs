@@ -165,6 +165,9 @@ export default function TakeTestPage() {
   const systemCheckVideoRef = useRef<HTMLVideoElement | null>(null)
   const modalStreamRef = useRef<MediaStream | null>(null)
 
+  // Add state for current code test case results
+  const [currentCodeStats, setCurrentCodeStats] = useState({ passed: 0, failed: 0, total: 0 })
+
   // Cleanup function to stop all webcam streams
   const cleanupWebcam = useCallback(() => {
     try {
@@ -220,6 +223,18 @@ export default function TakeTestPage() {
           localStorage.setItem(`submissions_${sessionQuestionKey}`, JSON.stringify(submissions))
         } catch (e) {
           console.warn("Failed to store in localStorage:", e)
+        }
+
+        // Update current code stats for counter and badges
+        if (submissions && submissions.length > 0) {
+          const latest = submissions[submissions.length - 1]
+          setCurrentCodeStats({
+            passed: latest.passedCount,
+            failed: latest.totalCount - latest.passedCount,
+            total: latest.totalCount,
+          })
+        } else {
+          setCurrentCodeStats({ passed: 0, failed: 0, total: 0 })
         }
       }
     },
@@ -1382,6 +1397,16 @@ export default function TakeTestPage() {
       return
     }
 
+    // Clear code and code submission localStorage for this test session
+    try {
+      const prefix = `${testSessionKey}-`;
+      for (let key in localStorage) {
+        if (key.startsWith('code_' + prefix) || key.startsWith('submissions_' + prefix)) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch (e) { /* ignore */ }
+
     setActiveTab("test")
     setStartTime(new Date())
     // Ensure webcam is started only if enabled
@@ -2090,21 +2115,28 @@ export default function TakeTestPage() {
                                         {test.sections[currentSection].questions[currentQuestion].points} points
                                       </p>
                                     </div>
-                                    <div>
-                                      <h4 className="font-medium text-sm mb-1">Time Limit</h4>
-                                      <p className="text-sm text-muted-foreground">5 seconds</p>
-                                    </div>
                                   </div>
 
                                   {/* Test Cases - Enhanced Display */}
                                   {test.sections[currentSection].questions[currentQuestion].testCases &&
                                     test.sections[currentSection].questions[currentQuestion].testCases!.length > 0 && (
                                       <div className="mt-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="text-sm font-medium">Test Cases:</span>
+                                            <span className="inline-block px-2 py-1 rounded bg-red-600 text-white text-xs font-mono border border-red-600">
+                                              {currentCodeStats.passed + currentCodeStats.failed}/{test.sections[currentSection].questions[currentQuestion].testCases.filter((tc: any) => !tc.isHidden).length}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="inline-block px-2 py-1 rounded bg-green-600 text-white text-xs font-mono border border-green-600">✓ {currentCodeStats.passed}</span>
+                                            <span className="inline-block px-2 py-1 rounded bg-red-600 text-white text-xs font-mono border border-red-600">✗ {currentCodeStats.failed}</span>
+                                          </div>
+                                        </div>
                                         <h4 className="font-medium text-sm mb-3">Example Test Cases</h4>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                           {test.sections[currentSection].questions[currentQuestion]
                                             .testCases!.filter((tc: any) => !tc.isHidden)
-                                            .slice(0, 2)
                                             .map((testCase: any, index: number) => (
                                               <div key={index} className="p-3 bg-background rounded border">
                                                 <div className="space-y-2">
