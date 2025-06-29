@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { toast, Toaster } from "sonner"
 import { ArrowLeft, Plus, Trash2, Save, Eye, Edit, Code, FileText, CheckSquare } from "lucide-react"
@@ -371,8 +371,15 @@ function solution() {
     }))
   }, [])
 
+  const saveQuestionInProgress = useRef(false);
+
   const handleSaveQuestion = useCallback(() => {
-    if (!test || currentSectionIndex === null) return
+    console.log('handleSaveQuestion called'); // Debug: check if called more than once per click
+    if (saveQuestionInProgress.current) return;
+    saveQuestionInProgress.current = true;
+    setTimeout(() => { saveQuestionInProgress.current = false; }, 500); // reset after short delay
+
+    if (!test || currentSectionIndex === null) return;
 
     // Validate question
     if (!questionForm.text.trim()) {
@@ -386,8 +393,6 @@ function solution() {
         toast.error("At least 2 options are required for multiple choice questions")
         return
       }
-
-      // Enhanced validation for correct answer
       if (
         !questionForm.correctAnswer ||
         (typeof questionForm.correctAnswer === "string"
@@ -397,19 +402,16 @@ function solution() {
         toast.error("Please select a correct answer by clicking the radio button")
         return
       }
-
       const correctAnswerStr =
         typeof questionForm.correctAnswer === "string"
           ? questionForm.correctAnswer
           : Array.isArray(questionForm.correctAnswer)
             ? questionForm.correctAnswer[0] || ""
             : ""
-
       if (!validOptions.includes(correctAnswerStr)) {
         toast.error("The selected correct answer is not valid. Please select from the available options.")
         return
       }
-
       console.log("MCQ Edit Validation passed:")
       console.log("- Question:", questionForm.text)
       console.log("- Options:", validOptions)
@@ -421,18 +423,14 @@ function solution() {
         toast.error("Programming language is required")
         return
       }
-
       if (!questionForm.codeTemplate?.trim()) {
         toast.error("Code template is required for coding questions")
         return
       }
-
       if (!questionForm.testCases || questionForm.testCases.length === 0) {
         toast.error("At least one test case is required")
         return
       }
-
-      // Validate test cases
       for (const testCase of questionForm.testCases) {
         if (!testCase.input.trim() && !testCase.expectedOutput.trim()) {
           toast.error("Test cases must have input or expected output")
@@ -443,7 +441,11 @@ function solution() {
 
     setTest((prev) => {
       if (!prev) return prev
-      const updatedSections = [...prev.sections]
+      // Deep clone sections and questions
+      const updatedSections = prev.sections.map((section, idx) => ({
+        ...section,
+        questions: [...section.questions],
+      }))
 
       if (editingQuestionIndex !== null) {
         // Update existing question
@@ -453,69 +455,55 @@ function solution() {
             questionForm.type === "Multiple Choice"
               ? questionForm.options?.filter((opt) => opt.trim() !== "")
               : questionForm.options,
-          // CRITICAL: Ensure correctAnswer is properly preserved
           correctAnswer:
             questionForm.type === "Multiple Choice" ? questionForm.correctAnswer : questionForm.correctAnswer || "",
-          // FIXED: Ensure code template is properly saved
           codeTemplate: questionForm.type === "Coding" ? questionForm.codeTemplate : undefined,
         }
-
-        console.log("Updating question with correctAnswer:", updatedQuestion.correctAnswer)
-        console.log("Updating question with codeTemplate:", updatedQuestion.codeTemplate)
         updatedSections[currentSectionIndex].questions[editingQuestionIndex] = updatedQuestion
         toast.success("Question updated successfully")
-        setQuestionForm({
-          id: "",
-          text: "",
-          type: "Multiple Choice",
-          options: ["", "", "", ""],
-          correctAnswer: "",
-          points: 1,
-          explanation: "",
-        })
       } else {
-        // Add new question - FIXED: Generate unique ID to prevent duplicates
-        const uniqueQuestionId = `question-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${currentSectionIndex}-${Date.now()}`
-
+        // Add new question - use the ID from questionForm (do not generate a new one)
         const questionToAdd = {
           ...questionForm,
-          id: uniqueQuestionId,
           options:
             questionForm.type === "Multiple Choice"
               ? questionForm.options?.filter((opt) => opt.trim() !== "")
               : questionForm.options,
-          // CRITICAL: Ensure correctAnswer is properly set
           correctAnswer:
             questionForm.type === "Multiple Choice" ? questionForm.correctAnswer : questionForm.correctAnswer || "",
-          // FIXED: Ensure code template is properly saved
           codeTemplate: questionForm.type === "Coding" ? questionForm.codeTemplate : undefined,
         }
-
-        console.log("Adding question with correctAnswer:", questionToAdd.correctAnswer)
-        console.log("Adding question with codeTemplate:", questionToAdd.codeTemplate)
-        updatedSections[currentSectionIndex].questions.push(questionToAdd)
-        toast.success("Question added successfully")
-        setQuestionForm({
-          id: "",
-          text: "",
-          type: "Multiple Choice",
-          options: ["", "", "", ""],
-          correctAnswer: "",
-          points: 1,
-          explanation: "",
-        })
+        // Prevent duplicate by ID
+        const alreadyExists = updatedSections[currentSectionIndex].questions.some(q => q.id === questionToAdd.id)
+        if (!alreadyExists) {
+          updatedSections[currentSectionIndex].questions = [
+            ...updatedSections[currentSectionIndex].questions,
+            questionToAdd
+          ]
+          toast.success("Question added successfully")
+        } else {
+          toast.error("Duplicate question detected. Not adding.")
+        }
       }
-
+      // Reset dialog and form state immediately after add
+      setShowQuestionDialog(false)
+      setCurrentSectionIndex(null)
+      setEditingQuestion(null)
+      setEditingQuestionIndex(null)
+      setQuestionForm({
+        id: "",
+        text: "",
+        type: "Multiple Choice",
+        options: ["", "", "", ""],
+        correctAnswer: "",
+        points: 1,
+        explanation: "",
+      })
       return {
         ...prev,
         sections: updatedSections,
       }
     })
-
-    setShowQuestionDialog(false)
-    setCurrentSectionIndex(null)
-    setEditingQuestion(null)
-    setEditingQuestionIndex(null)
   }, [test, currentSectionIndex, questionForm, editingQuestionIndex])
 
   const handleSaveTest = useCallback(async () => {
@@ -1495,7 +1483,9 @@ function solution() {
       </Dialog>
 
       {/* Question Dialog */}
-      <Dialog open={showQuestionDialog} onOpenChange={setShowQuestionDialog}>
+      <Dialog open={showQuestionDialog} onOpenChange={(open) => {
+        if (!open) setShowQuestionDialog(false);
+      }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingQuestion ? "Edit Question" : "Add Question"}</DialogTitle>
@@ -1507,10 +1497,10 @@ function solution() {
           </DialogHeader>
           <div className="py-4">{renderQuestionForm()}</div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowQuestionDialog(false)}>
+            <Button variant="outline" onClick={() => setShowQuestionDialog(false)} type="button">
               Cancel
             </Button>
-            <Button onClick={handleSaveQuestion}>{editingQuestion ? "Update Question" : "Add Question"}</Button>
+            <Button onClick={handleSaveQuestion} type="button">{editingQuestion ? "Update Question" : "Add Question"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
