@@ -2135,7 +2135,8 @@ export default function TakeTestPage() {
                                           <div className="flex items-center gap-2 flex-wrap">
                                             <span className="text-sm font-medium">Test Cases:</span>
                                             <span className="inline-block px-2 py-1 rounded bg-red-600 text-white text-xs font-mono border border-red-600">
-                                              {currentCodeStats.passed + currentCodeStats.failed}/{test.sections[currentSection].questions[currentQuestion].testCases.filter((tc: any) => !tc.isHidden).length}
+                                              {currentCodeStats.passed + currentCodeStats.failed}/
+                                              {(test.sections[currentSection].questions[currentQuestion].testCases?.filter((tc: any) => !tc.isHidden)?.length ?? 0)}
                                             </span>
                                           </div>
                                           <div className="flex items-center gap-2 flex-wrap">
