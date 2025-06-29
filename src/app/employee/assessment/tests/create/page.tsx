@@ -7,6 +7,8 @@ import { toast, Toaster } from "sonner"
 import { Pencil, Plus, Trash2, ArrowLeft, Save } from "lucide-react"
 import { AssessmentLayout } from "@/components/assessment-layout"
 import { AdvancedCodeEditor } from "@/components/advanced-code-editor"
+import ReactMarkdown from "react-markdown"
+import rehypeRaw from "rehype-raw"
 
 export default function CreateTestPage() {
   const router = useRouter()
@@ -50,6 +52,7 @@ export default function CreateTestPage() {
     codeTemplate: "",
     testCases: [] as any[],
     maxWords: 500,
+    instructions: "",
   })
 
   const handleTestDetailsChange = useCallback(
@@ -112,6 +115,7 @@ export default function CreateTestPage() {
           codeTemplate: "",
           testCases: [] as any[],
           maxWords: 500,
+          instructions: "",
         })
       } else if (section?.questionType === "Coding") {
         setNewQuestion({
@@ -135,6 +139,7 @@ function solution() {
             },
           ],
           maxWords: 500,
+          instructions: "",
         })
       } else {
         setNewQuestion({
@@ -147,6 +152,7 @@ function solution() {
           codeTemplate: "",
           testCases: [] as any[],
           maxWords: 500,
+          instructions: "",
         })
       }
     },
@@ -765,6 +771,22 @@ function solution() {
 
                           {newQuestion.type === "Coding" && (
                             <div className="space-y-3">
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-gray-700">Instructions</label>
+                                <textarea
+                                  value={newQuestion.instructions || ""}
+                                  onChange={(e) => handleQuestionChange("instructions", e.target.value)}
+                                  rows={3}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                                  placeholder="Provide specific instructions for the coding task. You can use Markdown for formatting and images (e.g. ![alt](url)).Or You can use Markdown for formatting and images (e.g. ![alt](url)). Or <img src='image-address' alt='graph' width='xxx' height='xxx' />"
+                                />
+                                {/* Markdown Preview */}
+                                <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-md">
+                                  <span className="text-xs text-muted-foreground mb-1 block">Preview:</span>
+                                  <ReactMarkdown rehypePlugins={[rehypeRaw]}>{newQuestion.instructions || ""}</ReactMarkdown>
+                                </div>
+                              </div>
+
                               <div className="space-y-2">
                                 <label className="block text-sm font-medium text-gray-700">Programming Language</label>
                                 <select

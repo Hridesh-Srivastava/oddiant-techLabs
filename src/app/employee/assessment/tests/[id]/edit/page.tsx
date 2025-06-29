@@ -19,6 +19,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { AdvancedCodeEditor } from "@/components/advanced-code-editor"
+import ReactMarkdown from "react-markdown"
+import rehypeRaw from "rehype-raw"
 
 interface TestData {
   _id: string
@@ -759,9 +761,14 @@ function solution() {
                   instructions: e.target.value,
                 })
               }
-              placeholder="Provide specific instructions for the coding task"
+              placeholder="Provide specific instructions for the coding task. You can use Markdown for formatting and images (e.g. ![alt](url)). Or <img src='image-address' alt='graph' width='xxx' height='xxx' />"
               rows={3}
             />
+            {/* Markdown Preview */}
+            <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-md">
+              <span className="text-xs text-muted-foreground mb-1 block">Preview:</span>
+              <ReactMarkdown rehypePlugins={[rehypeRaw]}>{questionForm.instructions || ""}</ReactMarkdown>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

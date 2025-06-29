@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { AdvancedCodeEditor } from "@/components/advanced-code-editor"
 import { CameraModal } from "@/components/camera-modal"
+import ReactMarkdown from "react-markdown"
+import rehypeRaw from "rehype-raw"
 
 interface InvitationData {
   _id: string
@@ -67,6 +69,7 @@ interface QuestionData {
   codeTemplate?: string
   testCases?: any[]
   maxWords?: number
+  instructions?: string
 }
 
 // FIXED: Updated interface for code submissions
@@ -2093,6 +2096,13 @@ export default function TakeTestPage() {
                         {/* Coding Question Layout - Enhanced with Better Heights */}
                         {test.sections[currentSection].questions[currentQuestion].type === "Coding" && (
                           <div className="space-y-6">
+                            {/* Coding Question Instructions (Markdown) */}
+                            {test.sections[currentSection].questions[currentQuestion].instructions && (
+                              <div className="mb-4 p-3 bg-muted/50 border rounded">
+                                <span className="text-sm font-medium mb-1 block">Instructions:</span>
+                                <ReactMarkdown rehypePlugins={[rehypeRaw]}>{test.sections[currentSection].questions[currentQuestion].instructions}</ReactMarkdown>
+                              </div>
+                            )}
                             {/* Problem Description - Improved Layout */}
                             <div className="w-full">
                               <Card className="bg-muted/50">
