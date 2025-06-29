@@ -49,6 +49,9 @@ interface AnswerData {
   codingTestResults?: CodingTestResult[]
   manualPoints?: number
   manualFeedback?: string
+  aiFeedback?: string
+  aiScore?: number
+  options?: string[]
 }
 
 interface CodingTestResult {
@@ -392,12 +395,6 @@ export default function ResultDetailsPage() {
                   <CardTitle>Question-wise Analysis</CardTitle>
                   <CardDescription>Detailed breakdown of answers for each question</CardDescription>
                 </div>
-                {hasWrittenAnswers && !writtenAnswersEvaluated && (
-                  <Button onClick={handleStartEvaluation}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Evaluate Written Answers
-                  </Button>
-                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -424,9 +421,11 @@ export default function ResultDetailsPage() {
                       <div>
                         <Label className="text-sm font-medium text-muted-foreground">Candidate Answer:</Label>
                         <div className="mt-1 p-3 bg-muted rounded-md">
-                          {Array.isArray(answer.answer)
-                            ? answer.answer.join(", ")
-                            : answer.answer || "No answer provided"}
+                          {answer.questionType === "Multiple Choice" && Array.isArray(answer.options) && !isNaN(Number(answer.answer))
+                            ? answer.options[Number(answer.answer)]
+                            : Array.isArray(answer.answer)
+                              ? answer.answer.join(", ")
+                              : answer.answer || "No answer provided"}
                         </div>
                       </div>
 
@@ -479,6 +478,13 @@ export default function ResultDetailsPage() {
                         <div>
                           <Label className="text-sm font-medium text-muted-foreground">Evaluator Feedback:</Label>
                           <div className="mt-1 p-3 bg-blue-50 text-blue-800 rounded-md">{answer.manualFeedback}</div>
+                        </div>
+                      )}
+
+                      {answer.questionType === "Written Answer" && answer.aiFeedback && (
+                        <div className="mt-2 text-sm text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-slate-800 rounded p-2">
+                          <div><b>AI Feedback:</b> {answer.aiFeedback}</div>
+                          <div><b>AI Score:</b> {answer.aiScore}/100</div>
                         </div>
                       )}
                     </div>
@@ -538,16 +544,6 @@ export default function ResultDetailsPage() {
                 <Mail className="h-4 w-4 mr-2" />
                 Email Candidate
               </Button>
-              {hasWrittenAnswers && (
-                <Button
-                  className="w-full"
-                  variant={writtenAnswersEvaluated ? "secondary" : "default"}
-                  onClick={handleStartEvaluation}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  {writtenAnswersEvaluated ? "Re-evaluate" : "Evaluate"} Written Answers
-                </Button>
-              )}
             </CardContent>
           </Card>
         </div>

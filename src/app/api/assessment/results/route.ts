@@ -3,6 +3,50 @@ import { connectToDatabase } from "@/lib/mongodb"
 import { getUserFromRequest } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 
+// 1. Load Gemini API key and URL from env
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_URL = process.env.GEMINI_API_URL;
+
+async function evaluateWrittenAnswerWithGemini(questionText: string, userAnswer: string) {
+  if (!GEMINI_API_KEY || !GEMINI_API_URL) return { aiScore: 0, aiFeedback: "AI evaluation unavailable." };
+  const prompt = `You are an exam evaluator. Evaluate the following answer for the question. Give a score (0-100) and a short, polite, constructive feedback (no JSON, no harsh language, just plain text).\nQuestion: ${questionText}\nAnswer: ${userAnswer}\nCriteria: relevance, completeness, clarity, grammar.\nRespond in this format: 'Score: <number>\nFeedback: <your feedback here>'`;
+  try {
+    const res = await fetch(GEMINI_API_URL + `?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    });
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    // Parse 'Score: <number>\nFeedback: <text>'
+    const scoreMatch = text.match(/Score:\s*(\d+)/i);
+    const feedbackMatch = text.match(/Feedback:\s*([\s\S]*)/i);
+    const aiScore = scoreMatch ? parseInt(scoreMatch[1], 10) : 0;
+    const aiFeedback = feedbackMatch ? feedbackMatch[1].trim() : text.trim();
+    return { aiScore, aiFeedback };
+  } catch (e) {
+    return { aiScore: 0, aiFeedback: "AI evaluation failed." };
+  }
+}
+
+// Add robust MCQ answer comparison helper
+function isMCQAnswerCorrect(userAnswer: any, correctAnswer: any, options?: string[]) {
+  const normalize = (val: any): string | string[] =>
+    typeof val === 'string' ? val.trim().toLowerCase() : Array.isArray(val) ? val.map((v: any) => String(v).trim().toLowerCase()).sort() : String(val).trim().toLowerCase();
+  const ua = normalize(userAnswer);
+  const ca = normalize(correctAnswer);
+  if (Array.isArray(ua) && Array.isArray(ca)) {
+    return JSON.stringify(ua) === JSON.stringify(ca);
+  }
+  if (ua === ca) return true;
+  if (options && typeof userAnswer === 'string' && typeof correctAnswer === 'string') {
+    const userIdx = options.findIndex((opt: string) => normalize(opt) === ua);
+    const correctIdx = options.findIndex((opt: string) => normalize(opt) === ca);
+    if (userIdx !== -1 && userIdx === correctIdx) return true;
+  }
+  return false;
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Get user ID from request
@@ -154,6 +198,70 @@ export async function POST(request: NextRequest) {
 
     if (!invitation) {
       return NextResponse.json({ success: false, message: "Invitation not found" }, { status: 404 })
+    }
+
+    // AI evaluation for written answers
+    if (Array.isArray(resultData.answers)) {
+      for (const ans of resultData.answers) {
+        if (ans.questionType === 'Written Answer' && typeof ans.answer === 'string' && ans.answer.trim().length > 0) {
+          const { aiScore, aiFeedback } = await evaluateWrittenAnswerWithGemini(ans.questionText, ans.answer);
+          ans.aiScore = aiScore;
+          ans.aiFeedback = aiFeedback;
+          // Assign points based on AI score (>=60 full, else proportional)
+          if (typeof aiScore === 'number') {
+            ans.points = Math.round((aiScore / 100) * ans.maxPoints);
+            ans.isCorrect = ans.points > 0;
+          } else {
+            ans.points = 0;
+            ans.isCorrect = false;
+          }
+        }
+        // MCQ robust evaluation
+        if (ans.questionType === 'Multiple Choice') {
+          if (typeof ans.correctAnswer === 'number' && Array.isArray(ans.options)) {
+            const userIdx = Number(ans.answer);
+            const correctIdx = Number(ans.correctAnswer);
+            if (!isNaN(userIdx) && userIdx === correctIdx) {
+              ans.points = ans.maxPoints;
+              ans.isCorrect = true;
+            } else {
+              ans.points = 0;
+              ans.isCorrect = false;
+            }
+          } else {
+            if (isMCQAnswerCorrect(ans.answer, ans.correctAnswer, ans.options)) {
+              ans.points = ans.maxPoints;
+              ans.isCorrect = true;
+            } else {
+              ans.points = 0;
+              ans.isCorrect = false;
+            }
+          }
+        }
+        // Coding partial points
+        if (ans.questionType === 'Coding' && Array.isArray(ans.codingTestResults)) {
+          const total = ans.codingTestResults.length;
+          const passed = ans.codingTestResults.filter((tc: any) => tc.passed).length;
+          ans.points = total > 0 ? Math.round((passed / total) * ans.maxPoints) : 0;
+        }
+      }
+    }
+
+    // After evaluating all answers, recalculate totalPoints, earnedPoints, correctAnswers, score, and status
+    if (Array.isArray(resultData.answers)) {
+      let totalPoints = 0;
+      let earnedPoints = 0;
+      let correctAnswers = 0;
+      for (const ans of resultData.answers) {
+        totalPoints += ans.maxPoints || 0;
+        earnedPoints += ans.points || 0;
+        if (ans.isCorrect) correctAnswers++;
+      }
+      resultData.totalPoints = totalPoints;
+      resultData.earnedPoints = earnedPoints;
+      resultData.correctAnswers = correctAnswers;
+      resultData.score = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+      resultData.status = (resultData.score >= (resultData.passingScore || 70)) ? 'Passed' : 'Failed';
     }
 
     // Create new result

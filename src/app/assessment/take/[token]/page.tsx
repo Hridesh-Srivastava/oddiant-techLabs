@@ -87,6 +87,26 @@ interface CodeSubmission {
 const questionCodeSubmissions: Record<string, CodeSubmission[]> = {}
 const testSessionKey = typeof window !== "undefined" ? window.location.pathname : "default"
 
+// Add a robust MCQ answer comparison helper
+function isMCQAnswerCorrect(userAnswer: any, correctAnswer: any, options?: string[]) {
+  // Normalize to string for comparison
+  const normalize = (val: any) =>
+    typeof val === 'string' ? val.trim().toLowerCase() : Array.isArray(val) ? val.map(v => String(v).trim().toLowerCase()).sort() : String(val).trim().toLowerCase();
+  const ua = normalize(userAnswer);
+  const ca = normalize(correctAnswer);
+  if (Array.isArray(ua) && Array.isArray(ca)) {
+    return JSON.stringify(ua) === JSON.stringify(ca);
+  }
+  if (ua === ca) return true;
+  // Option index match fallback
+  if (options && typeof userAnswer === 'string' && typeof correctAnswer === 'string') {
+    const userIdx = options.findIndex(opt => normalize(opt) === ua);
+    const correctIdx = options.findIndex(opt => normalize(opt) === ca);
+    if (userIdx !== -1 && userIdx === correctIdx) return true;
+  }
+  return false;
+}
+
 export default function TakeTestPage() {
   const router = useRouter()
   const params = useParams()
@@ -320,36 +340,11 @@ export default function TakeTestPage() {
 
           // Enhanced scoring logic for different question types
           if (question.type === "Multiple Choice") {
-            const userAnswerStr = String(userAnswer || "").trim()
-            const correctAnswerStr = String(question.correctAnswer || "").trim()
-
-            console.log(`=== MCQ Evaluation for Question ${question.id} ===`)
-            console.log(`Question Text: "${question.text}"`)
-            console.log(`User Answer String: "${userAnswerStr}"`)
-            console.log(`Correct Answer String: "${correctAnswerStr}"`)
-
-            if (userAnswerStr && userAnswerStr.length > 0 && correctAnswerStr && correctAnswerStr.length > 0) {
-              if (userAnswerStr === correctAnswerStr) {
-                isCorrect = true
-                earnedPoints += question.points
-                console.log(`✅ EXACT MATCH - ${question.points} points awarded`)
-              } else if (userAnswerStr.toLowerCase() === correctAnswerStr.toLowerCase()) {
-                isCorrect = true
-                earnedPoints += question.points
-                console.log(`✅ CASE-INSENSITIVE MATCH - ${question.points} points awarded`)
-              } else {
-                const userOptionIndex = question.options?.findIndex((opt) => opt.trim() === userAnswerStr)
-                const correctOptionIndex = question.options?.findIndex((opt) => opt.trim() === correctAnswerStr)
-                if (userOptionIndex !== -1 && correctOptionIndex !== -1 && userOptionIndex === correctOptionIndex) {
-                  isCorrect = true
-                  earnedPoints += question.points
-                  console.log(`✅ OPTION INDEX MATCH - ${question.points} points awarded`)
-                } else {
-                  console.log(`❌ NO MATCH FOUND - 0 points`)
-                }
-              }
-            } else {
-              console.log(`❌ EMPTY ANSWER - 0 points`)
+            const userAnswerStr = userAnswer;
+            const correctAnswerStr = question.correctAnswer;
+            if (isMCQAnswerCorrect(userAnswerStr, correctAnswerStr, question.options)) {
+              isCorrect = true;
+              earnedPoints += question.points;
             }
           } else if (question.type === "Coding") {
             // FIXED: For coding questions, get the latest submission results
@@ -1043,18 +1038,25 @@ export default function TakeTestPage() {
     (questionKey: string, answer: string | string[]) => {
       const currentQuestionData = test?.sections[currentSection]?.questions[currentQuestion]
       if (currentQuestionData) {
-        setCodes((prev) => {
-          if (prev[questionKey] === answer) return prev
-          return { ...prev, [questionKey]: answer as string }
-        })
-        // Persist code to localStorage for coding questions
-        if (currentQuestionData.type === "Coding" && typeof answer === "string") {
-          try {
-            const enhancedStorageKey = `${testSessionKey}-${questionKey}`
-            localStorage.setItem(`code_${enhancedStorageKey}`, answer)
-          } catch (e) {
-            console.warn("Failed to store code in localStorage:", e)
+        if (currentQuestionData.type === "Coding") {
+          setCodes((prev) => {
+            if (prev[questionKey] === answer) return prev
+            return { ...prev, [questionKey]: answer as string }
+          })
+          // Persist code to localStorage for coding questions
+          if (typeof answer === "string") {
+            try {
+              const enhancedStorageKey = `${testSessionKey}-${questionKey}`
+              localStorage.setItem(`code_${enhancedStorageKey}`, answer)
+            } catch (e) {
+              console.warn("Failed to store code in localStorage:", e)
+            }
           }
+        } else {
+          setAnswers((prev) => ({
+            ...prev,
+            [questionKey]: answer,
+          }))
         }
       }
     },
@@ -1376,7 +1378,7 @@ export default function TakeTestPage() {
     // Clear code and code submission localStorage for this test session
     try {
       const prefix = `${testSessionKey}-`;
-      for (let key in localStorage) {
+      for (const key in localStorage) {
         if (key.startsWith('code_' + prefix) || key.startsWith('submissions_' + prefix)) {
           localStorage.removeItem(key);
         }
@@ -1896,6 +1898,10 @@ export default function TakeTestPage() {
     )
   }
 
+  // Add above the return statement of the component:
+  const writtenAnswerValue = answers[getCurrentQuestionKey()];
+  const writtenWordCount = typeof writtenAnswerValue === 'string' ? writtenAnswerValue.trim().split(/\s+/).filter((word: string) => word.length > 0).length : 0;
+
   return (
     <div className="min-h-screen bg-background">
       <Toaster position="top-center" />
@@ -2221,8 +2227,8 @@ export default function TakeTestPage() {
                                           id={`option-${index}`}
                                           name={`question-${getCurrentQuestionKey()}`}
                                           value={option}
-                                          checked={getCurrentAnswer() === option}
-                                          onChange={() => handleAnswer(getCurrentQuestionKey(), option)}
+                                          checked={String(answers[getCurrentQuestionKey()]) === String(index)}
+                                          onChange={() => handleAnswer(getCurrentQuestionKey(), String(index))}
                                           className="h-4 w-4 mt-0.5 text-primary focus:ring-primary border-input"
                                         />
                                         <label
@@ -2242,7 +2248,7 @@ export default function TakeTestPage() {
                                     rows={window.innerWidth >= 768 ? 8 : 6}
                                     placeholder="Type your answer here..."
                                     className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                                    value={(getCurrentAnswer() as string) || ""}
+                                    value={answers[getCurrentQuestionKey()] || ""}
                                     onChange={(e) => {
                                       const words = e.target.value
                                         .trim()
@@ -2259,14 +2265,7 @@ export default function TakeTestPage() {
                                   />
                                   <div className="flex justify-between text-sm text-muted-foreground">
                                     <span>
-                                      Words:{" "}
-                                      {
-                                        ((getCurrentAnswer() as string) || "")
-                                          .trim()
-                                          .split(/\s+/)
-                                          .filter((word) => word.length > 0).length
-                                      }{" "}
-                                      / {test.sections[currentSection].questions[currentQuestion].maxWords || 500}
+                                      Words: {writtenWordCount} / {test.sections[currentSection].questions[currentQuestion].maxWords || 500}
                                     </span>
                                     <span>
                                       Max: {test.sections[currentSection].questions[currentQuestion].maxWords || 500}{" "}
