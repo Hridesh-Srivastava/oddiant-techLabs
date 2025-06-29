@@ -1036,7 +1036,7 @@ export default function TakeTestPage() {
         return prev
       })
     } else {
-      if (codes !== {}) {
+      if (Object.keys(codes).length > 0) {
         setCodes({})
       }
     }
