@@ -1035,11 +1035,8 @@ export default function TakeTestPage() {
         }
         return prev
       })
-    } else {
-      if (Object.keys(codes).length > 0) {
-        setCodes({})
-      }
     }
+    // For non-coding questions, do NOT clear codes; just leave as-is.
   }, [currentSection, currentQuestion, test?.sections])
 
   const handleAnswer = useCallback(
