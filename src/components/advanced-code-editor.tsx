@@ -265,6 +265,19 @@ export function AdvancedCodeEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const lineNumbersRef = useRef<HTMLDivElement>(null)
+  const settingsRef = useRef<HTMLDivElement>(null)
+
+  // Custom click-away handler for settings dropdown
+  useEffect(() => {
+    if (!showSettings) return;
+    function handleClick(event: MouseEvent) {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setShowSettings(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showSettings]);
 
   // FIXED: Memoize current language configuration to prevent recalculation
   const currentLang = useMemo(
@@ -758,14 +771,57 @@ export function AdvancedCodeEditor({
                 </Button>
               )}
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowSettings(!showSettings)}
-                className="px-2 sm:px-3 py-1 sm:py-2"
-              >
-                <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
-              </Button>
+              <div className="relative inline-block">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSettings((prev) => !prev)}
+                  className="px-2 sm:px-3 py-1 sm:py-2"
+                >
+                  <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
+                </Button>
+                {showSettings && (
+                  <div
+                    ref={settingsRef}
+                    className="absolute right-0 mt-2 bg-white dark:bg-slate-800 border border-border rounded-lg shadow-lg p-4 w-64 max-w-full flex flex-col gap-4 animate-fade-in z-50"
+                    style={{ minWidth: '200px' }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm text-white">Show Line Numbers</span>
+                      <input
+                        type="checkbox"
+                        checked={lineNumbers}
+                        onChange={() => setLineNumbers((prev) => !prev)}
+                        className="form-checkbox h-4 w-4 text-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-medium text-sm block mb-2 text-white">Font Size</label>
+                      <div className="flex flex-wrap gap-2">
+                        {[10, 40, 50, 60, 80, 100].map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            className={`px-2 py-1 rounded border ${fontSize === size ? 'bg-primary text-white' : 'bg-muted text-foreground'} text-xs`}
+                            onClick={() => setFontSize(size)}
+                          >
+                            {size}px
+                          </button>
+                        ))}
+                        <input
+                          type="number"
+                          min={8}
+                          max={200}
+                          value={fontSize}
+                          onChange={e => setFontSize(Number(e.target.value))}
+                          className="w-16 px-2 py-1 border rounded text-xs bg-background"
+                          placeholder="Custom"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <Button
                 variant="outline"
