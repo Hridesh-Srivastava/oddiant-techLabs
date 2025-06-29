@@ -78,6 +78,7 @@ interface CodeEditorProps {
   questionId?: string
   onTestCaseResults?: (questionId: string, results: CodeSubmission[]) => void
   initialTestCaseResults?: CodeSubmission[]
+  template?: string
 }
 
 const SUPPORTED_LANGUAGES = [
@@ -245,6 +246,7 @@ export function AdvancedCodeEditor({
   questionId,
   onTestCaseResults,
   initialTestCaseResults = [],
+  template = "",
 }: CodeEditorProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [fontSize, setFontSize] = useState(14)
@@ -253,7 +255,6 @@ export function AdvancedCodeEditor({
   const [customInput, setCustomInput] = useState("")
   const [activeTab, setActiveTab] = useState("output")
   const [showSettings, setShowSettings] = useState(false)
-  const [code, setCode] = useState(value)
   const [currentLanguage, setCurrentLanguage] = useState(language)
   const [lineNumbers, setLineNumbers] = useState(true)
 
@@ -291,21 +292,13 @@ export function AdvancedCodeEditor({
 
   // FIXED: Initialize with template only once when component mounts
   useEffect(() => {
-    if (!value && !code) {
+    if (!value && !template) {
       const template = currentLang.template
-      setCode(template)
       if (onChange) {
         onChange(template)
       }
     }
   }, []) // Empty dependency array - only run once
-
-  // FIXED: Sync with parent value prop when it changes (but prevent loops)
-  useEffect(() => {
-    if (value !== undefined && value !== code) {
-      setCode(value)
-    }
-  }, [value]) // Only depend on value, not code
 
   // FIXED: Handle question changes properly without causing loops
   useEffect(() => {
@@ -352,7 +345,7 @@ export function AdvancedCodeEditor({
   // FIXED: Update line numbers with proper dependency management
   useEffect(() => {
     if (lineNumbersRef.current && textareaRef.current) {
-      const lines = code.split("\n").length
+      const lines = value.split("\n").length
       const lineNumbersContent = Array.from({ length: lines }, (_, i) => i + 1).join("\n")
 
       // Only update if content actually changed
@@ -360,7 +353,7 @@ export function AdvancedCodeEditor({
         lineNumbersRef.current.textContent = lineNumbersContent
       }
     }
-  }, [code.split("\n").length]) // Only depend on line count, not full code
+  }, [value.split("\n").length]) // Only depend on line count, not full code
 
   // FIXED: Sync scroll between textarea and line numbers
   useEffect(() => {
@@ -379,7 +372,7 @@ export function AdvancedCodeEditor({
   // FIXED: Memoize keyboard shortcut handlers
   const handleDownload = useCallback(() => {
     const filename = `solution.${currentLang.extension}`
-    const blob = new Blob([code], { type: "text/plain" })
+    const blob = new Blob([value], { type: "text/plain" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
@@ -389,10 +382,10 @@ export function AdvancedCodeEditor({
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
     toast.success(`Code downloaded as ${filename}`)
-  }, [code, currentLang.extension])
+  }, [value, currentLang.extension])
 
   const handleRunCode = useCallback(async () => {
-    if (!code.trim()) {
+    if (!value.trim()) {
       toast.error("Please write some code first")
       return
     }
@@ -405,7 +398,7 @@ export function AdvancedCodeEditor({
         // Run with custom input if no test cases
         let result: ExecutionResult
         if (onRunCode) {
-          result = await onRunCode(code, currentLanguage, customInput)
+          result = await onRunCode(value, currentLanguage, customInput)
         } else {
           const response = await fetch("/api/code/execute", {
             method: "POST",
@@ -413,7 +406,7 @@ export function AdvancedCodeEditor({
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              code,
+              code: value,
               language: currentLang.pistonLang,
               version: currentLang.version,
               input: customInput,
@@ -441,7 +434,7 @@ export function AdvancedCodeEditor({
 
           let rawResult: ExecutionResult
           if (onRunCode) {
-            rawResult = await onRunCode(code, currentLanguage, testCase.input)
+            rawResult = await onRunCode(value, currentLanguage, testCase.input)
           } else {
             const response = await fetch("/api/code/execute", {
               method: "POST",
@@ -449,7 +442,7 @@ export function AdvancedCodeEditor({
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                code,
+                code: value,
                 language: currentLang.pistonLang,
                 version: currentLang.version,
                 input: testCase.input,
@@ -481,7 +474,7 @@ export function AdvancedCodeEditor({
 
         // Create a new code submission record
         const submission: CodeSubmission = {
-          code: code,
+          code: value,
           language: currentLanguage,
           timestamp: new Date(),
           results: allResults,
@@ -519,7 +512,7 @@ export function AdvancedCodeEditor({
     } finally {
       setIsRunning(false)
     }
-  }, [code, currentLanguage, customInput, testCases, onRunCode, currentLang.pistonLang, currentLang.version])
+  }, [value, currentLanguage, customInput, testCases, onRunCode, currentLang.pistonLang, currentLang.version])
 
   // FIXED: Handle keyboard shortcuts with proper dependencies
   useEffect(() => {
@@ -546,8 +539,7 @@ export function AdvancedCodeEditor({
         const end = textarea.selectionEnd
         const spaces = "  " // 2 spaces
 
-        const newValue = code.substring(0, start) + spaces + code.substring(end)
-        setCode(newValue)
+        const newValue = value.substring(0, start) + spaces + value.substring(end)
         if (onChange) {
           onChange(newValue)
         }
@@ -559,7 +551,7 @@ export function AdvancedCodeEditor({
 
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [handleDownload, handleRunCode, code, onChange])
+  }, [handleDownload, handleRunCode, value, onChange])
 
   // FIXED: Memoize language change handler
   const handleLanguageChange = useCallback(
@@ -576,26 +568,14 @@ export function AdvancedCodeEditor({
       const currentTemplate = currentLang.template
       const newTemplate = newLangConfig.template
 
-      if (!code.trim() || code === currentTemplate) {
-        setCode(newTemplate)
+      if (!value.trim() || value === currentTemplate) {
         if (onChange) {
           onChange(newTemplate)
         }
         toast.success(`Switched to ${newLangConfig.label}`)
       }
     },
-    [currentLang.template, code, onChange, onLanguageChange],
-  )
-
-  // FIXED: Memoize code change handler
-  const handleCodeChange = useCallback(
-    (newCode: string) => {
-      setCode(newCode)
-      if (onChange) {
-        onChange(newCode)
-      }
-    },
-    [onChange],
+    [value, onChange, onLanguageChange],
   )
 
   // FIXED: Memoize other handlers
@@ -605,21 +585,28 @@ export function AdvancedCodeEditor({
   }, [])
 
   const handleReset = useCallback(() => {
-    const template = currentLang.template
-    setCode(template)
+    // Always prefer the template prop (codeTemplate from parent/question) if available
+    const resetTemplate = template && template.trim() !== "" ? template : (value && value.trim() !== "" ? value : currentLang.template)
     if (onChange) {
-      onChange(template)
+      onChange(resetTemplate)
     }
     setExecutionResult(null)
     setCustomInput("")
     setCodeSubmissions([])
     toast.success("Code reset to template")
-  }, [currentLang.template, onChange])
+  }, [template, value, currentLang.template, onChange])
 
   const handleResetTestCases = useCallback(() => {
+    // Always prefer the template prop (codeTemplate from parent/question) if available
+    const resetTemplate = template && template.trim() !== "" ? template : (value && value.trim() !== "" ? value : currentLang.template)
+    if (onChange) {
+      onChange(resetTemplate)
+    }
     setCodeSubmissions([])
-    toast.success("Test case progress reset")
-  }, [])
+    setExecutionResult(null)
+    setCustomInput("")
+    toast.success("Code and test cases reset to template")
+  }, [template, value, currentLang.template, onChange])
 
   const handleUpload = useCallback(() => {
     fileInputRef.current?.click()
@@ -633,7 +620,6 @@ export function AdvancedCodeEditor({
       const reader = new FileReader()
       reader.onload = (event) => {
         const content = event.target?.result as string
-        setCode(content)
         if (onChange) {
           onChange(content)
         }
@@ -645,9 +631,9 @@ export function AdvancedCodeEditor({
   )
 
   const handleCopyCode = useCallback(() => {
-    navigator.clipboard.writeText(code)
+    navigator.clipboard.writeText(value)
     toast.success("Code copied to clipboard")
-  }, [code])
+  }, [value])
 
   const toggleFullscreen = useCallback(() => {
     setIsFullscreen((prev) => !prev)
@@ -740,19 +726,6 @@ export function AdvancedCodeEditor({
                 <span className="hidden sm:inline">Reset</span>
               </Button>
 
-              {testCases.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleResetTestCases}
-                  className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 bg-transparent"
-                >
-                  <TestTube className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  <span className="hidden md:inline">Reset Tests</span>
-                  <span className="md:hidden">Reset</span>
-                </Button>
-              )}
-
               <Button
                 variant="outline"
                 size="sm"
@@ -838,8 +811,8 @@ export function AdvancedCodeEditor({
               <div className={`flex-1 ${isFullscreen ? 'overflow-auto h-full' : 'min-h-0 h-full overflow-auto'}`}> 
                 <textarea
                   ref={textareaRef}
-                  value={code}
-                  onChange={(e) => handleCodeChange(e.target.value)}
+                  value={value}
+                  onChange={(e) => onChange?.(e.target.value)}
                   readOnly={readOnly}
                   className="w-full h-full min-h-0 p-2 sm:p-4 bg-slate-900 text-slate-100 font-mono resize-none border-none outline-none"
                   style={{
@@ -1067,8 +1040,8 @@ export function AdvancedCodeEditor({
             <div className="flex items-center gap-2 sm:gap-4 flex-wrap text-xs">
               <span className="hidden sm:inline">Shortcuts: Ctrl+Enter (Run), Ctrl+S (Save), Tab (Indent)</span>
               <span className="sm:hidden">Ctrl+Enter: Run</span>
-              <span>Lines: {code.split("\n").length}</span>
-              <span className="hidden sm:inline">Characters: {code.length}</span>
+              <span>Lines: {value.split("\n").length}</span>
+              <span className="hidden sm:inline">Characters: {value.length}</span>
               <span className="hidden md:inline">Language: {currentLang.label}</span>
               {testCases.length > 0 && (
                 <span>

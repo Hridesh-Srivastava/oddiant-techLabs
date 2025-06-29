@@ -92,7 +92,7 @@ export default function TakeTestPage() {
   const params = useParams()
   const token = params.token as string
 
-  const [code, setCode] = useState("")
+  const [codes, setCodes] = useState<{ [key: string]: string }>({})
   const [isLoading, setIsLoading] = useState(true)
   const [invitation, setInvitation] = useState<InvitationData | null>(null)
   const [test, setTest] = useState<TestData | null>(null)
@@ -1003,9 +1003,7 @@ export default function TakeTestPage() {
     if (currentQuestionData?.type === "Coding" && test) {
       const questionKey = `${test.sections[currentSection].id}-${currentQuestionData.id}`
       const enhancedStorageKey = `${testSessionKey}-${questionKey}`
-
-      console.log(`=== Loading code for Section ${currentSection}, Question ${currentQuestion} ===`)
-      console.log(`Question Key: ${questionKey}`)
+      const template = currentQuestionData.codeTemplate || ""
 
       let loadedCode: string | null = null
 
@@ -1014,78 +1012,56 @@ export default function TakeTestPage() {
         const stored = localStorage.getItem(`code_${enhancedStorageKey}`)
         if (stored !== null) {
           loadedCode = stored
-          console.log(`Loaded from localStorage: ${stored.substring(0, 50)}...`)
         }
-      } catch (e) {
-        console.warn("Failed to load from localStorage:", e)
-      }
+      } catch (e) {}
 
-      // If no localStorage, try answers state
+      // If no localStorage, try codes state
       if (loadedCode === null) {
-        const currentAnswer = answers[questionKey] as string
+        const currentAnswer = codes[questionKey]
         if (currentAnswer !== undefined && currentAnswer !== null) {
           loadedCode = currentAnswer
-          console.log(`Loaded from answers state: ${currentAnswer.substring(0, 50)}...`)
         }
       }
 
-      // If still no code, use template
-      if (loadedCode === null) {
-        loadedCode = currentQuestionData.codeTemplate || ""
-        console.log(`Using template: ${loadedCode.substring(0, 50)}...`)
+      // If loadedCode is empty, only whitespace, or matches the template, use template
+      if (!loadedCode || loadedCode.trim() === "" || loadedCode.trim() === template.trim()) {
+        loadedCode = template
       }
 
-      // Only update if different to prevent loops
-      if (code !== loadedCode) {
-        setCode(loadedCode)
-      }
-
-      // Always ensure answers state is updated
-      setAnswers((prev) => ({
-        ...prev,
-        [questionKey]: loadedCode || "",
-      }))
+      // Only update if different
+      setCodes((prev) => {
+        if (prev[questionKey] !== loadedCode) {
+          return { ...prev, [questionKey]: loadedCode || "" }
+        }
+        return prev
+      })
     } else {
-      // Reset code state for non-coding questions
-      if (code !== "") {
-        setCode("")
+      if (codes !== {}) {
+        setCodes({})
       }
     }
-  }, [currentSection, currentQuestion, test?.sections]) // REMOVED problematic dependencies
+  }, [currentSection, currentQuestion, test?.sections])
 
   const handleAnswer = useCallback(
     (questionKey: string, answer: string | string[]) => {
       const currentQuestionData = test?.sections[currentSection]?.questions[currentQuestion]
       if (currentQuestionData) {
-        // Only update if the answer is actually different
-        setAnswers((prev) => {
-          if (prev[questionKey] === answer) {
-            return prev // No change, prevent re-render
-          }
-          return {
-            ...prev,
-            [questionKey]: answer,
-          }
+        setCodes((prev) => {
+          if (prev[questionKey] === answer) return prev
+          return { ...prev, [questionKey]: answer as string }
         })
-
         // Persist code to localStorage for coding questions
         if (currentQuestionData.type === "Coding" && typeof answer === "string") {
           try {
             const enhancedStorageKey = `${testSessionKey}-${questionKey}`
             localStorage.setItem(`code_${enhancedStorageKey}`, answer)
-            console.log(`Saved code for question ${questionKey}`)
-
-            // Only update local code state if this is the current question
-            if (questionKey === getCurrentQuestionKey() && code !== answer) {
-              setCode(answer as string)
-            }
           } catch (e) {
             console.warn("Failed to store code in localStorage:", e)
           }
         }
       }
     },
-    [test, currentSection, currentQuestion, testSessionKey], // Removed 'code' dependency
+    [test, currentSection, currentQuestion, testSessionKey],
   )
 
   useEffect(() => {
@@ -1428,7 +1404,7 @@ export default function TakeTestPage() {
 
   const getCurrentAnswer = () => {
     const questionKey = getCurrentQuestionKey()
-    let answer = answers[questionKey] || ""
+    let answer = codes[questionKey] || ""
 
     // For coding questions, try to load from localStorage if answer is empty
     const currentQuestionData = test?.sections[currentSection]?.questions[currentQuestion]
@@ -1438,8 +1414,8 @@ export default function TakeTestPage() {
         const stored = localStorage.getItem(`code_${enhancedStorageKey}`)
         if (stored) {
           answer = stored
-          // Update the answers state with the loaded code
-          setAnswers((prev) => ({
+          // Update the codes state with the loaded code
+          setCodes((prev) => ({
             ...prev,
             [questionKey]: stored,
           }))
@@ -2179,47 +2155,24 @@ export default function TakeTestPage() {
                                 <div className="border rounded-lg overflow-hidden">
                                   <AdvancedCodeEditor
                                     key={`${currentSection}-${currentQuestion}-${getCurrentQuestionKey()}`}
-                                    value={code}
+                                    value={codes[getCurrentQuestionKey()] || ""}
                                     onChange={(value) => {
-                                      // Only update if value is different
-                                      if (value !== code) {
-                                        setCode(value)
+                                      if (value !== codes[getCurrentQuestionKey()]) {
                                         handleAnswer(getCurrentQuestionKey(), value)
                                       }
                                     }}
-                                    language={
-                                      test.sections[currentSection].questions[currentQuestion].codeLanguage ||
-                                      "javascript"
-                                    }
+                                    language={test.sections[currentSection].questions[currentQuestion].codeLanguage || "javascript"}
                                     showConsole={true}
                                     testCases={test.sections[currentSection].questions[currentQuestion].testCases || []}
                                     className="w-full"
                                     questionId={getCurrentQuestionId()}
                                     onTestCaseResults={handleCodeSubmissions}
                                     initialTestCaseResults={(() => {
-                                      const currentQuestionData =
-                                        test?.sections[currentSection]?.questions[currentQuestion]
-                                      if (!currentQuestionData) return []
-
+                                      const currentQuestionData = test.sections[currentSection].questions[currentQuestion]
                                       const questionKey = `${test.sections[currentSection].id}-${currentQuestionData.id}`
-                                      const sessionQuestionKey = `${testSessionKey}-${questionKey}`
-
-                                      let results = questionCodeSubmissions[sessionQuestionKey] || []
-
-                                      if (results.length === 0) {
-                                        try {
-                                          const stored = localStorage.getItem(`submissions_${sessionQuestionKey}`)
-                                          if (stored) {
-                                            results = JSON.parse(stored)
-                                            questionCodeSubmissions[sessionQuestionKey] = results
-                                          }
-                                        } catch (e) {
-                                          console.warn("Failed to load submissions from localStorage:", e)
-                                        }
-                                      }
-
-                                      return results
+                                      return questionCodeSubmissions[questionKey] || []
                                     })()}
+                                    template={test.sections[currentSection].questions[currentQuestion].codeTemplate || ""}
                                   />
                                 </div>
                               ) : (
@@ -2232,10 +2185,9 @@ export default function TakeTestPage() {
                                       rows={20}
                                       placeholder="// Write your code here"
                                       className="w-full p-3 font-mono text-sm bg-slate-900 text-slate-100 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-                                      value={code}
+                                      value={codes[getCurrentQuestionKey()] || ""}
                                       onChange={(e) => {
-                                        if (e.target.value !== code) {
-                                          setCode(e.target.value)
+                                        if (e.target.value !== codes[getCurrentQuestionKey()]) {
                                           handleAnswer(getCurrentQuestionKey(), e.target.value)
                                         }
                                       }}
