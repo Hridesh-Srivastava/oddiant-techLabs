@@ -675,17 +675,13 @@ export function AdvancedCodeEditor({
 
   // FIXED: Memoize card height calculation
   const cardHeight = useMemo(() => {
-    if (isFullscreen) return "calc(100vh - 2rem)"
-    if (typeof window !== "undefined") {
-      if (window.innerWidth >= 1024) return "800px"
-      if (window.innerWidth >= 640) return "700px"
-    }
-    return "600px"
-  }, [isFullscreen])
+    if (isFullscreen) return "98vh";
+    return "min(85vh, 1000px)";
+  }, [isFullscreen]);
 
   return (
-    <div className={className} style={fullscreenStyles}>
-      <Card className="w-full h-full flex flex-col overflow-hidden" style={{ height: cardHeight }}>
+    <div className={className} style={{ ...fullscreenStyles, maxWidth: '98vw', width: '100%', margin: '0 auto' }}>
+      <Card className="w-full h-full flex flex-col overflow-hidden" style={{ height: cardHeight, minHeight: isFullscreen ? '90vh' : '650px', maxHeight: isFullscreen ? '98vh' : '1000px', width: '100%' }}>
         <CardHeader className="pb-2 sm:pb-3 flex-shrink-0">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-base sm:text-lg flex items-center gap-2">
@@ -921,285 +917,279 @@ export function AdvancedCodeEditor({
           )}
         </CardHeader>
 
-        <CardContent className="flex-1 flex flex-col overflow-hidden p-2 sm:p-4 min-h-0">
-          <div className="flex-1 flex flex-col lg:flex-row gap-2 sm:gap-4 min-h-0 overflow-hidden">
-            {/* Code Editor Section */}
-            <div
-              className="border rounded-md overflow-hidden bg-slate-900 flex-1"
-              style={{
-                height: showConsole
-                  ? typeof window !== "undefined" && window.innerWidth >= 1024
-                    ? "100%"
-                    : "60%"
-                  : "100%",
-                minHeight: "300px",
-              }}
-            >
-              <div className="flex h-full">
-                {/* Line Numbers */}
-                {lineNumbers && (
-                  <div
-                    ref={lineNumbersRef}
-                    className="bg-slate-800 text-slate-400 p-2 sm:p-4 text-sm font-mono select-none border-r border-slate-700 overflow-hidden"
-                    style={{
-                      width: "40px sm:60px",
-                      fontSize: `${fontSize}px`,
-                      lineHeight: "1.5",
-                      whiteSpace: "pre",
-                    }}
-                  />
-                )}
-                {/* Code Textarea */}
-                <div className="flex-1 relative">
-                  <textarea
-                    ref={textareaRef}
-                    value={code}
-                    onChange={(e) => handleCodeChange(e.target.value)}
-                    readOnly={readOnly}
-                    className="w-full h-full p-2 sm:p-4 bg-slate-900 text-slate-100 font-mono resize-none border-none outline-none"
-                    style={{
-                      fontSize: `${Math.max(12, fontSize - (typeof window !== "undefined" && window.innerWidth < 640 ? 2 : 0))}px`,
-                      lineHeight: "1.5",
-                      tabSize: 2,
-                    }}
-                    placeholder="Start coding here..."
-                    spellCheck={false}
-                  />
-                </div>
+        <div className="flex-1 min-h-0 h-full flex flex-col lg:flex-row gap-4 overflow-hidden" style={{ width: '100%' }}>
+          {/* Code Editor Section */}
+          <div
+            className="border rounded-md bg-slate-900 flex-1 min-h-0 h-full overflow-hidden flex flex-col"
+            style={{
+              minHeight: 0,
+              maxHeight: '100%',
+              width: '100%',
+            }}
+          >
+            <div className="flex-1 min-h-0 h-full flex flex-row overflow-hidden">
+              {/* Line Numbers */}
+              {lineNumbers && (
+                <div
+                  ref={lineNumbersRef}
+                  className="bg-slate-800 text-slate-400 p-2 sm:p-4 text-sm font-mono select-none border-r border-slate-700 overflow-hidden"
+                  style={{
+                    width: "40px sm:60px",
+                    fontSize: `${fontSize}px`,
+                    lineHeight: "1.5",
+                    whiteSpace: "pre",
+                  }}
+                />
+              )}
+              {/* Code Textarea */}
+              <div className="flex-1 min-h-0 h-full overflow-auto">
+                <textarea
+                  ref={textareaRef}
+                  value={code}
+                  onChange={(e) => handleCodeChange(e.target.value)}
+                  readOnly={readOnly}
+                  className="w-full h-full min-h-0 p-2 sm:p-4 bg-slate-900 text-slate-100 font-mono resize-none border-none outline-none"
+                  style={{
+                    fontSize: `${Math.max(12, fontSize - (typeof window !== "undefined" && window.innerWidth < 640 ? 2 : 0))}px`,
+                    lineHeight: "1.5",
+                    tabSize: 2,
+                  }}
+                  placeholder="Start coding here..."
+                  spellCheck={false}
+                />
               </div>
             </div>
+          </div>
 
-            {/* Console Section */}
-            {showConsole && (
-              <div
-                className="border rounded-md overflow-hidden flex flex-col bg-background"
-                style={{
-                  height: typeof window !== "undefined" && window.innerWidth >= 1024 ? "100%" : "35%",
-                  minHeight: "250px",
-                  width: typeof window !== "undefined" && window.innerWidth >= 1024 ? "45%" : "100%",
-                }}
-              >
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-                  <div className="border-b flex-shrink-0 bg-muted/50">
-                    <TabsList className="h-auto p-0 bg-transparent w-full justify-start">
-                      <TabsTrigger
-                        value="output"
-                        className="rounded-none border-r data-[state=active]:bg-background text-xs sm:text-sm px-2 sm:px-4 py-2"
-                      >
-                        <Terminal className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                        <span className="hidden sm:inline">Output</span>
-                        <span className="sm:hidden">Out</span>
-                      </TabsTrigger>
-                      {testCases.length > 0 && (
-                        <TabsTrigger
-                          value="testcases"
-                          className="rounded-none data-[state=active]:bg-background text-xs sm:text-sm px-2 sm:px-4 py-2"
-                        >
-                          <TestTube className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                          <span className="hidden sm:inline">
-                            Test Results ({executionStats.passed}/{executionStats.total})
-                          </span>
-                          <span className="sm:hidden">
-                            Tests ({executionStats.passed}/{executionStats.total})
-                          </span>
-                        </TabsTrigger>
-                      )}
-                    </TabsList>
-                  </div>
-
-                  <div className="flex-1 overflow-hidden">
-                    <TabsContent value="output" className="m-0 h-full">
-                      <ScrollArea className="h-full">
-                        <div className="p-2 sm:p-4 font-mono text-xs sm:text-sm">
-                          {isRunning ? (
+          {/* Console Section */}
+          <div
+            className="border rounded-md flex-1 min-h-0 h-full overflow-hidden flex flex-col bg-background"
+            style={{
+              minHeight: 0,
+              maxHeight: '100%',
+              width: '100%',
+              minWidth: '350px',
+              maxWidth: '700px',
+            }}
+          >
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full min-h-0">
+              <div className="border-b flex-shrink-0 bg-muted/50">
+                <TabsList className="h-auto p-0 bg-transparent w-full justify-start">
+                  <TabsTrigger
+                    value="output"
+                    className="rounded-none border-r data-[state=active]:bg-background text-xs sm:text-sm px-2 sm:px-4 py-2"
+                  >
+                    <Terminal className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                    <span className="hidden sm:inline">Output</span>
+                    <span className="sm:hidden">Out</span>
+                  </TabsTrigger>
+                  {testCases.length > 0 && (
+                    <TabsTrigger
+                      value="testcases"
+                      className="rounded-none data-[state=active]:bg-background text-xs sm:text-sm px-2 sm:px-4 py-2"
+                    >
+                      <TestTube className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      <span className="hidden sm:inline">
+                        Test Results ({executionStats.passed}/{executionStats.total})
+                      </span>
+                      <span className="sm:hidden">
+                        Tests ({executionStats.passed}/{executionStats.total})
+                      </span>
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+              </div>
+              <div className="flex-1 min-h-0 h-full overflow-auto">
+                <TabsContent value="output" className="m-0 h-full min-h-0">
+                  <div className="h-full min-h-0 overflow-auto">
+                    <div className="p-2 sm:p-4 font-mono text-xs sm:text-sm">
+                      {isRunning ? (
+                        <div className="flex items-center space-x-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Executing code against all test cases...</span>
+                        </div>
+                      ) : executionResult ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
                             <div className="flex items-center space-x-2">
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              <span>Executing code against all test cases...</span>
+                              {executionResult.success ? (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <XCircle className="h-4 w-4 text-red-500" />
+                              )}
+                              <span className={executionResult.success ? "text-green-600" : "text-red-600"}>
+                                {executionResult.success ? "Execution Successful" : "Execution Failed"}
+                              </span>
                             </div>
-                          ) : executionResult ? (
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-between flex-wrap gap-2">
-                                <div className="flex items-center space-x-2">
-                                  {executionResult.success ? (
-                                    <CheckCircle className="h-4 w-4 text-green-500" />
-                                  ) : (
-                                    <XCircle className="h-4 w-4 text-red-500" />
-                                  )}
-                                  <span className={executionResult.success ? "text-green-600" : "text-red-600"}>
-                                    {executionResult.success ? "Execution Successful" : "Execution Failed"}
-                                  </span>
+                            {executionResult.executionTime && (
+                              <div className="flex items-center space-x-2 sm:space-x-4 text-xs sm:text-sm text-muted-foreground">
+                                <div className="flex items-center space-x-1">
+                                  <Clock className="h-3 w-3" />
+                                  <span>{executionResult.executionTime}ms</span>
                                 </div>
-                                {executionResult.executionTime && (
-                                  <div className="flex items-center space-x-2 sm:space-x-4 text-xs sm:text-sm text-muted-foreground">
-                                    <div className="flex items-center space-x-1">
-                                      <Clock className="h-3 w-3" />
-                                      <span>{executionResult.executionTime}ms</span>
-                                    </div>
-                                    {executionResult.memoryUsed && (
-                                      <div className="flex items-center space-x-1">
-                                        <MemoryStick className="h-3 w-3" />
-                                        <span>{executionResult.memoryUsed}KB</span>
-                                      </div>
-                                    )}
+                                {executionResult.memoryUsed && (
+                                  <div className="flex items-center space-x-1">
+                                    <MemoryStick className="h-3 w-3" />
+                                    <span>{executionResult.memoryUsed}KB</span>
                                   </div>
                                 )}
                               </div>
-                              {executionResult.error && (
-                                <div className="text-red-600 bg-red-50 dark:bg-red-950/20 p-3 rounded border border-red-200 dark:border-red-800">
-                                  <div className="text-sm font-medium mb-1">Error:</div>
-                                  <pre className="whitespace-pre-wrap text-xs sm:text-sm overflow-x-auto">
-                                    {executionResult.error}
-                                  </pre>
-                                </div>
-                              )}
-                              {executionResult.output && (
-                                <div>
-                                  <div className="text-sm font-medium mb-2">Output:</div>
-                                  <pre className="whitespace-pre-wrap bg-muted p-3 rounded border text-xs sm:text-sm overflow-x-auto max-h-40 sm:max-h-60">
-                                    {executionResult.output}
-                                  </pre>
-                                </div>
-                              )}
-                              {!executionResult.output && !executionResult.error && (
-                                <div className="text-muted-foreground text-xs sm:text-sm">
-                                  No output generated. Make sure your code produces output (e.g., console.log, print,
-                                  etc.)
-                                </div>
-                              )}
+                            )}
+                          </div>
+                          {executionResult.error && (
+                            <div className="text-red-600 bg-red-50 dark:bg-red-950/20 p-3 rounded border border-red-200 dark:border-red-800">
+                              <div className="text-sm font-medium mb-1">Error:</div>
+                              <pre className="whitespace-pre-wrap text-xs sm:text-sm overflow-x-auto">
+                                {executionResult.error}
+                              </pre>
                             </div>
-                          ) : (
+                          )}
+                          {executionResult.output && (
+                            <div>
+                              <div className="text-sm font-medium mb-2">Output:</div>
+                              <pre className="whitespace-pre-wrap bg-muted p-3 rounded border text-xs sm:text-sm overflow-x-auto max-h-40 sm:max-h-60">
+                                {executionResult.output}
+                              </pre>
+                            </div>
+                          )}
+                          {!executionResult.output && !executionResult.error && (
                             <div className="text-muted-foreground text-xs sm:text-sm">
-                              Click "Run All Tests" to execute your code against all test cases
+                              No output generated. Make sure your code produces output (e.g., console.log, print,
+                              etc.)
                             </div>
                           )}
                         </div>
-                      </ScrollArea>
-                    </TabsContent>
+                      ) : (
+                        <div className="text-muted-foreground text-xs sm:text-sm">
+                          Click "Run All Tests" to execute your code against all test cases
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </TabsContent>
 
-                    {testCases.length > 0 && (
-                      <TabsContent value="testcases" className="m-0 h-full">
-                        <ScrollArea className="h-full">
-                          <div className="p-2 sm:p-4 space-y-3 sm:space-y-4">
-                            {codeSubmissions.length === 0 ? (
-                              <div className="text-muted-foreground text-xs sm:text-sm text-center py-6 sm:py-8">
-                                No code submissions yet. Click "Run All Tests" to execute your code against all test
-                                cases.
-                              </div>
-                            ) : (
-                              <div className="space-y-4">
-                                {codeSubmissions.map((submission, submissionIndex) => (
-                                  <div
-                                    key={`submission-${submissionIndex}-${submission.timestamp.getTime()}`}
-                                    className="border rounded-md p-3 sm:p-4 bg-muted/50"
-                                  >
-                                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                                      <h3 className="font-semibold text-sm sm:text-base">
-                                        Submission #{submissionIndex + 1}
-                                      </h3>
-                                      <div className="flex items-center gap-2">
-                                        <Badge variant={submission.allPassed ? "default" : "secondary"}>
-                                          {submission.passedCount}/{submission.totalCount} Passed
-                                        </Badge>
-                                        <span className="text-xs text-muted-foreground">
-                                          {new Date(submission.timestamp).toLocaleTimeString()}
+                {testCases.length > 0 && (
+                  <TabsContent value="testcases" className="m-0 h-full min-h-0">
+                    <div className="h-full min-h-0 overflow-auto">
+                      <div className="p-2 sm:p-4 space-y-3 sm:space-y-4">
+                        {codeSubmissions.length === 0 ? (
+                          <div className="text-muted-foreground text-xs sm:text-sm text-center py-6 sm:py-8">
+                            No code submissions yet. Click "Run All Tests" to execute your code against all test
+                            cases.
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            {codeSubmissions.map((submission, submissionIndex) => (
+                              <div
+                                key={`submission-${submissionIndex}-${submission.timestamp.getTime()}`}
+                                className="border rounded-md p-3 sm:p-4 bg-muted/50"
+                              >
+                                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                                  <h3 className="font-semibold text-sm sm:text-base">
+                                    Submission #{submissionIndex + 1}
+                                  </h3>
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant={submission.allPassed ? "default" : "secondary"}>
+                                      {submission.passedCount}/{submission.totalCount} Passed
+                                    </Badge>
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(submission.timestamp).toLocaleTimeString()}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-2 sm:space-y-3">
+                                  {submission.results.map((result, resultIndex) => (
+                                    <div
+                                      key={`result-${result.testCaseId}-${resultIndex}-${submissionIndex}`}
+                                      className="border rounded-md p-2 sm:p-3 bg-background"
+                                    >
+                                      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                                        <span className="font-medium text-xs sm:text-sm">
+                                          Test Case {resultIndex + 1}
                                         </span>
-                                      </div>
-                                    </div>
-
-                                    <div className="space-y-2 sm:space-y-3">
-                                      {submission.results.map((result, resultIndex) => (
-                                        <div
-                                          key={`result-${result.testCaseId}-${resultIndex}-${submissionIndex}`}
-                                          className="border rounded-md p-2 sm:p-3 bg-background"
+                                        <Badge
+                                          variant={result.passed ? "default" : "destructive"}
+                                          className="text-xs"
                                         >
-                                          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                                            <span className="font-medium text-xs sm:text-sm">
-                                              Test Case {resultIndex + 1}
-                                            </span>
-                                            <Badge
-                                              variant={result.passed ? "default" : "destructive"}
-                                              className="text-xs"
-                                            >
-                                              {result.passed ? "✓ Passed" : "✗ Failed"}
-                                            </Badge>
-                                          </div>
+                                          {result.passed ? "✓ Passed" : "✗ Failed"}
+                                        </Badge>
+                                      </div>
 
-                                          <div className="space-y-2 text-xs">
-                                            {!testCases[resultIndex]?.isHidden && (
-                                              <>
-                                                <div>
-                                                  <span className="font-medium">Input:</span>
-                                                  <pre className="mt-1 p-2 bg-muted rounded text-xs overflow-x-auto border max-h-16 sm:max-h-24">
-                                                    {result.input === "" ? "(empty input)" : result.input}
-                                                  </pre>
-                                                </div>
-                                                <div>
-                                                  <span className="font-medium">Expected Output:</span>
-                                                  <pre className="mt-1 p-2 bg-muted rounded text-xs overflow-x-auto border max-h-16 sm:max-h-24">
-                                                    {result.expectedOutput}
-                                                  </pre>
-                                                </div>
-                                              </>
-                                            )}
+                                      <div className="space-y-2 text-xs">
+                                        {!testCases[resultIndex]?.isHidden && (
+                                          <>
                                             <div>
-                                              <span className="font-medium">Your Output:</span>
-                                              <pre
-                                                className={`mt-1 p-2 rounded text-xs overflow-x-auto border max-h-16 sm:max-h-24 ${
-                                                  result.passed
-                                                    ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
-                                                    : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
-                                                }`}
-                                              >
-                                                {result.actualOutput === "" ? "(empty output)" : result.actualOutput}
+                                              <span className="font-medium">Input:</span>
+                                              <pre className="mt-1 p-2 bg-muted rounded text-xs overflow-x-auto border max-h-16 sm:max-h-24">
+                                                {result.input === "" ? "(empty input)" : result.input}
                                               </pre>
                                             </div>
-                                            {result.executionTime && (
-                                              <div className="text-xs text-muted-foreground">
-                                                Execution time: {result.executionTime}ms
-                                              </div>
-                                            )}
-                                          </div>
+                                            <div>
+                                              <span className="font-medium">Expected Output:</span>
+                                              <pre className="mt-1 p-2 bg-muted rounded text-xs overflow-x-auto border max-h-16 sm:max-h-24">
+                                                {result.expectedOutput}
+                                              </pre>
+                                            </div>
+                                          </>
+                                        )}
+                                        <div>
+                                          <span className="font-medium">Your Output:</span>
+                                          <pre
+                                            className={`mt-1 p-2 rounded text-xs overflow-x-auto border max-h-16 sm:max-h-24 ${
+                                              result.passed
+                                                ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+                                                : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+                                            }`}
+                                          >
+                                            {result.actualOutput === "" ? "(empty output)" : result.actualOutput}
+                                          </pre>
                                         </div>
-                                      ))}
+                                        {result.executionTime && (
+                                          <div className="text-xs text-muted-foreground">
+                                            Execution time: {result.executionTime}ms
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
-                                  </div>
-                                ))}
+                                  ))}
+                                </div>
                               </div>
-                            )}
+                            ))}
                           </div>
-                        </ScrollArea>
-                      </TabsContent>
-                    )}
-                  </div>
-                </Tabs>
-              </div>
-            )}
-          </div>
-
-          <Separator className="my-2" />
-
-          <div className="text-xs text-muted-foreground flex-shrink-0">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2 sm:gap-4 flex-wrap text-xs">
-                <span className="hidden sm:inline">Shortcuts: Ctrl+Enter (Run), Ctrl+S (Save), Tab (Indent)</span>
-                <span className="sm:hidden">Ctrl+Enter: Run</span>
-                <span>Lines: {code.split("\n").length}</span>
-                <span className="hidden sm:inline">Characters: {code.length}</span>
-                <span className="hidden md:inline">Language: {currentLang.label}</span>
-                {testCases.length > 0 && (
-                  <span>
-                    Tests: {executionStats.passed}/{executionStats.total}
-                  </span>
+                        )}
+                      </div>
+                    </div>
+                  </TabsContent>
                 )}
               </div>
+            </Tabs>
+          </div>
+        </div>
 
-              <div className="flex items-center space-x-2">
-                <Cpu className="h-3 w-3" />
-                <span>{isRunning ? "Running..." : "Ready"}</span>
-              </div>
+        <Separator className="my-2" />
+
+        <div className="text-xs text-muted-foreground flex-shrink-0">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 sm:gap-4 flex-wrap text-xs">
+              <span className="hidden sm:inline">Shortcuts: Ctrl+Enter (Run), Ctrl+S (Save), Tab (Indent)</span>
+              <span className="sm:hidden">Ctrl+Enter: Run</span>
+              <span>Lines: {code.split("\n").length}</span>
+              <span className="hidden sm:inline">Characters: {code.length}</span>
+              <span className="hidden md:inline">Language: {currentLang.label}</span>
+              {testCases.length > 0 && (
+                <span>
+                  Tests: {executionStats.passed}/{executionStats.total}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Cpu className="h-3 w-3" />
+              <span>{isRunning ? "Running..." : "Ready"}</span>
             </div>
           </div>
-        </CardContent>
+        </div>
       </Card>
 
       <input

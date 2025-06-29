@@ -1166,37 +1166,6 @@ export default function TakeTestPage() {
   }, [test?._id])
 
   useEffect(() => {
-    if (test && test.settings.shuffleQuestions && !test._shuffled) {
-      // Only shuffle once when test is first loaded and mark it as shuffled
-      const shuffledTest = {
-        ...test,
-        _shuffled: true, // Add a flag to prevent re-shuffling
-        sections: test.sections.map((section) => ({
-          ...section,
-          questions: shuffleArray([...section.questions]),
-        })),
-      }
-      setTest(shuffledTest)
-    }
-  }, [test?.settings.shuffleQuestions, test?._id])
-
-  // Enhanced webcam initialization with proper dependency management and completion checks
-  useEffect(() => {
-    if (
-      test?._id &&
-      verificationComplete &&
-      !webcamInitializedRef.current &&
-      activeTab === "test" &&
-      webcamEnabled &&
-      !testCompleted &&
-      !testTerminated &&
-      componentMountedRef.current
-    ) {
-      startWebcam()
-    }
-  }, [test?._id, verificationComplete, activeTab, startWebcam, webcamEnabled, testCompleted, testTerminated])
-
-  useEffect(() => {
     let timer: NodeJS.Timeout
     if (timeLeft > 0 && activeTab === "test" && !testCompleted && !testTerminated) {
       timer = setTimeout(() => {
@@ -1344,23 +1313,37 @@ export default function TakeTestPage() {
           Pragma: "no-cache",
           Expires: "0",
         },
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch test")
+        throw new Error("Failed to fetch test");
       }
 
-      const data = await response.json()
+      const data = await response.json();
       if (data.success) {
-        setTest(data.test)
+        let testData = data.test;
+        // SHUFFLE IMMEDIATELY after fetch, before setTest
+        if (testData.settings?.shuffleQuestions) {
+          // Generate a consistent seed based on test ID and current time
+          const shuffleSeed = testData._id.charCodeAt(0) + Date.now() % 10000;
+          
+          testData = {
+            ...testData,
+            sections: testData.sections.map((section: any, sectionIndex: number) => ({
+              ...section,
+              questions: shuffleArray([...section.questions], shuffleSeed + sectionIndex),
+            })),
+          };
+        }
+        setTest(testData);
       } else {
-        throw new Error(data.message || "Failed to fetch test")
+        throw new Error(data.message || "Failed to fetch test");
       }
     } catch (error) {
-      console.error("Error fetching test:", error)
-      toast.error("Failed to load test. Please try again.")
+      console.error("Error fetching test:", error);
+      toast.error("Failed to load test. Please try again.");
     }
-  }
+  };
 
   const fetchResult = async () => {
     try {
@@ -1727,11 +1710,19 @@ export default function TakeTestPage() {
     return n * factorial(n - 1)
   }
 
-  // Helper function to shuffle array (Fisher-Yates algorithm)
-  const shuffleArray = <T,>(array: T[]): T[] => {
+  // Helper function to shuffle array (Fisher-Yates algorithm) with seed for consistency
+  const shuffleArray = <T,>(array: T[], seed?: number): T[] => {
     const newArray = [...array]
+    
+    // Use a simple seeded random number generator for consistency
+    let currentSeed = seed || Math.floor(Math.random() * 1000000)
+    const seededRandom = () => {
+      currentSeed = (currentSeed * 9301 + 49297) % 233280
+      return currentSeed / 233280
+    }
+    
     for (let i = newArray.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
+      const j = Math.floor(seededRandom() * (i + 1))
       ;[newArray[i], newArray[j]] = [newArray[j], newArray[i]]
     }
     return newArray
@@ -1744,8 +1735,12 @@ export default function TakeTestPage() {
       if (webcamRetryTimeoutRef.current) {
         clearTimeout(webcamRetryTimeoutRef.current)
       }
+      // Clean up shuffle localStorage when component unmounts
+      if (test?._id) {
+        localStorage.removeItem(`shuffled_${test._id}`)
+      }
     }
-  }, [])
+  }, [test?._id])
 
   // Test termination check
   if (testTerminated) {
