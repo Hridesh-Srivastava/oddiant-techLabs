@@ -30,6 +30,7 @@ import {
   Video,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -106,6 +107,8 @@ interface Candidate {
   industry?: string
   collection?: string
   employerId: string // Added for data isolation
+  geminiScore?: number // Gemini ATS score prediction
+  geminiFeedback?: string // Gemini ATS feedback
 }
 
 interface JobPosting {
@@ -861,17 +864,32 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
         return formatted
       })
 
-      console.log(`✅ ATS Data Processing Complete:`)
-      console.log(`- Total formatted resumes: ${formattedResumes.length}`)
-      console.log(`- From students collection: ${formattedResumes.filter((r: any) => r.source === "students").length}`)
-      console.log(`- From candidates collection: ${formattedResumes.filter((r: any) => r.source === "candidates").length}`)
-      console.log(`- Sample formatted data:`, formattedResumes.slice(0, 1))
+      // --- Backend ATS scoring for all candidates on initial load ---
+      const scoredResumes = await Promise.all(formattedResumes.map(async (resume: any) => {
+        const type = resume.source === "students" ? "students" : "candidates";
+        try {
+          const res = await fetch(`/api/ats/score/${resume._id}?type=${type}`);
+          if (res.ok) {
+            const { score, feedback } = await res.json();
+            resume.geminiScore = score;
+            resume.geminiFeedback = feedback;
+          } else {
+            resume.geminiScore = 0;
+            resume.geminiFeedback = "AI evaluation unavailable.";
+          }
+        } catch {
+          resume.geminiScore = 0;
+          resume.geminiFeedback = "AI evaluation unavailable.";
+        }
+        return resume;
+      }));
+      // --- End Backend ATS scoring ---
 
-      setAtsResumes(formattedResumes)
-      setAtsFilteredResumes(formattedResumes)
+      setAtsResumes(scoredResumes)
+      setAtsFilteredResumes(scoredResumes)
 
       // Prepare filter options for dropdowns
-      prepareFilterOptions(formattedResumes)
+      prepareFilterOptions(scoredResumes)
 
       toast.success(`Loaded ${formattedResumes.length} candidates`)
     } catch (error) {
@@ -1662,38 +1680,13 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
         })
       }
 
-      // Apply ATS score filter and calculate match scores for all resumes
-      filtered = filtered.map((resume) => {
-        // Calculate match score for each resume
-        let matchCount = 0
-        const content = resume.content.toLowerCase()
-
-        for (const keyword of atsFilters.mandatoryKeywords) {
-          if (keyword && content.includes(keyword.toLowerCase())) {
-            matchCount++
-          }
-        }
-
-        for (const keyword of atsFilters.preferredKeywords) {
-          if (keyword && content.includes(keyword.toLowerCase())) {
-            matchCount++
-          }
-        }
-
-        const totalKeywords = atsFilters.mandatoryKeywords.length + atsFilters.preferredKeywords.length
-        const score = totalKeywords > 0 ? Math.round((matchCount / totalKeywords) * 100) : 50
-
-        // Update the resume's match score (default to 50% if no keywords specified)
-        return {
-          ...resume,
-          matchScore: score,
-        }
-      })
-
-      // Then filter by minimum score if needed
+      // --- Use backend-driven ATS score for filtering ---
       if (atsFilters.atsScore > 0) {
-        filtered = filtered.filter((resume) => resume.matchScore >= atsFilters.atsScore)
+        filtered = filtered.filter((resume) =>
+          typeof resume.geminiScore === 'number' ? resume.geminiScore >= atsFilters.atsScore : false
+        )
       }
+      // --- End backend-driven ATS score filter ---
 
       // Apply assets filter
       if (atsFilters.assets) {
@@ -3242,7 +3235,11 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
             <Card>
               <CardHeader>
                 <div className="flex flex-col md:flex-row justify-between md:items-center space-y-4 md:space-y-0">
-                  <CardTitle>Applicant Tracking System</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CardTitle>Applicant Tracking System</CardTitle>
+                    {/* ATS AI Criteria Dropdown */}
+                    <AtsCriteriaDropdown />
+                  </div>
 
                   <div className="flex items-center space-x-2">
                     <div className="relative w-full md:w-64">
@@ -3405,6 +3402,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                         }}
                         selectedCandidateId={atsSelectedResume?._id || null}
                         showViewButton={true}
+                        allCandidates={atsResumes}
                       />
                     </div>
                   </div>
@@ -3466,4 +3464,37 @@ export default function DashboardPage(props: any) {
       <WrappedDashboard {...props} />
     </CandidateSelectionProvider>
   )
+}
+
+// Add this component at the bottom of the file or in a suitable place
+function AtsCriteriaDropdown() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        className="ml-2 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-100 text-black rounded flex items-center border border-gray-300 hover:bg-gray-200"
+        onClick={() => setOpen((v) => !v)}
+        type="button"
+      >
+        AI Scoring Criteria <ChevronDown className="h-3 w-3 ml-1" />
+      </button>
+      {open && (
+        <div className="absolute z-20 mt-2 w-72 right-0 bg-white border border-gray-200 rounded shadow-lg p-3 text-xs text-black">
+          <div className="font-semibold mb-1">AI ATS Score is based on:</div>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>Number of skills</li>
+            <li>Diversity of skills</li>
+            <li>Relevant IT/HR keywords in skills</li>
+            <li>Number of experience entries</li>
+            <li>Recent experience (last 2 years)</li>
+            <li>Number of education entries</li>
+            <li>Bonus for Masters/PhD</li>
+            <li>Number of certifications</li>
+            <li>Profile completeness (summary, resume, photo, email, phone)</li>
+          </ul>
+          <div className="mt-2 text-gray-500">The higher the match, the higher the score.</div>
+        </div>
+      )}
+    </div>
+  );
 }

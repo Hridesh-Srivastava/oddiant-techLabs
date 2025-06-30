@@ -119,29 +119,29 @@ export function BooleanSearch({ resumes, setFilteredResumes, setSelectedResume }
 
   return (
     <div className="space-y-6">
-      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-md">
+      <div className="bg-gray-50 p-4 rounded-md">
         <div className="flex items-start gap-2 mb-4">
           <Info className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
           <div className="text-sm">
             <p className="font-medium">Boolean Search Syntax:</p>
-            <ul className="list-disc list-inside mt-1 space-y-1 text-gray-600 dark:text-gray-400">
+            <ul className="list-disc list-inside mt-1 space-y-1 text-gray-600">
               <li>
-                <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">AND</code> - Both terms must be present
+                <code className="bg-gray-200 px-1 rounded">AND</code> - Both terms must be present
                 (default for space-separated terms)
               </li>
               <li>
-                <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">OR</code> - Either term must be present
+                <code className="bg-gray-200 px-1 rounded">OR</code> - Either term must be present
               </li>
               <li>
-                <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">NOT</code> - Term must not be present
+                <code className="bg-gray-200 px-1 rounded">NOT</code> - Term must not be present
               </li>
               <li>
-                <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">*</code> - Wildcard for continuous words
+                <code className="bg-gray-200 px-1 rounded">*</code> - Wildcard for continuous words
               </li>
             </ul>
             <p className="mt-2">
               Example:{" "}
-              <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">
+              <code className="bg-gray-200 px-1 rounded">
                 java AND (spring OR hibernate) NOT junior
               </code>
             </p>

@@ -50,7 +50,7 @@ export function ResumeViewer({ resume, highlightKeywords, keywords }: ResumeView
       const regex = new RegExp(`(${keyword})`, "gi")
       highlightedText = highlightedText.replace(
         regex,
-        '<span class="bg-yellow-200 dark:bg-yellow-800 rounded px-1">$1</span>',
+        '<span class="bg-yellow-200 rounded px-1">$1</span>',
       )
     }
 
@@ -145,7 +145,7 @@ export function ResumeViewer({ resume, highlightKeywords, keywords }: ResumeView
 
       {/* Header */}
       <div className="flex flex-col items-center text-center">
-        <div className="w-20 h-20 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mb-3">
+        <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mb-3">
           {resume.photographUrl ? (
             <img
               src={resume.photographUrl || "/placeholder.svg"}
@@ -153,7 +153,7 @@ export function ResumeViewer({ resume, highlightKeywords, keywords }: ResumeView
               className="w-full h-full rounded-full object-cover"
             />
           ) : (
-            <User className="h-10 w-10 text-gray-500 dark:text-gray-400" />
+            <User className="h-10 w-10 text-gray-500" />
           )}
         </div>
 
@@ -263,7 +263,7 @@ export function ResumeViewer({ resume, highlightKeywords, keywords }: ResumeView
         <div>
           <h3 className="font-medium mb-2">Summary</h3>
           <p
-            className="text-gray-700 dark:text-gray-300"
+            className="text-gray-700"
             dangerouslySetInnerHTML={{
               __html: highlightText(resume.summary || resume.profileOutline || resume.content),
             }}
@@ -291,7 +291,7 @@ export function ResumeViewer({ resume, highlightKeywords, keywords }: ResumeView
                   </div>
                   {exp.description || exp.summary ? (
                     <p
-                      className="mt-2 text-sm text-gray-700 dark:text-gray-300"
+                      className="mt-2 text-sm text-gray-700"
                       dangerouslySetInnerHTML={{
                         __html: highlightText(exp.description || exp.summary),
                       }}
@@ -337,7 +337,7 @@ export function ResumeViewer({ resume, highlightKeywords, keywords }: ResumeView
                   {edu.percentage && <p className="mt-1 text-xs text-gray-500">Percentage/CGPA: {edu.percentage}</p>}
                   {edu.description && (
                     <p
-                      className="mt-2 text-sm text-gray-700 dark:text-gray-300"
+                      className="mt-2 text-sm text-gray-700"
                       dangerouslySetInnerHTML={{
                         __html: highlightText(edu.description),
                       }}
@@ -427,7 +427,7 @@ export function ResumeViewer({ resume, highlightKeywords, keywords }: ResumeView
           <Card>
             <CardContent className="p-4">
               <p
-                className="whitespace-pre-line text-gray-700 dark:text-gray-300"
+                className="whitespace-pre-line text-gray-700"
                 dangerouslySetInnerHTML={{
                   __html: highlightText(resume.coverLetter),
                 }}
@@ -444,7 +444,7 @@ export function ResumeViewer({ resume, highlightKeywords, keywords }: ResumeView
           <Card>
             <CardContent className="p-4">
               <p
-                className="whitespace-pre-line text-gray-700 dark:text-gray-300"
+                className="whitespace-pre-line text-gray-700"
                 dangerouslySetInnerHTML={{
                   __html: highlightText(resume.additionalInfo),
                 }}
@@ -523,7 +523,7 @@ export function ResumeViewer({ resume, highlightKeywords, keywords }: ResumeView
           <Card>
             <CardContent className="p-4">
               <p
-                className="whitespace-pre-line text-gray-700 dark:text-gray-300"
+                className="whitespace-pre-line text-gray-700"
                 dangerouslySetInnerHTML={{
                   __html: highlightText(resume.content),
                 }}

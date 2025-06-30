@@ -1035,23 +1035,23 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
               }}
               onClick={() => setShowLocationDropdown(true)}
               placeholder="e.g. Noida - Uttar Pradesh or Remote"
-              className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md"
               required
             />
             {showLocationDropdown && (
-              <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                 <input
                   type="text"
                   placeholder="Search locations..."
                   value={locationSearchTerm}
                   onChange={(e) => setLocationSearchTerm(e.target.value)}
-                  className="w-full px-3 py-2 border-b border-gray-300 dark:border-gray-600"
+                  className="w-full px-3 py-2 border-b border-gray-300"
                 />
                 {filteredLocations.length > 0 ? (
                   filteredLocations.map((location, index) => (
                     <div
                       key={index}
-                      className="px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="px-3 py-2 cursor-pointer hover:bg-gray-100"
                       onClick={() => handleLocationSelect(location)}
                     >
                       {location}
@@ -1070,7 +1070,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
             id="experienceRange"
             value={experienceRange}
             onChange={(e) => setExperienceRange(e.target.value)}
-            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md"
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md"
             required
           >
             <option value="">Select range</option>
@@ -1087,7 +1087,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
             id="jobType"
             value={jobType}
             onChange={(e) => setJobType(e.target.value)}
-            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md"
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md"
             required
           >
             <option value="">Select type</option>
@@ -1120,22 +1120,22 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
               }}
               onClick={() => setShowIndustryDropdown(true)}
               placeholder="e.g. Technology"
-              className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md"
             />
             {showIndustryDropdown && (
-              <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                 <input
                   type="text"
                   placeholder="Search industries..."
                   value={industrySearchTerm}
                   onChange={(e) => setIndustrySearchTerm(e.target.value)}
-                  className="w-full px-3 py-2 border-b border-gray-300 dark:border-gray-600"
+                  className="w-full px-3 py-2 border-b border-gray-300"
                 />
                 {filteredIndustries.length > 0 ? (
                   filteredIndustries.map((industry, index) => (
                     <div
                       key={index}
-                      className="px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="px-3 py-2 cursor-pointer hover:bg-gray-100"
                       onClick={() => handleIndustrySelect(industry)}
                     >
                       {industry}
@@ -1154,7 +1154,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
             id="department"
             value={department}
             onChange={(e) => setDepartment(e.target.value)}
-            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md"
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md"
           >
             <option value="">Select department</option>
             {departmentOptions.map((dept, index) => (
@@ -1211,7 +1211,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
           required
           className={hasInappropriateContent ? "border-red-500 focus:ring-red-500" : ""}
         />
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-xs text-gray-500">
           {jobDescription.split(/\s+/).filter(Boolean).length} / 750 words
         </p>
         {hasInappropriateContent && (
@@ -1231,7 +1231,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
           id="educationalPreference"
           value={educationalPreference}
           onChange={(e) => setEducationalPreference(e.target.value)}
-          className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md"
+          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md"
         >
           <option value="">Select preference</option>
           <option value="any_high_school">Any High School</option>
@@ -1448,7 +1448,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
       {/* Questions and Answers */}
       {/* <h3 className="text-lg font-medium">Questions and Answers (Max 10)</h3>
       {questions.map((question, index) => (
-        <div key={index} className="space-y-2 border p-4 rounded-md dark:border-gray-700">
+        <div key={index} className="space-y-2 border p-4 rounded-md">
           <div className="flex items-center justify-between">
             <Label htmlFor={`question-${index}`}>Question #{index + 1}</Label>
             <Button
@@ -1456,7 +1456,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
               variant="ghost"
               size="sm"
               onClick={() => handleRemoveQuestion(index)}
-              className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+              className="text-red-500 hover:text-red-700 hover:bg-red-50"
             >
               <Trash2 className="h-4 w-4" />
             </Button>

@@ -133,7 +133,7 @@ export function ScheduleForm({ candidates = [], jobs = [], preselectedCandidateI
             name="candidateId"
             value={formData.candidateId}
             onChange={handleCandidateChange}
-            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md"
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md"
             required
           >
             <option value="">Select a candidate</option>
@@ -158,7 +158,7 @@ export function ScheduleForm({ candidates = [], jobs = [], preselectedCandidateI
             name="jobId"
             value={formData.jobId}
             onChange={handleJobChange}
-            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md"
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md"
           >
             <option value="">Select a job</option>
             {jobs.length > 0 ? (
@@ -239,7 +239,7 @@ export function ScheduleForm({ candidates = [], jobs = [], preselectedCandidateI
             name="duration"
             value={formData.duration}
             onChange={handleChange}
-            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md"
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md"
           >
             <option value="30">30 minutes</option>
             <option value="45">45 minutes</option>

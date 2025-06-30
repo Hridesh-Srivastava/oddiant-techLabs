@@ -223,7 +223,7 @@ const CandidateForm: React.FC<CandidateFormProps> = ({
             id="status"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md"
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md"
           >
             {candidateStatuses.map((statusOption) => (
               <option key={statusOption} value={statusOption}>

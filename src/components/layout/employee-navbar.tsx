@@ -48,7 +48,7 @@ export function EmployeeNavbar() {
   const isAssessments = pathname.includes("/employee/assessment")
 
   return (
-    <div className="w-full dark:bg-gray-800 shadow-sm mb-6">
+    <div className="w-full shadow-sm mb-6">
       <div className="max-w-7xl mx-auto ">
         <nav className="flex overflow-x-auto ml-72 mr-72 bg-gradient-to-br from-black to-black">
           {navItems.map((item) => {
@@ -61,8 +61,8 @@ export function EmployeeNavbar() {
                 className={cn(
                   "flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors",
                   isActive
-                    ? "border-purple-600 text-purple-600 dark:border-purple-400 dark:text-purple-400"
-                    : "border-transparent text-white dark:text-gray-300 dark:hover:text-gray-100 hover:underline",
+                    ? "border-purple-600 text-purple-600"
+                    : "border-transparent text-white hover:underline",
                 )}
               >
                 <item.icon className="w-5 h-5 mr-2" />

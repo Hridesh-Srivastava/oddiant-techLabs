@@ -783,7 +783,7 @@ export function AdvancedCodeEditor({
                 {showSettings && (
                   <div
                     ref={settingsRef}
-                    className="absolute right-0 mt-2 bg-white dark:bg-slate-800 border border-border rounded-lg shadow-lg p-4 w-64 max-w-full flex flex-col gap-4 animate-fade-in z-50"
+                    className="absolute right-0 mt-2 bg-white border border-border rounded-lg shadow-lg p-4 w-64 max-w-full flex flex-col gap-4 animate-fade-in z-50"
                     style={{ minWidth: '200px' }}
                   >
                     <div className="flex items-center justify-between">
@@ -959,7 +959,7 @@ export function AdvancedCodeEditor({
                             )}
                           </div>
                           {executionResult.error && (
-                            <div className="text-red-600 bg-red-50 dark:bg-red-950/20 p-3 rounded border border-red-200 dark:border-red-800">
+                            <div className="text-red-600 bg-red-50 p-3 rounded border border-red-200">
                               <div className="text-sm font-medium mb-1">Error:</div>
                               <pre className="whitespace-pre-wrap text-xs sm:text-sm overflow-x-auto">
                                 {executionResult.error}
@@ -1060,8 +1060,8 @@ export function AdvancedCodeEditor({
                                           <pre
                                             className={`mt-1 p-2 rounded text-xs overflow-x-auto border max-h-16 sm:max-h-24 ${
                                               result.passed
-                                                ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
-                                                : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+                                                ? "bg-green-50 border-green-200"
+                                                : "bg-red-50 border-red-200"
                                             }`}
                                           >
                                             {result.actualOutput === "" ? "(empty output)" : result.actualOutput}

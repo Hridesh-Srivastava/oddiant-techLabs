@@ -29,7 +29,7 @@ export function AtsScoreFilter({ onFilterChange }: AtsScoreFilterProps) {
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <Label htmlFor="ats-score">Minimum Match Score (%)</Label>
+            <Label htmlFor="ats-score">ATS Resume Score Prediction</Label>
             <span className="text-sm font-medium">{minScore}%</span>
           </div>
           <Slider

@@ -156,7 +156,7 @@ export function JobActions({ jobId, currentStatus = "open" }: JobActionsProps) {
             value={currentStatus}
             onChange={(e) => updateJobStatus(e.target.value as "open" | "hold" | "closed")}
             disabled={isUpdatingStatus}
-            className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm flex items-center"
+            className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm flex items-center"
           >
             <option value="open">Open</option>
             <option value="hold">Hold</option>

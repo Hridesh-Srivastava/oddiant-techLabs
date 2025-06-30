@@ -218,7 +218,7 @@ export function AddCandidateForm({ jobs = [] }: { jobs?: JobOption[] }) {
             name="jobId"
             value={selectedJobId}
             onChange={handleJobChange}
-            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md"
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md"
             required
           >
             <option value="">Select a position</option>

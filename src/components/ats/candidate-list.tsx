@@ -19,6 +19,7 @@ interface Candidate {
   yearsOfExperience: number
   skills: string[]
   matchScore: number
+  geminiFeedback?: string
 }
 
 interface CandidateListProps {
@@ -27,6 +28,7 @@ interface CandidateListProps {
   onSelectCandidate: (candidate: Candidate) => void
   selectedCandidateId: string | null
   showViewButton?: boolean
+  allCandidates?: Candidate[]
 }
 
 export function CandidateList({
@@ -35,6 +37,7 @@ export function CandidateList({
   onSelectCandidate,
   selectedCandidateId,
   showViewButton = true,
+  allCandidates = [],
 }: CandidateListProps) {
   const router = useRouter()
   const [selectedCandidates, setSelectedCandidates] = useState<string[]>([])
@@ -120,7 +123,7 @@ export function CandidateList({
 
   return (
     <Card className="border rounded-md h-full flex flex-col">
-      <div className="bg-gray-50 dark:bg-gray-800 p-3 border-b flex justify-between items-center">
+      <div className="bg-gray-50 p-3 border-b flex justify-between items-center">
         <div className="flex items-center space-x-2">
           <Checkbox
             id="select-all"
@@ -149,14 +152,31 @@ export function CandidateList({
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
           </div>
         ) : candidates.length === 0 ? (
-          <div className="p-4 text-center text-gray-500">No candidates match your criteria</div>
+          <div className="p-4 text-center text-gray-500">
+            No candidates match your criteria
+            <div className="mt-4 text-left max-w-xl mx-auto">
+              <h4 className="font-semibold mb-2">AI Feedback for All Candidates:</h4>
+              {allCandidates && allCandidates.length > 0 ? (
+                <ul className="space-y-2">
+                  {allCandidates.map((c) => (
+                    <li key={c._id} className="border-b pb-2">
+                      <span className="font-medium">{c.firstName} {c.lastName}:</span>
+                      <span className="ml-2 text-xs text-gray-500 italic">{c.geminiFeedback || "No feedback available."}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <span className="text-xs text-gray-400">No candidate data available.</span>
+              )}
+            </div>
+          </div>
         ) : (
           candidates.map((candidate) => (
             <div
               key={candidate._id}
-              className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-l-2 ${
+              className={`candidate-card p-4 hover:bg-gray-50 transition-colors border-l-2 ${
                 selectedCandidateId === candidate._id
-                  ? "bg-gray-100 dark:bg-gray-800 border-l-blue-500"
+                  ? "bg-gray-100 border-l-blue-500"
                   : "border-l-transparent"
               }`}
             >
@@ -171,12 +191,15 @@ export function CandidateList({
                 <div className="flex-1 cursor-pointer" onClick={() => onSelectCandidate(candidate)}>
                   <div className="flex items-start justify-between">
                     <div>
-                      <h4 className="font-medium text-blue-600 dark:text-blue-400">
+                      <h4 className="font-medium text-blue-600">
                         {candidate.firstName} {candidate.lastName}
                       </h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-gray-600">
                         {candidate.currentPosition || "No position specified"}
                       </p>
+                      {candidate.geminiFeedback && (
+                        <p className="text-xs font-medium mt-1 ai-feedback-text">AI Feedback: {candidate.geminiFeedback}</p>
+                      )}
                       <div className="flex items-center mt-1 text-xs text-gray-500">
                         <MapPin className="h-3 w-3 mr-1" />
                         <span>{candidate.location}</span>
@@ -241,3 +264,17 @@ export function CandidateList({
     </Card>
   )
 }
+
+<style jsx global>{`
+  .ai-feedback-text {
+    color: #111 !important;
+    background: none;
+    transition: background 0.2s;
+    border-radius: 4px;
+    padding: 2px 0;
+  }
+  .candidate-card:hover .ai-feedback-text {
+    background: #f3f4f6 !important;
+    color: #111 !important;
+  }
+`}</style>

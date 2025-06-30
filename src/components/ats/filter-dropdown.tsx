@@ -118,8 +118,8 @@ export function FilterDropdown({
       </Button>
 
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-72 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700">
-          <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+        <div className="absolute z-50 mt-1 w-72 bg-white rounded-md shadow-lg border border-gray-200">
+          <div className="p-2 border-b border-gray-200">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium">Filter by {title}</h3>
               <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setIsOpen(false)}>
@@ -139,7 +139,7 @@ export function FilterDropdown({
           </div>
 
           {canSort && (
-            <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+            <div className="p-2 border-b border-gray-200">
               <div className="space-y-1">
                 <Button variant="ghost" size="sm" className="w-full justify-start text-sm h-8" onClick={sortAtoZ}>
                   <ArrowUpDown className="h-4 w-4 mr-2 rotate-0" />
@@ -153,7 +153,7 @@ export function FilterDropdown({
             </div>
           )}
 
-          <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+          <div className="p-2 border-b border-gray-200">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -176,7 +176,7 @@ export function FilterDropdown({
               filteredOptions.map((option, index) => (
                 <div
                   key={`${option.value}-${index}`}
-                  className="flex items-center space-x-2 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-sm"
+                  className="flex items-center space-x-2 px-2 py-1 hover:bg-gray-100 rounded-sm"
                 >
                   <Checkbox
                     id={`${title}-option-${index}`}
@@ -198,7 +198,7 @@ export function FilterDropdown({
             )}
           </div>
 
-          <div className="p-2 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+          <div className="p-2 border-t border-gray-200 flex justify-between">
             <div className="text-xs text-gray-500">
               Showing {filteredOptions.length} of {options.length}
             </div>

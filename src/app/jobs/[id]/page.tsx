@@ -119,7 +119,7 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
       </div>
     )
@@ -127,7 +127,7 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
 
   if (!job) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <Button variant="ghost" className="mb-6" onClick={() => router.push("/")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -137,8 +137,8 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Briefcase className="h-16 w-16 text-gray-300 mb-4" />
-              <h2 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">Job Not Found</h2>
-              <p className="text-gray-500 dark:text-gray-400 mb-6">
+              <h2 className="text-xl font-medium text-gray-700 mb-2">Job Not Found</h2>
+              <p className="text-gray-500 mb-6">
                 The job posting you are looking for does not exist or has been removed.
               </p>
               <Button onClick={() => router.push("/")}>Go to Home</Button>
@@ -164,7 +164,7 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <Toaster position="top-center" />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <Button variant="ghost" className="mb-6" onClick={() => router.push("/")}>
@@ -209,7 +209,7 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex items-center">
-                    <MapPin className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
+                    <MapPin className="h-5 w-5 text-gray-500 mr-2 flex-shrink-0" />
                     <span>{job.jobLocation}</span>
                   </div>
                   <div className="flex items-center">

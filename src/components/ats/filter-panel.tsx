@@ -807,6 +807,31 @@ export function FilterPanel({ filters, setFilters, applyFilters, resetFilters }:
     resetFilters()
   }
 
+  // --- Gemini ATS Resume Score Prediction Integration ---
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  const GEMINI_API_URL = process.env.GEMINI_API_URL;
+
+  async function getGeminiAtsScore(resumeContent: string, jobDescription: string = ""): Promise<number> {
+    if (!GEMINI_API_KEY || !GEMINI_API_URL) return 0;
+    const prompt = `You are an advanced ATS resume screening engine for a recruitment platform. Given the following candidate resume/profile, analyze and predict the match score (0-100) for a generic IT/HR job, considering skills, experience, education, and relevance. Only respond with: Score: <number>\n.\nResume/Profile:\n${resumeContent}\n${jobDescription ? `Job Description:\n${jobDescription}` : ""}\nRespond in this format: 'Score: <number>'`;
+    try {
+      const res = await fetch(GEMINI_API_URL + `?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const scoreMatch = text.match(/Score:\s*(\d+)/i);
+      const aiScore = scoreMatch ? parseInt(scoreMatch[1], 10) : 0;
+      return aiScore;
+    } catch (e) {
+      return 0;
+    }
+  }
+  // --- End Gemini Integration ---
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -824,7 +849,7 @@ export function FilterPanel({ filters, setFilters, applyFilters, resetFilters }:
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <Label htmlFor="ats-score">Minimum Match Score (%)</Label>
+              <Label htmlFor="ats-score">ATS Resume Score Prediction</Label>
               <span className="text-sm font-medium">{filters.atsScore}%</span>
             </div>
             <Slider
