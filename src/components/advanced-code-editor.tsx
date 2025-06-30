@@ -787,7 +787,7 @@ export function AdvancedCodeEditor({
                     style={{ minWidth: '200px' }}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm text-white">Show Line Numbers</span>
+                      <span className="font-medium text-sm">Show Line Numbers</span>
                       <input
                         type="checkbox"
                         checked={lineNumbers}
@@ -796,7 +796,7 @@ export function AdvancedCodeEditor({
                       />
                     </div>
                     <div>
-                      <label className="font-medium text-sm block mb-2 text-white">Font Size</label>
+                      <label className="font-medium text-sm block mb-2">Font Size</label>
                       <div className="flex flex-wrap gap-2">
                         {[10, 40, 50, 60, 80, 100].map((size) => (
                           <button
