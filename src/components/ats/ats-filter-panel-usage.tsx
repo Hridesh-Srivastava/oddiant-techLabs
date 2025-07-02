@@ -64,7 +64,8 @@ export default function AtsFilterPanelUsage() {
       <FilterPanel
         filters={filters}
         setFilters={handleFilterChange}
-        applyFilters={applyFilters}
+        applyAtsScoreFilter={() => {}}
+        applyCustomFilters={applyFilters}
         resetFilters={resetFilters}
       />
     </div>

@@ -646,11 +646,12 @@ interface FilterPanelProps {
     shiftPreference?: string
   }
   setFilters: (filters: any) => void
-  applyFilters: () => void
+  applyAtsScoreFilter: () => void
+  applyCustomFilters: () => void
   resetFilters: () => void
 }
 
-export function FilterPanel({ filters, setFilters, applyFilters, resetFilters }: FilterPanelProps) {
+export function FilterPanel({ filters, setFilters, applyAtsScoreFilter, applyCustomFilters, resetFilters }: FilterPanelProps) {
   const [mandatoryKeyword, setMandatoryKeyword] = useState("")
   const [preferredKeyword, setPreferredKeyword] = useState("")
   const [notKeyword, setNotKeyword] = useState("")
@@ -831,6 +832,20 @@ export function FilterPanel({ filters, setFilters, applyFilters, resetFilters }:
     }
   }
   // --- End Gemini Integration ---
+
+  // Handler to robustly sync location and state before applying custom filters
+  const handleApplyCustomFilters = () => {
+    setFilters({
+      ...filters,
+      location: locationSearch,
+      // If you have a state input field, sync it here as well (assuming state is controlled by filters.state)
+      // state: stateInputValue
+    });
+    // Use a timeout to ensure setFilters is applied before filtering
+    setTimeout(() => {
+      applyCustomFilters();
+    }, 0);
+  };
 
   return (
     <div className="space-y-6">
@@ -1210,9 +1225,10 @@ export function FilterPanel({ filters, setFilters, applyFilters, resetFilters }:
         />
       </div>
 
-      <Button className="w-full" onClick={applyFilters}>
-        Apply Filters
-      </Button>
+      <div className="flex gap-2 mt-4">
+        <Button onClick={applyAtsScoreFilter} variant="secondary">Apply ATS Score Filter</Button>
+        <Button onClick={handleApplyCustomFilters} variant="default">Apply Custom Filters</Button>
+      </div>
     </div>
   )
 }

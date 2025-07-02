@@ -195,6 +195,11 @@ export default function ATSPage() {
     }, 1000)
   }
 
+  const applyAtsScoreFilter = () => {
+    // Implement your ATS score filtering logic here if needed
+    toast.info("ATS Score filter not implemented yet.")
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Toaster position="top-center" />
@@ -236,7 +241,13 @@ export default function ATSPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                 <FilterPanel filters={filters} setFilters={setFilters} applyFilters={applyFilters} resetFilters={resetFilters} />
+                 <FilterPanel
+                   filters={filters}
+                   setFilters={setFilters}
+                   applyAtsScoreFilter={applyAtsScoreFilter}
+                   applyCustomFilters={applyFilters}
+                   resetFilters={resetFilters}
+                 />
                 </CardContent>
               </Card>
             </div>
