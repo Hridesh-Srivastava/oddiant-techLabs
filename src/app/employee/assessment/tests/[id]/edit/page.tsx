@@ -746,9 +746,14 @@ function solution() {
               id="question-text"
               value={questionForm.text}
               onChange={(e) => setQuestionForm({ ...questionForm, text: e.target.value })}
-              placeholder="Describe the coding problem"
+              placeholder="Describe the coding problem (supports Markdown & HTML)"
               rows={4}
             />
+            {/* Markdown Preview for Coding Question Text */}
+            <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-md">
+              <span className="text-xs text-muted-foreground mb-1 block">Preview:</span>
+              <ReactMarkdown rehypePlugins={[rehypeRaw]}>{questionForm.text || ""}</ReactMarkdown>
+            </div>
           </div>
           <div>
             <Label htmlFor="coding-instructions">Instructions *</Label>

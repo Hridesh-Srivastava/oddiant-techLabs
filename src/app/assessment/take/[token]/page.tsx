@@ -2088,7 +2088,7 @@ export default function TakeTestPage() {
                                 <CardContent className="p-4 sm:p-6">
                                   <h3 className="text-lg sm:text-xl font-medium mb-4">
                                     Problem {currentQuestion + 1}:{" "}
-                                    {test.sections[currentSection].questions[currentQuestion].text}
+                                    <ReactMarkdown rehypePlugins={[rehypeRaw]}>{test.sections[currentSection].questions[currentQuestion].text}</ReactMarkdown>
                                   </h3>
 
                                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">

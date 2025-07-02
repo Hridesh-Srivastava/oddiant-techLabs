@@ -643,9 +643,9 @@ function solution() {
                         <div className="space-y-2">
                           {section.questions.map((question: any, qIndex: number) => (
                             <div key={question.id} className="p-3 border rounded-md bg-gray-50">
-                              <p className="font-medium">
+                              <div className="font-medium break-words max-h-40 overflow-auto whitespace-pre-line">
                                 {qIndex + 1}. {question.text}
-                              </p>
+                              </div>
                               <p className="text-sm text-gray-500 mt-1">
                                 {question.type} • {question.points} points
                                 {question.type === "Multiple Choice" && ` • ${question.options?.length || 0} options`}
@@ -771,6 +771,22 @@ function solution() {
 
                           {newQuestion.type === "Coding" && (
                             <div className="space-y-3">
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-gray-700">Problem Statement</label>
+                                <textarea
+                                  value={newQuestion.text}
+                                  onChange={(e) => handleQuestionChange("text", e.target.value)}
+                                  rows={3}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                                  placeholder="Describe the coding problem (supports Markdown & HTML)"
+                                />
+                                {/* Markdown Preview for Coding Question Text */}
+                                <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-md">
+                                  <span className="text-xs text-muted-foreground mb-1 block">Preview:</span>
+                                  <ReactMarkdown rehypePlugins={[rehypeRaw]}>{newQuestion.text || ""}</ReactMarkdown>
+                                </div>
+                              </div>
+
                               <div className="space-y-2">
                                 <label className="block text-sm font-medium text-gray-700">Instructions</label>
                                 <textarea
