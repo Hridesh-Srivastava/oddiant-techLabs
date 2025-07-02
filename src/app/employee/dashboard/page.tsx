@@ -3690,7 +3690,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                         allCandidates={atsResumes}
                       />
                       {/* ATS Pagination Controls - moved inside the Card, just below the list */}
-                      <div className="w-full max-w-full overflow-x-auto flex justify-center mt-4">
+                      <div className="w-full max-w-full overflow-x-visible flex justify-center mt-4">
                         <div className="flex items-center space-x-2">
                           <Button variant="outline" size="sm" onClick={() => setCurrentAtsPage(currentAtsPage - 1)} disabled={currentAtsPage === 1}>
                             <ChevronLeft className="h-4 w-4 ml-1" />
