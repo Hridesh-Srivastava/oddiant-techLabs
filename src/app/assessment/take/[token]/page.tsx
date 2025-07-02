@@ -340,12 +340,25 @@ export default function TakeTestPage() {
 
           // Enhanced scoring logic for different question types
           if (question.type === "Multiple Choice") {
-            const userAnswerStr = userAnswer;
-            const correctAnswerStr = question.correctAnswer;
+            const userAnswerStr = typeof userAnswer === "string" ? userAnswer : Array.isArray(userAnswer) ? userAnswer.join(", ") : ""
+            const correctAnswerStr = typeof question.correctAnswer === "string" ? question.correctAnswer : Array.isArray(question.correctAnswer) ? question.correctAnswer[0] || "" : ""
             if (isMCQAnswerCorrect(userAnswerStr, correctAnswerStr, question.options)) {
               isCorrect = true;
               earnedPoints += question.points;
             }
+            answersWithDetails.push({
+              questionId: question.id,
+              questionText: question.text,
+              questionType: question.type,
+              answer: userAnswerStr,
+              correctAnswer: correctAnswerStr,
+              options: question.options || [],
+              isCorrect,
+              points: isCorrect ? question.points : 0,
+              maxPoints: question.points,
+              codingTestResults: codingTestResults, // Store test case results
+            })
+            return;
           } else if (question.type === "Coding") {
             // FIXED: For coding questions, get the latest submission results
             const questionKey = `${section.id}-${question.id}`
@@ -412,6 +425,7 @@ export default function TakeTestPage() {
             questionType: question.type,
             answer: userAnswer,
             correctAnswer: question.correctAnswer,
+            options: question.options || [],
             isCorrect,
             points: isCorrect ? question.points : 0,
             maxPoints: question.points,
@@ -1038,7 +1052,25 @@ export default function TakeTestPage() {
     (questionKey: string, answer: string | string[]) => {
       const currentQuestionData = test?.sections[currentSection]?.questions[currentQuestion]
       if (currentQuestionData) {
-        if (currentQuestionData.type === "Coding") {
+        if (currentQuestionData.type === "Multiple Choice") {
+          // Always store the selected option text (never index)
+          let answerText = ""
+          if (typeof answer === "string") {
+            // If answer is an index, convert to option text
+            const options = currentQuestionData.options || []
+            if (!isNaN(Number(answer)) && options[Number(answer)] !== undefined) {
+              answerText = options[Number(answer)]
+            } else {
+              answerText = answer
+            }
+          } else {
+            answerText = Array.isArray(answer) ? answer.join(", ") : ""
+          }
+          setAnswers((prev) => ({
+            ...prev,
+            [questionKey]: answerText,
+          }))
+        } else if (currentQuestionData.type === "Coding") {
           setCodes((prev) => {
             if (prev[questionKey] === answer) return prev
             return { ...prev, [questionKey]: answer as string }
@@ -2227,8 +2259,8 @@ export default function TakeTestPage() {
                                           id={`option-${index}`}
                                           name={`question-${getCurrentQuestionKey()}`}
                                           value={option}
-                                          checked={String(answers[getCurrentQuestionKey()]) === String(index)}
-                                          onChange={() => handleAnswer(getCurrentQuestionKey(), String(index))}
+                                          checked={String(answers[getCurrentQuestionKey()]) === option}
+                                          onChange={() => handleAnswer(getCurrentQuestionKey(), option)}
                                           className="h-4 w-4 mt-0.5 text-primary focus:ring-primary border-input"
                                         />
                                         <label

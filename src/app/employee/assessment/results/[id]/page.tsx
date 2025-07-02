@@ -421,8 +421,8 @@ export default function ResultDetailsPage() {
                       <div>
                         <Label className="text-sm font-medium text-muted-foreground">Candidate Answer:</Label>
                         <div className="mt-1 p-3 bg-muted rounded-md">
-                          {answer.questionType === "Multiple Choice" && Array.isArray(answer.options) && !isNaN(Number(answer.answer))
-                            ? answer.options[Number(answer.answer)]
+                          {answer.questionType === "Multiple Choice" && Array.isArray(answer.options)
+                            ? answer.options.find(opt => String(opt).trim().toLowerCase() === String(answer.answer).trim().toLowerCase()) || answer.answer || "No answer provided"
                             : Array.isArray(answer.answer)
                               ? answer.answer.join(", ")
                               : answer.answer || "No answer provided"}

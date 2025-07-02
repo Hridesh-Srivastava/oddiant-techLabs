@@ -207,9 +207,13 @@ export async function POST(request: NextRequest) {
           const { aiScore, aiFeedback } = await evaluateWrittenAnswerWithGemini(ans.questionText, ans.answer);
           ans.aiScore = aiScore;
           ans.aiFeedback = aiFeedback;
-          // Assign points based on AI score (>=60 full, else proportional)
+          // Assign points based on AI score (>=15 gets proportional, <15 gets 0)
           if (typeof aiScore === 'number') {
-            ans.points = Math.round((aiScore / 100) * ans.maxPoints);
+            if (aiScore >= 15) {
+              ans.points = Math.round((aiScore / 100) * ans.maxPoints);
+            } else {
+              ans.points = 0;
+            }
             ans.isCorrect = ans.points > 0;
           } else {
             ans.points = 0;
@@ -218,24 +222,23 @@ export async function POST(request: NextRequest) {
         }
         // MCQ robust evaluation
         if (ans.questionType === 'Multiple Choice') {
-          if (typeof ans.correctAnswer === 'number' && Array.isArray(ans.options)) {
-            const userIdx = Number(ans.answer);
-            const correctIdx = Number(ans.correctAnswer);
-            if (!isNaN(userIdx) && userIdx === correctIdx) {
-              ans.points = ans.maxPoints;
-              ans.isCorrect = true;
-            } else {
-              ans.points = 0;
-              ans.isCorrect = false;
+          let userAnswerText = ans.answer;
+          let correctAnswerText = ans.correctAnswer;
+          // If answer is an index (number or string), convert to option text
+          if (Array.isArray(ans.options)) {
+            if (!isNaN(Number(ans.answer)) && ans.options[Number(ans.answer)] !== undefined) {
+              userAnswerText = ans.options[Number(ans.answer)];
             }
+            if (!isNaN(Number(ans.correctAnswer)) && ans.options[Number(ans.correctAnswer)] !== undefined) {
+              correctAnswerText = ans.options[Number(ans.correctAnswer)];
+            }
+          }
+          if (isMCQAnswerCorrect(userAnswerText, correctAnswerText, ans.options)) {
+            ans.points = ans.maxPoints;
+            ans.isCorrect = true;
           } else {
-            if (isMCQAnswerCorrect(ans.answer, ans.correctAnswer, ans.options)) {
-              ans.points = ans.maxPoints;
-              ans.isCorrect = true;
-            } else {
-              ans.points = 0;
-              ans.isCorrect = false;
-            }
+            ans.points = 0;
+            ans.isCorrect = false;
           }
         }
         // Coding partial points
