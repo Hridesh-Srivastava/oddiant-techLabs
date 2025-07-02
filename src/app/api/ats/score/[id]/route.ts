@@ -102,6 +102,53 @@ export async function GET(
     feedback.push("Profile is incomplete");
   }
 
+  // --- Additional important fields for higher score (with more weight for assets, identity, social links) ---
+  if (profile.portfolioLink || profile.socialMediaLink || profile.linkedIn || (profile.onlinePresence && (profile.onlinePresence.portfolio || profile.onlinePresence.linkedin || profile.onlinePresence.github))) {
+    score += 6; // increased weight
+    feedback.push("Portfolio or social links provided");
+  }
+  if (profile.coverLetter) {
+    score += 2;
+    feedback.push("Cover letter provided");
+  }
+  if (profile.additionalInfo) {
+    score += 2;
+    feedback.push("Additional info provided");
+  }
+  if (Array.isArray(profile.preferredCities) && profile.preferredCities.length > 0) {
+    score += 2;
+    feedback.push("Preferred cities specified");
+  }
+  if (Array.isArray(profile.availableAssets) && profile.availableAssets.length > 0) {
+    score += 5; // increased weight
+    feedback.push("Assets listed");
+  }
+  if (Array.isArray(profile.identityDocuments) && profile.identityDocuments.length > 0) {
+    score += 5; // increased weight
+    feedback.push("Identity documents listed");
+  }
+  // --- Global best-practice fields (LinkedIn/Naukri) ---
+  if (profile.headline || profile.title) {
+    score += 2;
+    feedback.push("Professional headline/title provided");
+  }
+  if (profile.professionalSummary || profile.summary || profile.profileOutline) {
+    score += 2;
+    feedback.push("Professional summary provided");
+  }
+  if (Array.isArray(profile.languages) && profile.languages.length > 0) {
+    score += 2;
+    feedback.push("Languages listed");
+  }
+  if (Array.isArray(profile.projects) && profile.projects.length > 0) {
+    score += 2;
+    feedback.push("Projects listed");
+  }
+  if (Array.isArray(profile.references) && profile.references.length > 0) {
+    score += 2;
+    feedback.push("References listed");
+  }
+
   // --- Cap score and build feedback ---
   score = Math.max(0, Math.min(Math.round(score), 100));
   if (score < 40) feedback.push("Consider adding more skills, experience, or education for a better match.");
