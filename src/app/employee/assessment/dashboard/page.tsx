@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AssessmentLayout } from "@/components/assessment-layout"
-import withAuth from "@/components/auth/withAuth";
 
 interface TestData {
   _id: string
@@ -29,7 +28,7 @@ interface ResultData {
   status: "Passed" | "Failed"
 }
 
-function Page() {
+export default function AssessmentDashboard() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [dashboardStats, setDashboardStats] = useState({
@@ -495,5 +494,3 @@ function Page() {
     </AssessmentLayout>
   )
 }
-
-export default withAuth(Page, "employee");

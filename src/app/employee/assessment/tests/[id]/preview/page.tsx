@@ -17,7 +17,6 @@ import { Input } from "@/components/ui/input"
 import { AdvancedCodeEditor } from "@/components/advanced-code-editor"
 import { useCameraManager } from "@/hooks/useCameraManager"
 import { CameraVideo } from "@/components/camera-video"
-import withAuth from "@/components/auth/withAuth"
 
 interface TestData {
   _id: string
@@ -64,9 +63,7 @@ interface StepCompletion {
   instructions: boolean
 }
 
-export default withAuth(Page, "employee")
-
-function Page() {
+export default function TestPreviewPage() {
   const router = useRouter()
   const params = useParams()
   const testId = params.id as string

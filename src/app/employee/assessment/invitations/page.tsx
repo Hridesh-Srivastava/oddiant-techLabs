@@ -12,7 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { AssessmentLayout } from "@/components/assessment-layout"
 import * as XLSX from "xlsx"
-import withAuth from "@/components/auth/withAuth";
 
 interface InvitationData {
   _id: string
@@ -29,7 +28,7 @@ interface TestData {
   name: string
 }
 
-function Page() {
+export default function InvitationsPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -652,5 +651,3 @@ function Page() {
     </AssessmentLayout>
   )
 }
-
-export default withAuth(Page, "employee");

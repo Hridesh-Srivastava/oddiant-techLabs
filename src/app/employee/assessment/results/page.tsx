@@ -22,7 +22,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { AssessmentLayout } from "@/components/assessment-layout"
-import withAuth from "@/components/auth/withAuth";
 
 interface ResultData {
   _id: string
@@ -37,7 +36,7 @@ interface ResultData {
   resultsDeclared: boolean
 }
 
-function Page() {
+export default function ResultsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -666,5 +665,3 @@ function Page() {
  </AssessmentLayout>
   )
 }
-
-export default withAuth(Page, "employee");

@@ -44,7 +44,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import withAuth from "@/components/auth/withAuth";
 
 interface TestData {
   _id: string
@@ -112,7 +111,7 @@ interface ResultData {
   answers?: any[]
 }
 
-function Page() {
+export default function TestDetailsPage() {
   const router = useRouter()
   const params = useParams()
   const testId = params.id as string
@@ -1456,5 +1455,3 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
     </div>
   )
 }
-
-export default withAuth(Page, "employee");

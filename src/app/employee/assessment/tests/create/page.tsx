@@ -9,9 +9,8 @@ import { AssessmentLayout } from "@/components/assessment-layout"
 import { AdvancedCodeEditor } from "@/components/advanced-code-editor"
 import ReactMarkdown from "react-markdown"
 import rehypeRaw from "rehype-raw"
-import withAuth from "@/components/auth/withAuth";
 
-function Page() {
+export default function CreateTestPage() {
   const router = useRouter()
 
   const [testDetails, setTestDetails] = useState({
@@ -1096,4 +1095,3 @@ function solution() {
   )
 }
 
-export default withAuth(Page, "employee");
