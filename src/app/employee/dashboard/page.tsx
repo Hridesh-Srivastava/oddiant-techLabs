@@ -330,7 +330,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
       wifi: false,
       laptop: false,
     },
-    shiftPreference: "",
+    shiftPreference: [] as string[],
   })
 
   const [atsHighlightKeywords, setAtsHighlightKeywords] = useState(true)
@@ -1715,15 +1715,17 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
       }
 
       // Apply shift preference filter
-      if (atsFilters.shiftPreference) {
+      if (Array.isArray(atsFilters.shiftPreference) && atsFilters.shiftPreference.length > 0) {
         filtered = filtered.filter((resume) => {
-          const content = resume.content.toLowerCase()
-          const preference = atsFilters.shiftPreference.toLowerCase()
-          return (
-            content.includes(preference) ||
-            (resume.skills && resume.skills.some((s) => s.toLowerCase().includes(preference)))
-          )
-        })
+          const content = resume.content.toLowerCase();
+          return atsFilters.shiftPreference.some((preference) => {
+            const pref = preference.toLowerCase();
+            return (
+              content.includes(pref) ||
+              (resume.skills && resume.skills.some((s) => s.toLowerCase().includes(pref)))
+            );
+          });
+        });
       }
 
       // Apply column filters
@@ -1805,7 +1807,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
         wifi: false,
         laptop: false,
       },
-      shiftPreference: "",
+      shiftPreference: [] as string[],
     }
 
     // Set the filters back to default
@@ -2047,250 +2049,39 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
     }, 500);
   };
 
-  const applyCustomFilters = () => {
+  const applyCustomFilters = async () => {
     setAtsIsLoading(true);
-    setTimeout(() => {
-      let filtered = [...atsResumes];
-      // Debug: Show all filter values
-      console.log('DEBUG: Custom filter values:', atsFilters);
-      // Mandatory Keywords
-      if (Array.isArray(atsFilters.mandatoryKeywords) && atsFilters.mandatoryKeywords.length > 0) {
-        filtered = filtered.filter((resume) => {
-          const content = resume.content || resume.profileOutline || resume.summary || '';
-          const skills = Array.isArray(resume.skills) ? resume.skills : resume.skills ? [resume.skills] : [];
-          const profileOutline = resume.profileOutline || '';
-          const summary = resume.summary || '';
-          return atsFilters.mandatoryKeywords.every((keyword) => {
-            if (!keyword) return true;
-            const kw = keyword.toLowerCase();
-            return (
-              (content && content.toLowerCase().includes(kw)) ||
-              (skills.some((s) => s && s.toLowerCase().includes(kw))) ||
-              (profileOutline && profileOutline.toLowerCase().includes(kw)) ||
-              (summary && summary.toLowerCase().includes(kw))
-            );
-          });
-        });
+    try {
+      const response = await fetch("/api/ats/custom-filter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidates: atsResumes,
+          filters: atsFilters,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Only show error if no fallback results
+        if (data.filtered && data.filtered.length > 0) {
+          toast.warning("AI filter failed, showing fallback results.");
+          setAtsFilteredResumes(data.filtered);
+        } else {
+          toast.error("Custom AI filter failed");
+          setAtsFilteredResumes([]);
+        }
+        return;
       }
-      // Preferred Keywords (sort by match count)
-      if (Array.isArray(atsFilters.preferredKeywords) && atsFilters.preferredKeywords.length > 0) {
-        filtered.sort((a, b) => {
-          const aContent = a.content || a.profileOutline || a.summary || '';
-          const aSkills = Array.isArray(a.skills) ? a.skills : a.skills ? [a.skills] : [];
-          const aProfileOutline = a.profileOutline || '';
-          const aSummary = a.summary || '';
-          const bContent = b.content || b.profileOutline || b.summary || '';
-          const bSkills = Array.isArray(b.skills) ? b.skills : b.skills ? [b.skills] : [];
-          const bProfileOutline = b.profileOutline || '';
-          const bSummary = b.summary || '';
-          const aMatches = atsFilters.preferredKeywords.filter((keyword) => {
-            const kw = keyword.toLowerCase();
-            return (
-              (aContent && aContent.toLowerCase().includes(kw)) ||
-              (aSkills.some((s) => s && s.toLowerCase().includes(kw))) ||
-              (aProfileOutline && aProfileOutline.toLowerCase().includes(kw)) ||
-              (aSummary && aSummary.toLowerCase().includes(kw))
-            );
-          }).length;
-          const bMatches = atsFilters.preferredKeywords.filter((keyword) => {
-            const kw = keyword.toLowerCase();
-            return (
-              (bContent && bContent.toLowerCase().includes(kw)) ||
-              (bSkills.some((s) => s && s.toLowerCase().includes(kw))) ||
-              (bProfileOutline && bProfileOutline.toLowerCase().includes(kw)) ||
-              (bSummary && bSummary.toLowerCase().includes(kw))
-            );
-          }).length;
-          return bMatches - aMatches;
-        });
-      }
-      // NOT Keywords
-      if (Array.isArray(atsFilters.notKeywords) && atsFilters.notKeywords.length > 0) {
-        filtered = filtered.filter((resume) => {
-          const content = resume.content || resume.profileOutline || resume.summary || '';
-          const skills = Array.isArray(resume.skills) ? resume.skills : resume.skills ? [resume.skills] : [];
-          const profileOutline = resume.profileOutline || '';
-          const summary = resume.summary || '';
-          return !atsFilters.notKeywords.some((keyword) => {
-            if (!keyword) return false;
-            const kw = keyword.toLowerCase();
-            return (
-              (content && content.toLowerCase().includes(kw)) ||
-              (skills.some((s) => s && s.toLowerCase().includes(kw))) ||
-              (profileOutline && profileOutline.toLowerCase().includes(kw)) ||
-              (summary && summary.toLowerCase().includes(kw))
-            );
-          });
-        });
-      }
-      // Location
-      if (typeof atsFilters.location === 'string' && atsFilters.location.trim() !== '') {
-        const locationFilter = atsFilters.location.trim().toLowerCase();
-        filtered = filtered.filter((resume) => {
-          const locations = [
-            resume.location,
-            resume.currentCity,
-            resume.city,
-            (resume as any).currentLocation,
-            (resume as any).address
-          ]
-            .filter(Boolean)
-            .map((loc) => (typeof loc === 'string' ? loc.trim().toLowerCase() : ''))
-            .filter(Boolean);
-          if (locations.length === 0) return true;
-          return locations.some((loc) => loc.includes(locationFilter));
-        });
-      }
-      // State
-      if (typeof atsFilters.state === 'string' && atsFilters.state.trim() !== '' && atsFilters.state !== 'Any') {
-        const stateFilter = atsFilters.state.trim().toLowerCase();
-        filtered = filtered.filter((resume) => {
-          const states = [
-            resume.state,
-            resume.currentState,
-            (resume as any).currentLocation,
-            resume.location,
-            (resume as any).address
-          ]
-            .filter(Boolean)
-            .map((st) => (typeof st === 'string' ? st.trim().toLowerCase() : ''))
-            .filter(Boolean);
-          if (states.length === 0) return true;
-          return states.some((st) => st.includes(stateFilter));
-        });
-      }
-      // Assets
-      if (atsFilters.assets && (atsFilters.assets.bike || atsFilters.assets.car || atsFilters.assets.wifi || atsFilters.assets.laptop)) {
-        const { bike, car, wifi, laptop } = atsFilters.assets;
-        filtered = filtered.filter((resume) => {
-          const assets = (resume as any).assets || (resume as any).availableAssets || {};
-          const skills = Array.isArray(resume.skills) ? resume.skills.map((s) => s.toLowerCase()) : [];
-          if (bike && !(assets.bike || skills.some((a) => a.includes('bike') || a.includes('motorcycle')))) return false;
-          if (car && !(assets.car || skills.some((a) => a.includes('car') || a.includes('driving')))) return false;
-          if (wifi && !(assets.wifi || skills.some((a) => a.includes('wifi') || a.includes('internet')))) return false;
-          if (laptop && !(assets.laptop || skills.some((a) => a.includes('laptop') || a.includes('computer')))) return false;
-          return true;
-        });
-      }
-      // Education Level
-      if (Array.isArray(atsFilters.educationLevel) && atsFilters.educationLevel.length > 0) {
-        filtered = filtered.filter((resume) => {
-          const education = Array.isArray(resume.education) ? resume.education : resume.education ? [resume.education] : [];
-          return atsFilters.educationLevel.some((level) => {
-            const lvl = level.toLowerCase();
-            return education.some((edu) => {
-              if (!edu) return false;
-              return (
-                (edu.degree && edu.degree.toLowerCase().includes(lvl)) ||
-                (edu.level && edu.level.toLowerCase().includes(lvl)) ||
-                (edu.qualification && edu.qualification.toLowerCase().includes(lvl)) ||
-                (typeof edu === 'string' && edu.toLowerCase().includes(lvl))
-              );
-            });
-          });
-        });
-      }
-      // Gender
-      if (typeof atsFilters.gender === 'string' && atsFilters.gender.trim() !== '' && atsFilters.gender !== 'Any') {
-        filtered = filtered.filter((resume) =>
-          typeof resume.gender === 'string' && resume.gender.toLowerCase() === atsFilters.gender.toLowerCase()
-        );
-      }
-      // Industry
-      if (typeof atsFilters.industry === 'string' && atsFilters.industry.trim() !== '' && atsFilters.industry !== 'Any') {
-        const industryFilter = atsFilters.industry.toLowerCase();
-        filtered = filtered.filter((resume) =>
-          resume.industry && typeof resume.industry === 'string' && resume.industry.toLowerCase().includes(industryFilter)
-        );
-      }
-      // Experience Range
-      if (Array.isArray(atsFilters.experienceRange) && atsFilters.experienceRange.length === 2) {
-        filtered = filtered.filter((resume) => {
-          const exp = resume.yearsOfExperience ?? (resume as any).totalExperience ?? 0;
-          return exp >= atsFilters.experienceRange[0] && exp <= atsFilters.experienceRange[1];
-        });
-      }
-      // Salary Range
-      if (Array.isArray(atsFilters.salaryRange) && atsFilters.salaryRange.length === 2) {
-        filtered = filtered.filter((resume) => {
-          const salary = resume.currentSalary ?? (resume as any).expectedSalary ?? 0;
-          return salary >= atsFilters.salaryRange[0] && salary <= atsFilters.salaryRange[1];
-        });
-      }
-      // Age Range
-      if (Array.isArray(atsFilters.ageRange) && atsFilters.ageRange.length === 2) {
-        filtered = filtered.filter((resume) => {
-          let age = resume.age;
-          const dob = (resume as any).dateOfBirth;
-          if (!age && dob) {
-            const dobDate = new Date(dob);
-            if (!isNaN(dobDate.getTime())) {
-              age = new Date().getFullYear() - dobDate.getFullYear();
-            }
-          }
-          return age >= atsFilters.ageRange[0] && age <= atsFilters.ageRange[1];
-        });
-      }
-      // Shift Preference
-      if (typeof atsFilters.shiftPreference === 'string' && atsFilters.shiftPreference.trim() !== '' && atsFilters.shiftPreference !== 'Any') {
-        const pref = atsFilters.shiftPreference.toLowerCase();
-        filtered = filtered.filter((resume) => {
-          const shiftPref = (resume as any).shiftPreference || (resume as any).preferredShift || [];
-          if (Array.isArray(shiftPref)) {
-            return shiftPref.some((p) => typeof p === 'string' && p.toLowerCase().includes(pref));
-          } else if (typeof shiftPref === 'string') {
-            return shiftPref.toLowerCase().includes(pref);
-          }
-          return false;
-        });
-      }
-      // Column filters (name, position, status, appliedDate)
-      if (candidateNameFilter.length > 0) {
-        filtered = filtered.filter((resume) => {
-          const fullName = `${resume.firstName} ${resume.lastName}`.trim();
-          return candidateNameFilter.includes(fullName);
-        });
-      }
-      if (positionFilter.length > 0) {
-        filtered = filtered.filter((resume) => positionFilter.includes(resume.currentPosition));
-      }
-      if (statusFilter.length > 0) {
-        filtered = filtered.filter((resume) => statusFilter.includes(resume.status));
-      }
-      if (appliedDateFilter.length > 0) {
-        filtered = filtered.filter((resume) => appliedDateFilter.includes(resume.appliedDate));
-      }
-      // Sorting (if any)
-      if (candidateNameSort) {
-        filtered.sort((a, b) => {
-          const nameA = `${a.firstName} ${a.lastName}`.trim().toLowerCase();
-          const nameB = `${b.firstName} ${b.lastName}`.trim().toLowerCase();
-          return candidateNameSort === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
-        });
-      }
-      if (positionSort) {
-        filtered.sort((a, b) => {
-          return positionSort === 'asc'
-            ? a.currentPosition.localeCompare(b.currentPosition)
-            : b.currentPosition.localeCompare(a.currentPosition);
-        });
-      }
-      if (statusSort) {
-        filtered.sort((a, b) => {
-          return statusSort === 'asc' ? a.status.localeCompare(b.status) : b.status.localeCompare(a.status);
-        });
-      }
-      if (appliedDateSort) {
-        filtered.sort((a, b) => {
-          const dateA = new Date(a.appliedDate).getTime();
-          const dateB = new Date(b.appliedDate).getTime();
-          return appliedDateSort === 'asc' ? dateA - dateB : dateB - dateA;
-        });
-      }
-      setAtsFilteredResumes(filtered);
+
+      setAtsFilteredResumes(data.filtered || []);
+      toast.success(`Found ${data.filtered?.length || 0} matching resumes (AI Custom Filters)`);
+    } catch (e) {
+      toast.error("Custom AI filter failed");
+      setAtsFilteredResumes([]);
+    } finally {
       setAtsIsLoading(false);
-      toast.success(`Found ${filtered.length} matching resumes (Custom Filters)`);
-    }, 500);
+    }
   };
 
   // Add ATS pagination state

@@ -20,6 +20,8 @@ interface Candidate {
   skills: string[]
   matchScore: number
   geminiFeedback?: string
+  currentSalary?: number
+  age?: number
 }
 
 interface CandidateListProps {
@@ -162,6 +164,8 @@ export function CandidateList({
                     <li key={c._id} className="border-b pb-2">
                       <span className="font-medium">{c.firstName} {c.lastName}:</span>
                       <span className="ml-2 text-xs text-gray-500 italic">{c.geminiFeedback || "No feedback available."}</span>
+                      <span className="ml-2 text-xs text-blue-700">Experience: {c.yearsOfExperience ?? "-"}</span>
+                      <span className="ml-2 text-xs text-green-700">Salary: {c.currentSalary ?? "-"}</span>
                     </li>
                   ))}
                 </ul>

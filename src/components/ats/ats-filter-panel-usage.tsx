@@ -5,17 +5,17 @@ import { FilterPanel } from "./filter-panel"
 
 export default function AtsFilterPanelUsage() {
   const [filters, setFilters] = useState({
-    mandatoryKeywords: [],
-    preferredKeywords: [],
+    mandatoryKeywords: [] as string[],
+    preferredKeywords: [] as string[],
     location: "",
     state: "",
-    educationLevel: [],
+    educationLevel: [] as string[],
     gender: "",
-    experienceRange: [0, 10],
-    salaryRange: [0, 100000],
+    experienceRange: [0, 20],
+    salaryRange: [0, 200000],
     industry: "",
-    ageRange: [18, 45],
-    notKeywords: [],
+    ageRange: [18, 65],
+    notKeywords: [] as string[],
     atsScore: 0,
     assets: {
       bike: false,
@@ -23,7 +23,7 @@ export default function AtsFilterPanelUsage() {
       wifi: false,
       laptop: false,
     },
-    shiftPreference: "",
+    shiftPreference: [] as string[],
   })
 
   const handleFilterChange = (newFilters: any) => {
@@ -43,10 +43,10 @@ export default function AtsFilterPanelUsage() {
       state: "",
       educationLevel: [],
       gender: "",
-      experienceRange: [0, 10],
-      salaryRange: [0, 100000],
+      experienceRange: [0, 20],
+      salaryRange: [0, 200000],
       industry: "",
-      ageRange: [18, 45],
+      ageRange: [18, 65],
       notKeywords: [],
       atsScore: 0,
       assets: {
@@ -55,7 +55,7 @@ export default function AtsFilterPanelUsage() {
         wifi: false,
         laptop: false,
       },
-      shiftPreference: "",
+      shiftPreference: [],
     })
   }
 

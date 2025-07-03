@@ -643,7 +643,7 @@ interface FilterPanelProps {
       wifi: boolean
       laptop: boolean
     }
-    shiftPreference?: string
+    shiftPreference?: string[]
   }
   setFilters: (filters: any) => void
   applyAtsScoreFilter: () => void
@@ -674,7 +674,7 @@ export function FilterPanel({ filters, setFilters, applyAtsScoreFilter, applyCus
           wifi: false,
           laptop: false,
         },
-        shiftPreference: "",
+        shiftPreference: [],
       })
     }
   }, [])
@@ -1072,33 +1072,63 @@ export function FilterPanel({ filters, setFilters, applyAtsScoreFilter, applyCus
       <div className="space-y-2">
         <Label htmlFor="shift-preference">Shift Preference</Label>
         <div className="grid grid-cols-3 gap-2">
-          <Button
-            variant={filters.shiftPreference === "day" ? "default" : "outline"}
-            size="sm"
-            className="flex items-center gap-1"
-            onClick={() => setFilters({ ...filters, shiftPreference: "day" })}
-          >
-            <Sun className="h-4 w-4" />
-            <span>Day</span>
-          </Button>
-          <Button
-            variant={filters.shiftPreference === "night" ? "default" : "outline"}
-            size="sm"
-            className="flex items-center gap-1"
-            onClick={() => setFilters({ ...filters, shiftPreference: "night" })}
-          >
-            <Moon className="h-4 w-4" />
-            <span>Night</span>
-          </Button>
-          <Button
-            variant={filters.shiftPreference === "rotational" ? "default" : "outline"}
-            size="sm"
-            className="flex items-center gap-1"
-            onClick={() => setFilters({ ...filters, shiftPreference: "rotational" })}
-          >
-            <RotateCw className="h-4 w-4" />
-            <span>Rotational</span>
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="shift-day"
+              checked={Array.isArray(filters.shiftPreference) && filters.shiftPreference.includes("day")}
+              onCheckedChange={(checked) => {
+                let newPrefs = Array.isArray(filters.shiftPreference) ? [...filters.shiftPreference] : [];
+                if (checked) {
+                  if (!newPrefs.includes("day")) newPrefs.push("day");
+                } else {
+                  newPrefs = newPrefs.filter((p) => p !== "day");
+                }
+                setFilters({ ...filters, shiftPreference: newPrefs });
+              }}
+            />
+            <Label htmlFor="shift-day" className="flex items-center gap-2 cursor-pointer">
+              <Sun className="h-4 w-4" />
+              <span>Day</span>
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="shift-night"
+              checked={Array.isArray(filters.shiftPreference) && filters.shiftPreference.includes("night")}
+              onCheckedChange={(checked) => {
+                let newPrefs = Array.isArray(filters.shiftPreference) ? [...filters.shiftPreference] : [];
+                if (checked) {
+                  if (!newPrefs.includes("night")) newPrefs.push("night");
+                } else {
+                  newPrefs = newPrefs.filter((p) => p !== "night");
+                }
+                setFilters({ ...filters, shiftPreference: newPrefs });
+              }}
+            />
+            <Label htmlFor="shift-night" className="flex items-center gap-2 cursor-pointer">
+              <Moon className="h-4 w-4" />
+              <span>Night</span>
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="shift-rotational"
+              checked={Array.isArray(filters.shiftPreference) && filters.shiftPreference.includes("rotational")}
+              onCheckedChange={(checked) => {
+                let newPrefs = Array.isArray(filters.shiftPreference) ? [...filters.shiftPreference] : [];
+                if (checked) {
+                  if (!newPrefs.includes("rotational")) newPrefs.push("rotational");
+                } else {
+                  newPrefs = newPrefs.filter((p) => p !== "rotational");
+                }
+                setFilters({ ...filters, shiftPreference: newPrefs });
+              }}
+            />
+            <Label htmlFor="shift-rotational" className="flex items-center gap-2 cursor-pointer">
+              <RotateCw className="h-4 w-4" />
+              <span>Rotational</span>
+            </Label>
+          </div>
         </div>
       </div>
 
