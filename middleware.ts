@@ -103,6 +103,7 @@ export const config = {
   matcher: [
     "/student/:path*",
     "/employee/:path*",
+    "/employee/assessment/:path*", // Explicitly protect all assessment routes
     "/admin/:path*",
     "/auth/login",
     "/auth/register",
