@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AssessmentLayout } from "@/components/assessment-layout"
+import withAuth from "@/components/auth/withAuth";
 
 interface CandidateData {
   _id: string
@@ -25,7 +26,7 @@ interface CandidateData {
   status: "Completed" | "In Progress" | "Invited" | "Failed"
 }
 
-export default function CandidatesPage() {
+function Page() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -478,3 +479,5 @@ export default function CandidatesPage() {
     </AssessmentLayout>
   )
 }
+
+export default withAuth(Page, "employee");

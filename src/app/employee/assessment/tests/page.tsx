@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AssessmentLayout } from "@/components/assessment-layout"
+import withAuth from "@/components/auth/withAuth";
 
 interface TestData {
   _id: string
@@ -24,7 +25,7 @@ interface TestData {
   createdAt: string
 }
 
-export default function TestsPage() {
+function Page() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -486,3 +487,5 @@ export default function TestsPage() {
   </AssessmentLayout>
   )
 }
+
+export default withAuth(Page, "employee");

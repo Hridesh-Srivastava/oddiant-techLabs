@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import withAuth from "@/components/auth/withAuth";
 
 interface CandidateData {
   _id: string
@@ -82,7 +83,7 @@ interface VerificationData {
   updatedAt: string
 }
 
-export default function CandidateDetailsPage() {
+function Page() {
   const params = useParams()
   const router = useRouter()
   const candidateId = params.id as string
@@ -1081,3 +1082,5 @@ export default function CandidateDetailsPage() {
     </div>
   )
 }
+
+export default withAuth(Page, "employee");

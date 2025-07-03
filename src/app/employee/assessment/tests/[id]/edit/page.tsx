@@ -21,6 +21,7 @@ import {
 import { AdvancedCodeEditor } from "@/components/advanced-code-editor"
 import ReactMarkdown from "react-markdown"
 import rehypeRaw from "rehype-raw"
+import withAuth from "@/components/auth/withAuth";
 
 interface TestData {
   _id: string
@@ -78,7 +79,7 @@ interface TestCase {
   id?: string
 }
 
-export default function EditTestPage() {
+function Page() {
   const router = useRouter()
   const params = useParams()
   const testId = params.id as string
@@ -1468,3 +1469,5 @@ function solution() {
     </div>
   )
 }
+
+export default withAuth(Page, "employee");

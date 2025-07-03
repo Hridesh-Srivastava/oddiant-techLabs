@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import withAuth from "@/components/auth/withAuth";
 
 interface CandidateData {
   _id: string
@@ -16,7 +17,7 @@ interface CandidateData {
   averageScore: number
 }
 
-export default function CandidatesDebugPage() {
+function Page() {
   const [candidates, setCandidates] = useState<CandidateData[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -140,3 +141,5 @@ export default function CandidatesDebugPage() {
     </div>
   )
 }
+
+export default withAuth(Page, "employee");

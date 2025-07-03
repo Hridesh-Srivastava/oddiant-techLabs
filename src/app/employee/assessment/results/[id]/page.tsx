@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import withAuth from "@/components/auth/withAuth";
 
 interface ResultData {
   _id: string
@@ -77,7 +78,7 @@ interface TestData {
   passingScore: number
 }
 
-export default function ResultDetailsPage() {
+function Page() {
   const router = useRouter()
   const params = useParams()
   const resultId = params.id as string
@@ -633,3 +634,5 @@ export default function ResultDetailsPage() {
     </div>
   )
 }
+
+export default withAuth(Page, "employee");
