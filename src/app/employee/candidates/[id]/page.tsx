@@ -284,17 +284,17 @@ export default function CandidateDetailsPage({
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Applied":
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+        return "bg-gray-100 text-gray-800"
       case "Shortlisted":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+        return "bg-green-100 text-green-800"
       case "Interview":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+        return "bg-blue-100 text-blue-800"
       case "Hired":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
+        return "bg-purple-100 text-purple-800"
       case "Rejected":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+        return "bg-red-100 text-red-800"
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+        return "bg-gray-100 text-gray-800"
     }
   }
 
@@ -316,14 +316,14 @@ export default function CandidateDetailsPage({
 
     if (Array.isArray(education)) {
       return education.map((edu, index) => (
-        <Card key={index} className="mb-3 bg-gray-50 dark:bg-gray-800">
+        <Card key={index} className="mb-3 bg-gray-50">
           <CardContent className="pt-4">
             <div className="flex justify-between items-start">
               <div>
                 <h4 className="font-medium">
                   {typeof edu === "object" && edu !== null ? edu.degree : "Degree not specified"}
                 </h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray-500">
                   {typeof edu === "object" && edu !== null ? edu.institution : "Institution not specified"}
                 </p>
               </div>
@@ -342,15 +342,15 @@ export default function CandidateDetailsPage({
             {typeof edu === "object" && edu !== null && (
               <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
                 <div>
-                  <span className="text-gray-500 dark:text-gray-400">Level: </span>
+                  <span className="text-gray-500">Level: </span>
                   {edu.level || "N/A"}
                 </div>
                 <div>
-                  <span className="text-gray-500 dark:text-gray-400">Mode: </span>
+                  <span className="text-gray-500">Mode: </span>
                   {edu.mode || "N/A"}
                 </div>
                 <div>
-                  <span className="text-gray-500 dark:text-gray-400">Percentage/CGPA: </span>
+                  <span className="text-gray-500">Percentage/CGPA: </span>
                   {edu.percentage || "N/A"}
                 </div>
               </div>
@@ -367,12 +367,12 @@ export default function CandidateDetailsPage({
     // If education is an object, format it properly
     if (typeof education === "object" && education !== null) {
       return (
-        <Card className="mb-3 bg-gray-50 dark:bg-gray-800">
+        <Card className="mb-3 bg-gray-50">
           <CardContent className="pt-4">
             <div className="flex justify-between items-start">
               <div>
                 <h4 className="font-medium">{education.degree || "Degree not specified"}</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray-500">
                   {education.institution || "Institution not specified"}
                 </p>
               </div>
@@ -388,15 +388,15 @@ export default function CandidateDetailsPage({
             </div>
             <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
               <div>
-                <span className="text-gray-500 dark:text-gray-400">Level: </span>
+                <span className="text-gray-500">Level: </span>
                 {education.level || "N/A"}
               </div>
               <div>
-                <span className="text-gray-500 dark:text-gray-400">Mode: </span>
+                <span className="text-gray-500">Mode: </span>
                 {education.mode || "N/A"}
               </div>
               <div>
-                <span className="text-gray-500 dark:text-gray-400">Percentage/CGPA: </span>
+                <span className="text-gray-500">Percentage/CGPA: </span>
                 {education.percentage || "N/A"}
               </div>
             </div>
@@ -433,7 +433,7 @@ export default function CandidateDetailsPage({
       // Handle simple string values in the array
       if (typeof cert === "string") {
         return (
-          <Card key={index} className="mb-3 bg-gray-50 dark:bg-gray-800">
+          <Card key={index} className="mb-3 bg-gray-50">
             <CardContent className="pt-4">
               <div className="flex justify-between items-start">
                 <div>
@@ -447,31 +447,31 @@ export default function CandidateDetailsPage({
 
       // Handle certification objects
       return (
-        <Card key={index} className="mb-3 bg-gray-50 dark:bg-gray-800">
+        <Card key={index} className="mb-3 bg-gray-50">
           <CardContent className="pt-4">
             <div className="flex justify-between items-start">
               <div>
                 <h4 className="font-medium">{cert.name || cert}</h4>
-                {cert.issuer && <p className="text-sm text-gray-500 dark:text-gray-400">{cert.issuer}</p>}
+                {cert.issuer && <p className="text-sm text-gray-500">{cert.issuer}</p>}
               </div>
               {cert.date && <Badge variant="outline">{formatDate(cert.date)}</Badge>}
             </div>
             <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
               {cert.expiryDate && (
                 <div>
-                  <span className="text-gray-500 dark:text-gray-400">Expiry Date: </span>
+                  <span className="text-gray-500">Expiry Date: </span>
                   {formatDate(cert.expiryDate)}
                 </div>
               )}
               {cert.credentialId && (
                 <div>
-                  <span className="text-gray-500 dark:text-gray-400">Credential ID: </span>
+                  <span className="text-gray-500">Credential ID: </span>
                   {cert.credentialId}
                 </div>
               )}
               {cert.credentialUrl && (
                 <div className="col-span-2">
-                  <span className="text-gray-500 dark:text-gray-400">Credential URL: </span>
+                  <span className="text-gray-500">Credential URL: </span>
                   <a
                     href={formatWebsiteUrl(cert.credentialUrl)}
                     target="_blank"
@@ -491,7 +491,7 @@ export default function CandidateDetailsPage({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
       </div>
     )
@@ -499,7 +499,7 @@ export default function CandidateDetailsPage({
 
   if (!candidate) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="min-h-screen bg-gray-50 py-8">
         <EmployeeNavbar />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
@@ -510,8 +510,8 @@ export default function CandidateDetailsPage({
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <User className="h-16 w-16 text-gray-300 mb-4" />
-              <h2 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">Candidate Not Found</h2>
-              <p className="text-gray-500 dark:text-gray-400 mb-6">
+              <h2 className="text-xl font-medium text-gray-700 mb-2">Candidate Not Found</h2>
+              <p className="text-gray-500 mb-6">
                 The candidate you are looking for does not exist or has been removed.
               </p>
               <Button onClick={() => router.push("/employee/dashboard?tab=candidates")}>View All Candidates</Button>
@@ -523,7 +523,7 @@ export default function CandidateDetailsPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <Toaster position="top-center" />
       <EmployeeNavbar />
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -548,7 +548,7 @@ export default function CandidateDetailsPage({
                     {candidate.salutation ? `${candidate.salutation} ` : ""}
                     {candidate.name}
                   </h2>
-                  <p className="text-gray-500 dark:text-gray-400 mb-2">{candidate.role}</p>
+                  <p className="text-gray-500 mb-2">{candidate.role}</p>
                   <Badge className={getStatusColor(candidate.status)}>{candidate.status}</Badge>
 
                   <div className="w-full mt-6 space-y-2">
@@ -596,45 +596,45 @@ export default function CandidateDetailsPage({
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-start">
-                  <Mail className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
+                  <Mail className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium">Email</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{candidate.email}</p>
+                    <p className="text-sm text-gray-500">{candidate.email}</p>
                   </div>
                 </div>
                 {candidate.phone && (
                   <div className="flex items-start">
-                    <Phone className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
+                    <Phone className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Phone</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{candidate.phone}</p>
+                      <p className="text-sm text-gray-500">{candidate.phone}</p>
                     </div>
                   </div>
                 )}
                 {candidate.alternativePhone && (
                   <div className="flex items-start">
-                    <Phone className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
+                    <Phone className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Alternative Phone</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{candidate.alternativePhone}</p>
+                      <p className="text-sm text-gray-500">{candidate.alternativePhone}</p>
                     </div>
                   </div>
                 )}
                 {candidate.location && (
                   <div className="flex items-start">
-                    <MapPin className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
+                    <MapPin className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Location</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{candidate.location}</p>
+                      <p className="text-sm text-gray-500">{candidate.location}</p>
                     </div>
                   </div>
                 )}
                 {(candidate.currentCity || candidate.currentState) && (
                   <div className="flex items-start">
-                    <MapPin className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
+                    <MapPin className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Current Location</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-sm text-gray-500">
                         {candidate.currentCity}
                         {candidate.currentState && `, ${candidate.currentState}`}
                         {candidate.pincode && ` - ${candidate.pincode}`}
@@ -644,7 +644,7 @@ export default function CandidateDetailsPage({
                 )}
                 {candidate.linkedIn && (
                   <div className="flex items-start">
-                    <Linkedin className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
+                    <Linkedin className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">LinkedIn</p>
                       <a
@@ -704,7 +704,7 @@ export default function CandidateDetailsPage({
                 <CardTitle>Candidate Profile</CardTitle>
                 <div className="flex space-x-2">
                   <select
-                    className="px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm"
+                    className="px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm"
                     value={candidate.status}
                     onChange={(e) => handleStatusChange(e.target.value)}
                   >
@@ -725,7 +725,7 @@ export default function CandidateDetailsPage({
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Full Name</p>
+                      <p className="text-sm font-medium text-gray-500">Full Name</p>
                       <p>
                         {candidate.salutation ? `${candidate.salutation} ` : ""}
                         {candidate.firstName || ""} {candidate.middleName || ""} {candidate.lastName || candidate.name}
@@ -733,25 +733,25 @@ export default function CandidateDetailsPage({
                     </div>
                     {candidate.gender && (
                       <div>
-                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Gender</p>
+                        <p className="text-sm font-medium text-gray-500">Gender</p>
                         <p>{candidate.gender}</p>
                       </div>
                     )}
                     {candidate.dateOfBirth && (
                       <div>
-                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Date of Birth</p>
+                        <p className="text-sm font-medium text-gray-500">Date of Birth</p>
                         <p>{formatDate(candidate.dateOfBirth)}</p>
                       </div>
                     )}
                     <div>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Applied Date</p>
+                      <p className="text-sm font-medium text-gray-500">Applied Date</p>
                       <p>{formatDate(candidate.appliedDate || candidate.createdAt)}</p>
                     </div>
                   </div>
 
                   {candidate.profileOutline && (
                     <div className="mt-4">
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Profile Outline</p>
+                      <p className="text-sm font-medium text-gray-500">Profile Outline</p>
                       <p className="whitespace-pre-line">{candidate.profileOutline}</p>
                     </div>
                   )}
@@ -767,18 +767,18 @@ export default function CandidateDetailsPage({
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Position</p>
+                      <p className="text-sm font-medium text-gray-500">Position</p>
                       <p>{candidate.role}</p>
                     </div>
                     {candidate.experience && (
                       <div>
-                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Experience</p>
+                        <p className="text-sm font-medium text-gray-500">Experience</p>
                         <p>{safeRender(candidate.experience)}</p>
                       </div>
                     )}
                     {candidate.totalExperience && (
                       <div>
-                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Experience (years)</p>
+                        <p className="text-sm font-medium text-gray-500">Total Experience (years)</p>
                         <p>{candidate.totalExperience}</p>
                       </div>
                     )}
@@ -794,19 +794,19 @@ export default function CandidateDetailsPage({
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {candidate.currentSalary && (
                           <div>
-                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Salary</p>
+                            <p className="text-sm font-medium text-gray-500">Current Salary</p>
                             <p className="text-green-600 font-medium">{candidate.currentSalary}</p>
                           </div>
                         )}
                         {candidate.expectedSalary && (
                           <div>
-                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Expected Salary</p>
+                            <p className="text-sm font-medium text-gray-500">Expected Salary</p>
                             <p className="text-blue-600 font-medium">{candidate.expectedSalary}</p>
                           </div>
                         )}
                         {candidate.noticePeriod && (
                           <div>
-                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Notice Period</p>
+                            <p className="text-sm font-medium text-gray-500">Notice Period</p>
                             <p className="text-orange-600 font-medium">{candidate.noticePeriod} days</p>
                           </div>
                         )}
@@ -855,7 +855,7 @@ export default function CandidateDetailsPage({
                           // Safely handle work experience objects
                           if (typeof exp === "string") {
                             return (
-                              <Card key={index} className="bg-gray-50 dark:bg-gray-800">
+                              <Card key={index} className="bg-gray-50">
                                 <CardContent className="pt-4">
                                   <p>{exp}</p>
                                 </CardContent>
@@ -866,12 +866,12 @@ export default function CandidateDetailsPage({
                           // Handle work experience objects
                           const workExp = exp as WorkExperience
                           return (
-                            <Card key={index} className="bg-gray-50 dark:bg-gray-800">
+                            <Card key={index} className="bg-gray-50">
                               <CardContent className="pt-4">
                                 <div className="flex justify-between items-start">
                                   <div>
                                     <h4 className="font-medium">{workExp.title || "Position"}</h4>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    <p className="text-sm text-gray-500">
                                       {workExp.companyName || "Company"}{" "}
                                       {workExp.department && `- ${workExp.department}`}
                                     </p>
@@ -964,7 +964,7 @@ export default function CandidateDetailsPage({
                       <div className="space-y-2">
                         {candidate.portfolioLink && (
                           <div>
-                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Portfolio</p>
+                            <p className="text-sm font-medium text-gray-500">Portfolio</p>
                             <a
                               href={formatWebsiteUrl(candidate.portfolioLink)}
                               target="_blank"
@@ -977,7 +977,7 @@ export default function CandidateDetailsPage({
                         )}
                         {candidate.socialMediaLink && (
                           <div>
-                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Social Media</p>
+                            <p className="text-sm font-medium text-gray-500">Social Media</p>
                             <a
                               href={formatWebsiteUrl(candidate.socialMediaLink)}
                               target="_blank"
@@ -1002,7 +1002,7 @@ export default function CandidateDetailsPage({
                         <MessageSquare className="h-5 w-5 mr-2" />
                         Cover Letter
                       </h3>
-                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-md">
+                      <div className="bg-gray-50 p-4 rounded-md">
                         <p className="whitespace-pre-line">{candidate.coverLetter}</p>
                       </div>
                     </div>
@@ -1032,7 +1032,7 @@ export default function CandidateDetailsPage({
                         <MessageSquare className="h-5 w-5 mr-2" />
                         Notes
                       </h3>
-                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">{candidate.notes}</p>
+                      <p className="text-gray-700 whitespace-pre-line">{candidate.notes}</p>
                     </div>
                   </>
                 )}
@@ -1052,7 +1052,7 @@ export default function CandidateDetailsPage({
                       <FileText className="h-5 w-5 mr-2" />
                       Resume
                     </h3>
-                    <Button variant="outline" className="text-blue-600 dark:text-blue-400" asChild>
+                    <Button variant="outline" className="text-blue-600" asChild>
                       <a href={candidate.resumeUrl} target="_blank" rel="noopener noreferrer">
                         <FileText className="h-4 w-4 mr-2" />
                         View Resume
@@ -1068,8 +1068,8 @@ export default function CandidateDetailsPage({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {candidate.videoResumeUrl && (
                         <div>
-                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Video Resume</p>
-                          <div className="aspect-video bg-gray-100 dark:bg-gray-800 rounded-md overflow-hidden">
+                          <p className="text-sm font-medium text-gray-500 mb-2">Video Resume</p>
+                          <div className="aspect-video bg-gray-100 rounded-md overflow-hidden">
                             <video src={candidate.videoResumeUrl} controls className="w-full h-full object-contain">
                               Your browser does not support the video tag.
                             </video>
@@ -1079,7 +1079,7 @@ export default function CandidateDetailsPage({
 
                       {candidate.audioBiodataUrl && (
                         <div>
-                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Audio Biodata</p>
+                          <p className="text-sm font-medium text-gray-500 mb-2">Audio Biodata</p>
                           <audio src={candidate.audioBiodataUrl} controls className="w-full">
                             Your browser does not support the audio tag.
                           </audio>
@@ -1088,8 +1088,8 @@ export default function CandidateDetailsPage({
 
                       {candidate.photographUrl && (
                         <div>
-                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Photograph</p>
-                          <div className="rounded-md overflow-hidden border dark:border-gray-700">
+                          <p className="text-sm font-medium text-gray-500 mb-2">Photograph</p>
+                          <div className="rounded-md overflow-hidden border">
                             <img
                               src={candidate.photographUrl || "/placeholder.svg"}
                               alt={`${candidate.name}'s photograph`}
@@ -1119,11 +1119,11 @@ export default function CandidateDetailsPage({
                     {interviews.map((interview) => (
                       <div
                         key={interview._id}
-                        className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-md dark:border-gray-700"
+                        className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-md"
                       >
                         <div className="mb-2 md:mb-0">
                           <p className="font-medium">{interview.position}</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                          <p className="text-sm text-gray-500">
                             {formatDate(interview.date)} at {interview.time}
                           </p>
                         </div>
@@ -1131,12 +1131,12 @@ export default function CandidateDetailsPage({
                           <Badge
                             className={
                               interview.status === "scheduled"
-                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                                ? "bg-blue-100 text-blue-800"
                                 : interview.status === "completed"
-                                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                  ? "bg-green-100 text-green-800"
                                   : interview.status === "cancelled"
-                                    ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                                    : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-gray-100 text-gray-800"
                             }
                           >
                             {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
@@ -1155,7 +1155,7 @@ export default function CandidateDetailsPage({
                 ) : (
                   <div className="text-center py-8">
                     <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500 dark:text-gray-400 mb-4">No interviews scheduled yet</p>
+                    <p className="text-gray-500 mb-4">No interviews scheduled yet</p>
                     <Button onClick={() => router.push(`/employee/interviews/schedule?candidateId=${candidateId}`)}>
                       Schedule Interview
                     </Button>

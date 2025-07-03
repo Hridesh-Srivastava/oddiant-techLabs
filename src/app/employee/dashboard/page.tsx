@@ -2096,7 +2096,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
       </div>
     )
@@ -2104,7 +2104,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
 
   if (!employee) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Session Expired</CardTitle>
@@ -2124,7 +2124,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-8">
+    <div className="min-h-screen bg-gray-50 pb-8">
       {/* <EmployeeNavbar /> */}
 
       <Toaster position="top-center" />
@@ -2143,27 +2143,27 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                 onChange={(e) => setGlobalSearchTerm(e.target.value)}
               />
               {showSearchResults && (
-                <div className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700">
+                <div className="absolute z-50 mt-1 w-full bg-white rounded-md shadow-lg border border-gray-200">
                   <div className="p-2">
                     {searchResults.candidates.length === 0 &&
                     searchResults.jobs.length === 0 &&
                     searchResults.interviews.length === 0 ? (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 p-2">No results found</p>
+                      <p className="text-sm text-gray-500 p-2">No results found</p>
                     ) : (
                       <>
                         {searchResults.candidates.length > 0 && (
                           <div className="mb-2">
-                            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 px-2">
+                            <h3 className="text-xs font-semibold text-gray-500 mb-1 px-2">
                               Candidates
                             </h3>
                             {searchResults.candidates.slice(0, 3).map((candidate) => (
                               <div
                                 key={candidate._id}
-                                className="px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer"
+                                className="px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer"
                                 onClick={() => handleSearchResultClick("candidate", candidate._id)}
                               >
                                 <p className="text-sm font-medium">{candidate.name}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{candidate.email}</p>
+                                <p className="text-xs text-gray-500">{candidate.email}</p>
                               </div>
                             ))}
                             {searchResults.candidates.length > 3 && (
@@ -2176,15 +2176,15 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
 
                         {searchResults.jobs.length > 0 && (
                           <div className="mb-2">
-                            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 px-2">Jobs</h3>
+                            <h3 className="text-xs font-semibold text-gray-500 mb-1 px-2">Jobs</h3>
                             {searchResults.jobs.slice(0, 3).map((job) => (
                               <div
                                 key={job._id}
-                                className="px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer"
+                                className="px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer"
                                 onClick={() => handleSearchResultClick("job", job._id)}
                               >
                                 <p className="text-sm font-medium">{job.jobTitle}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                <p className="text-xs text-gray-500">
                                   {job.department} • {job.jobLocation}
                                 </p>
                               </div>
@@ -2199,17 +2199,17 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
 
                         {searchResults.interviews.length > 0 && (
                           <div>
-                            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 px-2">
+                            <h3 className="text-xs font-semibold text-gray-500 mb-1 px-2">
                               Interviews
                             </h3>
                             {searchResults.interviews.slice(0, 3).map((interview) => (
                               <div
                                 key={interview._id}
-                                className="px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer"
+                                className="px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer"
                                 onClick={() => handleSearchResultClick("interview", interview._id)}
                               >
                                 <p className="text-sm font-medium">{interview.candidate.name}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                <p className="text-xs text-gray-500">
                                   {interview.position} • {interview.date}
                                 </p>
                               </div>
@@ -2387,7 +2387,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                   )}
                   {!employee.companyName && (
                     <div className="text-center py-6">
-                      <p className="text-gray-500 dark:text-gray-400">Company profile not set up</p>
+                      <p className="text-gray-500">Company profile not set up</p>
                     </div>
                   )}
                   <div className="mt-4 flex justify-center">
@@ -2438,12 +2438,12 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                             <Badge
                               className={
                                 candidate.status === "Shortlisted"
-                                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                  ? "bg-green-100 text-green-800"
                                   : candidate.status === "Interview"
-                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                                    ? "bg-blue-100 text-blue-800"
                                     : candidate.status === "Rejected"
-                                      ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                                      : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-gray-100 text-gray-800"
                               }
                             >
                               {candidate.status}
@@ -2454,7 +2454,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                     ) : (
                       <div className="text-center py-6">
                         <Users className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                        <p className="text-gray-500 dark:text-gray-400">No candidates yet</p>
+                        <p className="text-gray-500">No candidates yet</p>
                         <Button variant="outline" className="mt-4" onClick={() => setActiveTab("candidates")}>
                           Add Candidates
                         </Button>
@@ -2484,21 +2484,21 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                   {jobPostings.length > 0 ? (
                     <div className="space-y-4">
                       {jobPostings.slice(0, 3).map((job) => (
-                        <div key={job._id} className="border rounded-lg p-4 dark:border-gray-700">
+                        <div key={job._id} className="border rounded-lg p-4">
                           <div className="flex justify-between items-start">
                             <div>
                               <h3 className="font-medium">{job.jobTitle}</h3>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                              <p className="text-sm text-gray-500">
                                 {job.department} • {job.jobType} • {job.jobLocation}
                               </p>
                               <div className="flex mt-2 space-x-4">
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                <span className="text-xs text-gray-500">
                                   <strong>{job.applicants}</strong> Applicants
                                 </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                <span className="text-xs text-gray-500">
                                   <strong>{job.interviews}</strong> Interviews
                                 </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                <span className="text-xs text-gray-500">
                                   <strong>{job.daysLeft}</strong> Days Left
                                 </span>
                               </div>
@@ -2549,13 +2549,13 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                     {interviews.length > 0 ? (
                       interviews.slice(0, 2).map((interview) => (
                         <div key={interview._id} className="flex items-start border-b pb-4 last:border-0 last:pb-0">
-                          <div className="bg-purple-100 dark:bg-purple-800 p-2 rounded-full mr-3">
-                            <Clock className="h-5 w-5 text-purple-600 dark:text-purple-300" />
+                          <div className="bg-purple-100 p-2 rounded-full mr-3">
+                            <Clock className="h-5 w-5 text-purple-600" />
                           </div>
                           <div>
                             <p className="font-medium">{interview.candidate.name}</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{interview.position}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            <p className="text-sm text-gray-500">{interview.position}</p>
+                            <p className="text-xs text-gray-500 mt-1">
                               {interview.date} at {interview.time}
                             </p>
                           </div>
@@ -2564,7 +2564,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                     ) : (
                       <div className="text-center py-6">
                         <Calendar className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                        <p className="text-gray-500 dark:text-gray-400">No upcoming interviews</p>
+                        <p className="text-gray-500">No upcoming interviews</p>
                       </div>
                     )}
 
@@ -2615,8 +2615,8 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
 
                 {filteredCandidates.length > 0 ? (
                   <>
-                    <div className="rounded-md border dark:border-gray-700">
-                      <div className="grid grid-cols-8 bg-gray-50 dark:bg-gray-700 p-3 text-sm font-medium text-gray-500">
+                    <div className="rounded-md border">
+                      <div className="grid grid-cols-8 bg-gray-50 p-3 text-sm font-medium text-gray-500">
                         <div className="col-span-1 flex items-center">
                           <Checkbox
                             id="select-all"
@@ -2646,8 +2646,8 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                       {paginateItems(filteredCandidates, currentCandidatesPage).map((candidate, index) => (
                         <div
                           key={candidate._id}
-                          className={`grid grid-cols-8 border-t dark:border-gray-700 p-3 items-center ${
-                            index % 2 === 0 ? "bg-gray-200 dark:bg-gray-200" : "bg-white"
+                          className={`grid grid-cols-8 border-t p-3 items-center ${
+                            index % 2 === 0 ? "bg-gray-200" : "bg-white"
                           }`}
                         >
                           <div className="col-span-1">
@@ -2664,7 +2664,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                             </Avatar>
                             <div>
                               <p className="font-medium">{candidate.name}</p>
-                              <p className="text-xs text-black dark:text-black">{candidate.email}</p>
+                              <p className="text-xs text-black">{candidate.email}</p>
                             </div>
                           </div>
                           <div>{candidate.role}</div>
@@ -2672,18 +2672,18 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                             <Badge
                               className={
                                 candidate.status === "Shortlisted"
-                                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                  ? "bg-green-100 text-green-800"
                                   : candidate.status === "Interview"
-                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                                    ? "bg-blue-100 text-blue-800"
                                     : candidate.status === "Rejected"
-                                      ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                                      : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-gray-100 text-gray-800"
                               }
                             >
                               {candidate.status}
                             </Badge>
                           </div>
-                          <div className="text-sm text-black dark:text-black">{candidate.appliedDate}</div>
+                          <div className="text-sm text-black">{candidate.appliedDate}</div>
                           <div className="flex justify-end space-x-2 col-span-2">
                             <Button
                               variant="outline"
@@ -2696,7 +2696,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="text-white dark:text-white bg-black"
+                              className="text-white bg-black"
                               onClick={() => router.push(`/employee/candidates/${candidate._id}/contact`)}
                             >
                               <Send className="h-4 w-4 mr-1" />
@@ -2723,10 +2723,10 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                     />
                   </>
                 ) : (
-                  <div className="text-center py-12 border rounded-lg dark:border-gray-700">
+                  <div className="text-center py-12 border rounded-lg">
                     <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">No candidates found</h3>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">
+                    <h3 className="text-lg font-medium text-gray-700">No candidates found</h3>
+                    <p className="text-gray-500 mt-1">
                       Try adjusting your filters or add new candidates
                     </p>
                     <Button className="mt-4" onClick={() => router.push("/employee/candidates/add")}>
@@ -2760,24 +2760,24 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                       {paginateItems(jobPostings, currentJobsPage).map((job, index) => (
                         <div
                           key={job._id}
-                          className={`border rounded-lg p-4 dark:border-gray-700 ${
+                          className={`border rounded-lg p-4 ${
                             index % 2 === 0 ? "bg-gray-200" : "bg-white"
                           }`}
                         >
                           <div className="flex justify-between items-start">
                             <div>
                               <h3 className="font-medium">{job.jobTitle}</h3>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                              <p className="text-sm text-gray-500">
                                 {job.department} • {job.jobType} • {job.jobLocation}
                               </p>
                               <div className="flex mt-2 space-x-4">
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                <span className="text-xs text-gray-500">
                                   <strong>{job.applicants}</strong> Applicants
                                 </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                <span className="text-xs text-gray-500">
                                   <strong>{job.interviews}</strong> Interviews
                                 </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                <span className="text-xs text-gray-500">
                                   <strong>{job.daysLeft}</strong> Days Left
                                 </span>
                               </div>
@@ -2867,7 +2867,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                         .map((interview) => (
                           <div
                             key={interview._id}
-                            className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200"
+                            className="bg-white rounded-xl p-6 shadow-md border border-gray-200 hover:shadow-lg transition-all duration-200"
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-4">
@@ -2877,11 +2877,11 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                                   </span>
                                 </div>
                                 <div>
-                                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                  <h4 className="text-lg font-semibold text-gray-900">
                                     {interview.candidate.name}
                                   </h4>
-                                  <p className="text-gray-600 dark:text-gray-400 text-sm">{interview.position}</p>
-                                  <p className="text-gray-500 dark:text-gray-500 text-xs">
+                                  <p className="text-gray-600 text-sm">{interview.position}</p>
+                                  <p className="text-gray-500 text-xs">
                                     {interview.date} at {interview.time}
                                   </p>
                                 </div>
@@ -2892,7 +2892,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => router.push(`/employee/interviews/${interview._id}`)}
-                                  className="flex items-center hover:bg-gray-50 dark:hover:bg-gray-700"
+                                  className="flex items-center hover:bg-gray-50"
                                 >
                                   <Eye className="h-4 w-4 mr-1" />
                                   Details
@@ -2901,7 +2901,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => router.push(`/employee/interviews/${interview._id}/reschedule`)}
-                                  className="flex items-center hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+                                  className="flex items-center hover:bg-yellow-50"
                                 >
                                   <Edit className="h-4 w-4 mr-1" />
                                   Reschedule
@@ -2937,9 +2937,9 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                           interview.status !== "expired"
                         )
                       }).length === 0 && (
-                        <div className="text-center py-8 border rounded-lg dark:border-gray-700">
+                        <div className="text-center py-8 border rounded-lg">
                           <Calendar className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                          <p className="text-gray-500 dark:text-gray-400">No interviews scheduled for today</p>
+                          <p className="text-gray-500">No interviews scheduled for today</p>
                         </div>
                       )}
                     </div>
@@ -2978,7 +2978,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                           .map((interview) => (
                             <div
                               key={interview._id}
-                              className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-200 cursor-pointer group"
+                              className="bg-white rounded-xl p-6 shadow-md border border-gray-200 hover:shadow-lg hover:border-purple-300 transition-all duration-200 cursor-pointer group"
                               onClick={() => router.push(`/employee/interviews/${interview._id}`)}
                             >
                               <div className="flex items-center justify-between">
@@ -2989,10 +2989,10 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                                     </span>
                                   </div>
                                   <div>
-                                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                                    <h4 className="text-lg font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">
                                       {interview.candidate.name}
                                     </h4>
-                                    <p className="text-gray-600 dark:text-gray-400 text-sm">{interview.position}</p>
+                                    <p className="text-gray-600 text-sm">{interview.position}</p>
                                     <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
                                       <span className="flex items-center gap-1">
                                         <Calendar className="h-3 w-3" />
@@ -3014,7 +3014,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                                       e.stopPropagation()
                                       router.push(`/employee/interviews/${interview._id}`)
                                     }}
-                                    className="flex items-center hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:border-purple-300"
+                                    className="flex items-center hover:bg-purple-50 hover:border-purple-300"
                                   >
                                     <Eye className="h-4 w-4 mr-1" />
                                     Details
@@ -3026,9 +3026,9 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                           ))}
                       </div>
                     ) : (
-                      <div className="text-center py-8 border rounded-lg dark:border-gray-700">
+                      <div className="text-center py-8 border rounded-lg">
                         <Calendar className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                        <p className="text-gray-500 dark:text-gray-400">No upcoming interviews scheduled</p>
+                        <p className="text-gray-500">No upcoming interviews scheduled</p>
                       </div>
                     )}
                   </div>
@@ -3209,7 +3209,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium">Email Notifications</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="text-sm text-gray-500">
                           Receive email notifications for important updates
                         </p>
                       </div>
@@ -3231,7 +3231,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium">Application Updates</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="text-sm text-gray-500">
                           Get notified when candidates apply to your jobs
                         </p>
                       </div>
@@ -3253,7 +3253,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium">Interview Reminders</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="text-sm text-gray-500">
                           Receive reminders before scheduled interviews
                         </p>
                       </div>
@@ -3287,8 +3287,8 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                 <Separator className="my-4" />
 
                 <div className="space-y-4 pt-4">
-                  <h3 className="text-lg font-medium text-red-600 dark:text-red-400">Danger Zone</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <h3 className="text-lg font-medium text-red-600">Danger Zone</h3>
+                  <p className="text-sm text-gray-500">
                     Once you delete your account, there is no going back. Please be certain.
                   </p>
                   <Button variant="destructive" onClick={handleDeleteAccount} disabled={isDeletingAccount}>
@@ -3318,7 +3318,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
 
                   <div className="flex items-center space-x-2">
                     <div className="relative w-full md:w-64">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                       <Input
                         placeholder="Search resumes..."
                         className="pl-8"
@@ -3331,7 +3331,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                       variant="outline"
                       size="icon"
                       onClick={() => {
-                        console.log("🔄 Manual ATS refresh triggered...")
+                        console.log("Manual ATS refresh triggered...")
                         setAtsIsLoading(true)
                         fetchAtsResumes().finally(() => setAtsIsLoading(false))
                       }}
@@ -3346,7 +3346,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
 
               <CardContent>
                 {/* Enhanced Debug Information */}
-                <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-blue-200">
                   <div className="flex flex-wrap items-center gap-4 text-sm">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
@@ -3571,7 +3571,7 @@ function AtsCriteriaDropdown() {
   return (
     <div className="relative">
       <button
-        className="ml-2 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-100 text-black rounded flex items-center border border-gray-300 hover:bg-gray-200"
+        className="ml-2 px-2 py-1 text-xs bg-gray-100 text-black rounded flex items-center border border-gray-300 hover:bg-gray-200"
         onClick={() => setOpen((v) => !v)}
         type="button"
       >

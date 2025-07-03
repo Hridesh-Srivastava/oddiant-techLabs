@@ -178,7 +178,7 @@ export default function ContactCandidatePage({ params }: { params: Promise<{ id:
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
       </div>
     )
@@ -186,7 +186,7 @@ export default function ContactCandidatePage({ params }: { params: Promise<{ id:
 
   if (!candidate) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -196,8 +196,8 @@ export default function ContactCandidatePage({ params }: { params: Promise<{ id:
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Mail className="h-16 w-16 text-gray-300 mb-4" />
-              <h2 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">Candidate Not Found</h2>
-              <p className="text-gray-500 dark:text-gray-400 mb-6">
+              <h2 className="text-xl font-medium text-gray-700 mb-2">Candidate Not Found</h2>
+              <p className="text-gray-500 mb-6">
                 The candidate you are trying to contact does not exist or has been removed.
               </p>
               <Button onClick={() => router.push("/employee/dashboard?tab=candidates")}>View All Candidates</Button>
@@ -209,7 +209,7 @@ export default function ContactCandidatePage({ params }: { params: Promise<{ id:
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <Toaster position="top-center" />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <Button variant="ghost" className="mb-6" onClick={() => router.back()}>

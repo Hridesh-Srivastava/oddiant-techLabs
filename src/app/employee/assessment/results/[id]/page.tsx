@@ -482,7 +482,7 @@ export default function ResultDetailsPage() {
                       )}
 
                       {answer.questionType === "Written Answer" && answer.aiFeedback && (
-                        <div className="mt-2 text-sm text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-slate-800 rounded p-2">
+                        <div className="mt-2 text-sm text-blue-700 bg-blue-50 rounded p-2">
                           <div><b>AI Feedback:</b> {answer.aiFeedback}</div>
                           <div><b>AI Score:</b> {answer.aiScore}/100</div>
                         </div>

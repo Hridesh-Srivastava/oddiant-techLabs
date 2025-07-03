@@ -170,7 +170,7 @@ export default function ScheduleInterviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <Toaster position="top-center" />
       <EmployeeNavbar />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -199,7 +199,7 @@ export default function ScheduleInterviewPage() {
                       name="candidateId"
                       value={formData.candidateId}
                       onChange={handleCandidateChange}
-                      className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md"
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md"
                       required
                     >
                       <option value="">Select a candidate</option>
@@ -224,7 +224,7 @@ export default function ScheduleInterviewPage() {
                       name="jobId"
                       value={formData.jobId}
                       onChange={handleJobChange}
-                      className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md"
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md"
                     >
                       <option value="">Select a job</option>
                       {jobs.length > 0 ? (
@@ -283,7 +283,7 @@ export default function ScheduleInterviewPage() {
                       name="duration"
                       value={formData.duration}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md"
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md"
                     >
                       <option value="30">30 minutes</option>
                       <option value="45">45 minutes</option>

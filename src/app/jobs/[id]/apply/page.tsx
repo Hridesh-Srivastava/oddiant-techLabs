@@ -2239,14 +2239,14 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <Toaster position="top-center" />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
@@ -2427,11 +2427,11 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                             required
                           />
                           {showCityDropdown && filteredCities.length > 0 && (
-                            <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto">
+                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
                               {filteredCities.map((item, idx) => (
                                 <div
                                   key={idx}
-                                  className="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                                  className="px-4 py-2 cursor-pointer hover:bg-gray-100"
                                   onClick={() => handleCitySelect(item.city, item.state)}
                                 >
                                   {item.city}
@@ -2566,11 +2566,11 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                                   placeholder="Type to search courses..."
                                 />
                                 {activeDegreeDropdownIndex === index && filteredDegrees.length > 0 && (
-                                  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto">
+                                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
                                     {filteredDegrees.map((degree, idx) => (
                                       <div
                                         key={idx}
-                                        className="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        className="px-4 py-2 cursor-pointer hover:bg-gray-100"
                                         onClick={() => handleDegreeSelect(degree, index)}
                                       >
                                         {degree}
@@ -2894,7 +2894,7 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                           {formData.preferredCities.map((city, index) => (
                             <div
                               key={index}
-                              className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-1"
+                              className="flex items-center bg-gray-100 rounded-full px-3 py-1"
                             >
                               <span className="text-sm">{city}</span>
                               <Button
@@ -3049,7 +3049,7 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                           {formData.skills.map((skill, index) => (
                             <div
                               key={index}
-                              className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-1"
+                              className="flex items-center bg-gray-100 rounded-full px-3 py-1"
                             >
                               <span className="text-sm">{skill}</span>
                               <Button
@@ -3162,7 +3162,7 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                             </Button>
                           </div>
                           {uploadedUrls.resumeUrl && (
-                            <div className="text-sm text-green-600 dark:text-green-400">
+                            <div className="text-sm text-green-600">
                               Resume uploaded successfully! ✓
                             </div>
                           )}
@@ -3193,7 +3193,7 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                             </Button>
                           </div>
                           {uploadedUrls.videoResumeUrl && (
-                            <div className="text-sm text-green-600 dark:text-green-400">
+                            <div className="text-sm text-green-600">
                               Video Resume uploaded successfully! ✓
                             </div>
                           )}
@@ -3223,7 +3223,7 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                             </Button>
                           </div>
                           {uploadedUrls.audioBiodataUrl && (
-                            <div className="text-sm text-green-600 dark:text-green-400">
+                            <div className="text-sm text-green-600">
                               Audio Biodata uploaded successfully! ✓
                             </div>
                           )}
@@ -3253,7 +3253,7 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                             </Button>
                           </div>
                           {uploadedUrls.photographUrl && (
-                            <div className="text-sm text-green-600 dark:text-green-400">
+                            <div className="text-sm text-green-600">
                               Photograph uploaded successfully! ✓
                             </div>
                           )}

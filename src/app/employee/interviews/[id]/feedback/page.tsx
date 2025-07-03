@@ -116,7 +116,7 @@ export default function InterviewFeedbackPage({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
       </div>
     )
@@ -124,7 +124,7 @@ export default function InterviewFeedbackPage({
 
   if (!interview) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -133,8 +133,8 @@ export default function InterviewFeedbackPage({
 
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <h2 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">Interview Not Found</h2>
-              <p className="text-gray-500 dark:text-gray-400 mb-6">
+              <h2 className="text-xl font-medium text-gray-700 mb-2">Interview Not Found</h2>
+              <p className="text-gray-500 mb-6">
                 The interview you are trying to provide feedback for does not exist or has been removed.
               </p>
               <Button onClick={() => router.push("/employee/dashboard?tab=interviews")}>View All Interviews</Button>
@@ -146,7 +146,7 @@ export default function InterviewFeedbackPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <Toaster position="top-center" />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <Button variant="ghost" className="mb-6" onClick={() => router.push(`/employee/interviews/${interviewId}`)}>
@@ -172,14 +172,14 @@ export default function InterviewFeedbackPage({
                       className={`h-8 w-8 cursor-pointer ${
                         star <= (hoveredRating || rating)
                           ? "text-yellow-500 fill-yellow-500"
-                          : "text-gray-300 dark:text-gray-600"
+                          : "text-gray-300"
                       }`}
                       onClick={() => setRating(star)}
                       onMouseEnter={() => setHoveredRating(star)}
                       onMouseLeave={() => setHoveredRating(0)}
                     />
                   ))}
-                  <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
+                  <span className="ml-2 text-sm text-gray-500">
                     {rating > 0 ? `${rating} out of 5` : "Select a rating"}
                   </span>
                 </div>

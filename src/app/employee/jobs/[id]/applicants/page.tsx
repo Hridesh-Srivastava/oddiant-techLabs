@@ -211,7 +211,7 @@ export default function JobApplicantsPage({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
       </div>
     )
@@ -219,7 +219,7 @@ export default function JobApplicantsPage({
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="min-h-screen bg-gray-50 py-8">
         <EmployeeNavbar />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
@@ -229,8 +229,8 @@ export default function JobApplicantsPage({
 
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <h2 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">Error Loading Data</h2>
-              <p className="text-gray-500 dark:text-gray-400 mb-6">{error}</p>
+              <h2 className="text-xl font-medium text-gray-700 mb-2">Error Loading Data</h2>
+              <p className="text-gray-500 mb-6">{error}</p>
               <Button onClick={handleRefresh}>Try Again</Button>
             </CardContent>
           </Card>
@@ -241,7 +241,7 @@ export default function JobApplicantsPage({
 
   if (!job) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="min-h-screen bg-gray-50 py-8">
         <EmployeeNavbar />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
@@ -251,8 +251,8 @@ export default function JobApplicantsPage({
 
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <h2 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">Job Not Found</h2>
-              <p className="text-gray-500 dark:text-gray-400 mb-6">
+              <h2 className="text-xl font-medium text-gray-700 mb-2">Job Not Found</h2>
+              <p className="text-gray-500 mb-6">
                 The job posting you are looking for does not exist or has been removed.
               </p>
               <Button onClick={() => router.push("/employee/dashboard?tab=jobs")}>View All Jobs</Button>
@@ -264,7 +264,7 @@ export default function JobApplicantsPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <Toaster position="top-center" />
       <EmployeeNavbar />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -303,7 +303,7 @@ export default function JobApplicantsPage({
                   {isDownloading ? "Downloading..." : "Download in Excel"}
                 </Button>
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                   <Input
                     placeholder="Search applicants..."
                     className="pl-8 w-[250px]"
@@ -316,8 +316,8 @@ export default function JobApplicantsPage({
           </CardHeader>
           <CardContent>
             {filteredApplicants.length > 0 ? (
-              <div className="rounded-md border dark:border-gray-700">
-                <div className="grid grid-cols-8 bg-gray-50 dark:bg-gray-800 p-3 text-sm font-medium text-gray-500 dark:text-gray-400">
+              <div className="rounded-md border">
+                <div className="grid grid-cols-8 bg-gray-50 p-3 text-sm font-medium text-gray-500">
                   <div className="flex items-center">
                     <Checkbox
                       id="select-all"
@@ -339,7 +339,7 @@ export default function JobApplicantsPage({
                 </div>
 
                 {filteredApplicants.map((applicant) => (
-                  <div key={applicant._id} className="grid grid-cols-8 border-t dark:border-gray-700 p-3 items-center">
+                  <div key={applicant._id} className="grid grid-cols-8 border-t p-3 items-center">
                     <div className="flex items-center">
                       <Checkbox
                         id={`select-${applicant._id}`}
@@ -357,18 +357,18 @@ export default function JobApplicantsPage({
                       </Avatar>
                       <div>
                         <p className="font-medium">{applicant.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{applicant.email}</p>
+                        <p className="text-xs text-gray-500">{applicant.email}</p>
                       </div>
                     </div>
                     <div>
                       <ApplicantStatus applicantId={applicant._id} currentStatus={applicant.status} jobId={jobId} />
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">{applicant.appliedDate}</div>
+                    <div className="text-sm text-gray-500">{applicant.appliedDate}</div>
                     <div className="col-span-2 truncate text-sm">
                       {applicant.lastComment ? (
-                        <p className="text-gray-600 dark:text-gray-300 italic">{applicant.lastComment}</p>
+                        <p className="text-gray-600 italic">{applicant.lastComment}</p>
                       ) : (
-                        <p className="text-gray-400 dark:text-gray-500">No comments yet</p>
+                        <p className="text-gray-400">No comments yet</p>
                       )}
                     </div>
                     <div className="flex justify-end space-x-2">
@@ -392,9 +392,9 @@ export default function JobApplicantsPage({
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12 border rounded-lg dark:border-gray-700">
-                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">No applicants found</h3>
-                <p className="text-gray-500 dark:text-gray-400 mt-1">
+              <div className="text-center py-12 border rounded-lg">
+                <h3 className="text-lg font-medium text-gray-700">No applicants found</h3>
+                <p className="text-gray-500 mt-1">
                   {searchTerm ? "Try a different search term" : "No one has applied to this job yet"}
                 </p>
               </div>

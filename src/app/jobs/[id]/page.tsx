@@ -213,17 +213,17 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
                     <span>{job.jobLocation}</span>
                   </div>
                   <div className="flex items-center">
-                    <Briefcase className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
+                    <Briefcase className="h-5 w-5 text-gray-500 mr-2 flex-shrink-0" />
                     <span>{job.jobType}</span>
                   </div>
                   <div className="flex items-center">
-                    <Clock className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
+                    <Clock className="h-5 w-5 text-gray-500 mr-2 flex-shrink-0" />
                     <span>{job.experienceRange}</span>
                   </div>
                   {/* Department field - explicitly displayed */}
                   {job.department && (
                     <div className="flex items-center">
-                      <Building className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
+                      <Building className="h-5 w-5 text-gray-500 mr-2 flex-shrink-0" />
                       <span>{job.department}</span>
                     </div>
                   )}
@@ -249,7 +249,7 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
 
                 <div>
                   <h3 className="text-lg font-medium mb-3">Job Description</h3>
-                  <div className="prose dark:prose-invert max-w-none">
+                  <div className="prose max-w-none">
                     <p className="whitespace-pre-line">{job.jobDescription}</p>
                   </div>
                 </div>
@@ -276,7 +276,7 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
                     <div>
                       <h3 className="text-lg font-medium mb-3">Educational Requirements</h3>
                       <div className="flex items-center">
-                        <GraduationCap className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
+                        <GraduationCap className="h-5 w-5 text-gray-500 mr-2 flex-shrink-0" />
                         <span>
                           {job.educationalPreference === "high_school"
                             ? "High School"
@@ -323,7 +323,7 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
                     <div>
                       <h3 className="text-lg font-medium mb-3">Gender Preference</h3>
                       <div className="flex items-center">
-                        <Users className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
+                        <Users className="h-5 w-5 text-gray-500 mr-2 flex-shrink-0" />
                         <div className="flex flex-wrap gap-2">
                           {job.genderPreference.map((gender, index) => (
                             <Badge key={index} variant="outline">
@@ -359,12 +359,12 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
                       <h3 className="text-lg font-medium mb-3">Screening Questions</h3>
                       <div className="space-y-3">
                         {job.questions.map((question, index) => (
-                          <div key={index} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+                          <div key={index} className="p-3 bg-gray-50 rounded-md">
                             <p className="font-medium">
                               Q{index + 1}: {question}
                             </p>
                             {job.answers && job.answers[index] && (
-                              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              <p className="text-sm text-gray-500 mt-1">
                                 <span className="font-medium">Expected answer:</span> {job.answers[index]}
                               </p>
                             )}
@@ -398,7 +398,7 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
                   </div>
                 )}
                 {!job.aboutCompany && !job.websiteLink && (
-                  <p className="text-gray-500 dark:text-gray-400">No company information provided</p>
+                  <p className="text-gray-500">No company information provided</p>
                 )}
               </CardContent>
             </Card>
@@ -430,12 +430,12 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
                   )}
                 </Button>
                 <div className="text-center mt-4">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-gray-500">
                     <Calendar className="h-4 w-4 inline-block mr-1" />
                     Posted on {new Date(job.createdAt).toLocaleDateString()}
                   </p>
                   {job.daysLeft !== undefined && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-sm text-gray-500 mt-1">
                       {job.daysLeft > 0 ? `${job.daysLeft} days left to apply` : "Application deadline has passed"}
                     </p>
                   )}
@@ -449,7 +449,7 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Job ID</span>
+                  <span className="text-gray-500">Job ID</span>
                   <div className="flex items-center max-w-[150px] sm:max-w-full">
                     <span className="font-medium truncate">{jobId}</span>
                     <Button
@@ -464,18 +464,18 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-500 dark:text-gray-400">Status</span>
+                  <span className="text-gray-500">Status</span>
                   <Badge className={getStatusBadgeVariant(job.status)}>
                     {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
                   </Badge>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-500 dark:text-gray-400">Posted on</span>
+                  <span className="text-gray-500">Posted on</span>
                   <span className="font-medium">{new Date(job.createdAt).toLocaleDateString()}</span>
                 </div>
                 {job.daysLeft !== undefined && (
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-500 dark:text-gray-400">Days Left</span>
+                    <span className="text-gray-500">Days Left</span>
                     <span className="font-medium">{job.daysLeft}</span>
                   </div>
                 )}

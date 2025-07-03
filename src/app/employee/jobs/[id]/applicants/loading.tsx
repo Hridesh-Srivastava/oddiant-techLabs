@@ -4,7 +4,7 @@ import { EmployeeNavbar } from "@/components/layout/employee-navbar"
 
 export default function JobApplicantsLoading() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <EmployeeNavbar />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="h-10 w-24 mb-6">
@@ -26,8 +26,8 @@ export default function JobApplicantsLoading() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border dark:border-gray-700">
-              <div className="grid grid-cols-8 bg-gray-50 dark:bg-gray-800 p-3">
+            <div className="rounded-md border">
+              <div className="grid grid-cols-8 bg-gray-50 p-3">
                 <Skeleton className="h-5 w-20" />
                 <div className="col-span-2">
                   <Skeleton className="h-5 w-24" />
@@ -43,7 +43,7 @@ export default function JobApplicantsLoading() {
               </div>
 
               {Array.from({ length: 5 }).map((_, index) => (
-                <div key={index} className="grid grid-cols-8 border-t dark:border-gray-700 p-3 items-center">
+                <div key={index} className="grid grid-cols-8 border-t p-3 items-center">
                   <Skeleton className="h-5 w-5" />
                   <div className="col-span-2 flex items-center">
                     <Skeleton className="h-8 w-8 rounded-full mr-2" />

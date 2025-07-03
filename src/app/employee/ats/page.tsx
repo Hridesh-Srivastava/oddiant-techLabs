@@ -201,7 +201,7 @@ export default function ATSPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50">
       <Toaster position="top-center" />
       <EmployeeNavbar />
 
@@ -262,7 +262,7 @@ export default function ATSPage() {
 
                   <div className="flex items-center space-x-2">
                     <div className="relative w-full md:w-64">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                       <Input
                         placeholder="Search resumes..."
                         className="pl-8"
@@ -315,7 +315,7 @@ export default function ATSPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Resume List */}
                       <div className="border rounded-md overflow-hidden">
-                        <div className="bg-gray-50 dark:bg-gray-800 p-3 border-b">
+                        <div className="bg-gray-50 p-3 border-b">
                           <h3 className="font-medium">Candidates</h3>
                         </div>
 
@@ -330,8 +330,8 @@ export default function ATSPage() {
                             filteredResumes.map((resume) => (
                               <div
                                 key={resume.id}
-                                className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
-                                  selectedResume?.id === resume.id ? "bg-gray-100 dark:bg-gray-800" : ""
+                                className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+                                  selectedResume?.id === resume.id ? "bg-gray-100" : ""
                                 }`}
                                 onClick={() => setSelectedResume(resume)}
                               >
@@ -375,7 +375,7 @@ export default function ATSPage() {
 
                       {/* Resume Viewer */}
                       <div className="border rounded-md overflow-hidden">
-                        <div className="bg-gray-50 dark:bg-gray-800 p-3 border-b">
+                        <div className="bg-gray-50 p-3 border-b">
                           <h3 className="font-medium">Resume Preview</h3>
                         </div>
 

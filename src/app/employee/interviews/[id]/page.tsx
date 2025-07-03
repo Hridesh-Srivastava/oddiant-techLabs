@@ -164,15 +164,15 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
   const getStatusColor = (status: string) => {
     switch (status) {
       case "scheduled":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+        return "bg-blue-100 text-blue-800"
       case "rescheduled":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+        return "bg-yellow-100 text-yellow-800"
       case "completed":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+        return "bg-green-100 text-green-800"
       case "cancelled":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+        return "bg-red-100 text-red-800"
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+        return "bg-gray-100 text-gray-800"
     }
   }
 
@@ -284,7 +284,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900">Loading interview details</h3>
@@ -296,7 +296,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
 
   if (!interview) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="min-h-screen bg-gray-50 py-8">
         <EmployeeNavbar />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
@@ -307,8 +307,8 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <AlertTriangle className="h-16 w-16 text-gray-300 mb-4" />
-              <h2 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">Interview Not Found</h2>
-              <p className="text-gray-500 dark:text-gray-400 mb-6">
+              <h2 className="text-xl font-medium text-gray-700 mb-2">Interview Not Found</h2>
+              <p className="text-gray-500 mb-6">
                 The interview you are looking for does not exist or has been removed.
               </p>
               <Button onClick={() => router.push("/employee/interviews")}>View All Interviews</Button>
@@ -320,7 +320,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <Toaster position="top-center" />
       <EmployeeNavbar />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -337,7 +337,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-2xl">{interview.position}</CardTitle>
-                  <p className="text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-gray-500 mt-1">
                     Interview with {interview.candidate?.name || "Unknown Candidate"}
                   </p>
                 </div>
@@ -459,14 +459,14 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
                         <Calendar className="h-5 w-5 text-gray-500 mr-3" />
                         <div>
                           <p className="font-medium">Date</p>
-                          <p className="text-gray-600 dark:text-gray-400">{formatDate(interview.date)}</p>
+                          <p className="text-gray-600">{formatDate(interview.date)}</p>
                         </div>
                       </div>
                       <div className="flex items-center">
                         <Clock className="h-5 w-5 text-gray-500 mr-3" />
                         <div>
                           <p className="font-medium">Time</p>
-                          <p className="text-gray-600 dark:text-gray-400">
+                          <p className="text-gray-600">
                             {formatTime(interview.time)} ({interview.duration} minutes)
                           </p>
                         </div>
@@ -505,7 +505,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
                     {interview.notes && (
                       <div>
                         <p className="font-medium mb-2">Notes</p>
-                        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                        <div className="bg-gray-50 p-4 rounded-lg">
                           <p className="whitespace-pre-line">{interview.notes}</p>
                         </div>
                       </div>
@@ -539,7 +539,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
                             {new Date(feedback.submittedAt).toLocaleDateString()}
                           </span>
                         </div>
-                        <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">{feedback.feedback}</p>
+                        <p className="text-gray-700 whitespace-pre-line">{feedback.feedback}</p>
                       </div>
                     ))}
                   </div>
@@ -568,7 +568,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
                       </Avatar>
                       <div>
                         <h3 className="font-medium">{interview.candidate.name}</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{interview.candidate.role}</p>
+                        <p className="text-sm text-gray-500">{interview.candidate.role}</p>
                       </div>
                     </div>
 
@@ -601,7 +601,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
                     </Button>
                   </div>
                 ) : (
-                  <p className="text-gray-500 dark:text-gray-400">Candidate information not available</p>
+                  <p className="text-gray-500">Candidate information not available</p>
                 )}
               </CardContent>
             </Card>
@@ -616,7 +616,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
                   <div className="space-y-3">
                     <div>
                       <p className="font-medium">{interview.job.jobTitle}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Position</p>
+                      <p className="text-sm text-gray-500">Position</p>
                     </div>
                     <Button
                       variant="outline"
@@ -669,8 +669,8 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-start">
-                    <div className="bg-blue-100 dark:bg-blue-900 p-2 rounded-full mr-3">
-                      <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-300" />
+                    <div className="bg-blue-100 p-2 rounded-full mr-3">
+                      <Calendar className="h-4 w-4 text-blue-600" />
                     </div>
                     <div>
                       <p className="font-medium text-sm">Interview Scheduled</p>
@@ -680,8 +680,8 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
 
                   {interview.status === "rescheduled" && (
                     <div className="flex items-start">
-                      <div className="bg-yellow-100 dark:bg-yellow-900 p-2 rounded-full mr-3">
-                        <Clock className="h-4 w-4 text-yellow-600 dark:text-yellow-300" />
+                      <div className="bg-yellow-100 p-2 rounded-full mr-3">
+                        <Clock className="h-4 w-4 text-yellow-600" />
                       </div>
                       <div>
                         <p className="font-medium text-sm">Interview Rescheduled</p>
@@ -692,8 +692,8 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
 
                   {interview.status === "completed" && (
                     <div className="flex items-start">
-                      <div className="bg-green-100 dark:bg-green-900 p-2 rounded-full mr-3">
-                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-300" />
+                      <div className="bg-green-100 p-2 rounded-full mr-3">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
                       </div>
                       <div>
                         <p className="font-medium text-sm">Interview Completed</p>

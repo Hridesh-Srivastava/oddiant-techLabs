@@ -197,19 +197,19 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const getStatusColor = (status: string) => {
     switch (status) {
       case "open":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+        return "bg-green-100 text-green-800"
       case "hold":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+        return "bg-yellow-100 text-yellow-800"
       case "closed":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+        return "bg-red-100 text-red-800"
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+        return "bg-gray-100 text-gray-800"
     }
   }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
       </div>
     )
@@ -217,7 +217,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
   if (!job) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="min-h-screen bg-gray-50 py-8">
         <EmployeeNavbar />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
@@ -228,8 +228,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Briefcase className="h-16 w-16 text-gray-300 mb-4" />
-              <h2 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">Job Not Found</h2>
-              <p className="text-gray-500 dark:text-gray-400 mb-6">
+              <h2 className="text-xl font-medium text-gray-700 mb-2">Job Not Found</h2>
+              <p className="text-gray-500 mb-6">
                 The job posting you are looking for does not exist or has been removed.
               </p>
               <Button onClick={() => router.push("/employee/dashboard?tab=jobs")}>View All Jobs</Button>
@@ -241,7 +241,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <Toaster position="top-center" />
       <EmployeeNavbar />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -312,20 +312,20 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex items-center">
-                    <MapPin className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-2" />
+                    <MapPin className="h-5 w-5 text-gray-500 mr-2" />
                     <span>{job.jobLocation}</span>
                   </div>
                   <div className="flex items-center">
-                    <Briefcase className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-2" />
+                    <Briefcase className="h-5 w-5 text-gray-500 mr-2" />
                     <span>{job.jobType}</span>
                   </div>
                   <div className="flex items-center">
-                    <Clock className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-2" />
+                    <Clock className="h-5 w-5 text-gray-500 mr-2" />
                     <span>{job.experienceRange}</span>
                   </div>
                   {/* Department field - explicitly displayed */}
                   <div className="flex items-center">
-                    <Building className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-2" />
+                    <Building className="h-5 w-5 text-gray-500 mr-2" />
                     <span>{job.department || "Not specified"}</span>
                   </div>
                   {job.salaryRange && (
@@ -348,7 +348,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
                 <div>
                   <h3 className="text-lg font-medium mb-3">Job Description</h3>
-                  <div className="prose dark:prose-invert max-w-none">
+                  <div className="prose max-w-none">
                     <p className="whitespace-pre-line">{job.jobDescription}</p>
                   </div>
                 </div>
@@ -452,10 +452,10 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                       <h3 className="text-lg font-medium mb-3">Screening Questions</h3>
                       <div className="space-y-4">
                         {job.questions.map((question, index) => (
-                          <div key={index} className="border p-4 rounded-md dark:border-gray-700">
+                          <div key={index} className="border p-4 rounded-md">
                             <p className="font-medium mb-2">Q: {question}</p>
                             {job.answers && job.answers[index] && (
-                              <p className="text-gray-600 dark:text-gray-400">
+                              <p className="text-gray-600">
                                 <span className="font-medium">A:</span> {job.answers[index]}
                               </p>
                             )}
@@ -507,7 +507,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Job ID</span>
+                  <span className="text-gray-500">Job ID</span>
                   <div className="flex items-center max-w-[180px] sm:max-w-full">
                     <span className="font-medium text-right truncate">{jobId}</span>
                     <Button
@@ -524,23 +524,23 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-500 dark:text-gray-400">Posted on</span>
+                  <span className="text-gray-500">Posted on</span>
                   <span className="font-medium">{new Date(job.createdAt).toLocaleDateString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-500 dark:text-gray-400">Applicants</span>
+                  <span className="text-gray-500">Applicants</span>
                   <span className="font-medium">{job.applicants || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-500 dark:text-gray-400">Interviews</span>
+                  <span className="text-gray-500">Interviews</span>
                   <span className="font-medium">{job.interviews || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-500 dark:text-gray-400">Days Left</span>
+                  <span className="text-gray-500">Days Left</span>
                   <span className="font-medium">{job.daysLeft || 30}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-500 dark:text-gray-400">Status</span>
+                  <span className="text-gray-500">Status</span>
                   <Badge className={getStatusColor(job.status || "open")}>
                     {job.status ? job.status.charAt(0).toUpperCase() + job.status.slice(1) : "Open"}
                   </Badge>

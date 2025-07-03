@@ -136,7 +136,7 @@ export default function RescheduleInterviewPage({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
       </div>
     )
@@ -144,7 +144,7 @@ export default function RescheduleInterviewPage({
 
   if (!interview) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="min-h-screen bg-gray-50 py-8">
         <EmployeeNavbar />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
@@ -154,8 +154,8 @@ export default function RescheduleInterviewPage({
 
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <h2 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">Interview Not Found</h2>
-              <p className="text-gray-500 dark:text-gray-400 mb-6">
+              <h2 className="text-xl font-medium text-gray-700 mb-2">Interview Not Found</h2>
+              <p className="text-gray-500 mb-6">
                 The interview you are trying to reschedule does not exist or has been removed.
               </p>
               <Button onClick={() => router.push("/employee/dashboard?tab=interviews")}>View All Interviews</Button>
@@ -167,7 +167,7 @@ export default function RescheduleInterviewPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <Toaster position="top-center" />
       <EmployeeNavbar />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -225,7 +225,7 @@ export default function RescheduleInterviewPage({
                     name="duration"
                     value={formData.duration}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md"
                   >
                     <option value="30">30 minutes</option>
                     <option value="45">45 minutes</option>

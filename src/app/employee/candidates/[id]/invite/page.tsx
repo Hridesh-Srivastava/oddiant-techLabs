@@ -171,13 +171,13 @@ export default function InviteCandidateToJobsPage({
   const getStatusColor = (status: string) => {
     switch (status) {
       case "open":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+        return "bg-green-100 text-green-800"
       case "hold":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+        return "bg-yellow-100 text-yellow-800"
       case "closed":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+        return "bg-red-100 text-red-800"
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+        return "bg-gray-100 text-gray-800"
     }
   }
 
@@ -254,7 +254,7 @@ export default function InviteCandidateToJobsPage({
                   className={`min-w-[40px] ${
                     currentPage === page
                       ? "bg-blue-600 hover:bg-blue-700 text-white"
-                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                      : "hover:bg-gray-100"
                   }`}
                 >
                   {page}
@@ -280,7 +280,7 @@ export default function InviteCandidateToJobsPage({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900">Loading candidate details</h3>
@@ -292,7 +292,7 @@ export default function InviteCandidateToJobsPage({
 
   if (!candidate) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="min-h-screen bg-gray-50 py-8">
         <EmployeeNavbar />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
@@ -303,8 +303,8 @@ export default function InviteCandidateToJobsPage({
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <AlertTriangle className="h-16 w-16 text-gray-300 mb-4" />
-              <h2 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">Candidate Not Found</h2>
-              <p className="text-gray-500 dark:text-gray-400 mb-6">
+              <h2 className="text-xl font-medium text-gray-700 mb-2">Candidate Not Found</h2>
+              <p className="text-gray-500 mb-6">
                 The candidate you are looking for does not exist or has been removed.
               </p>
               <Button onClick={() => router.push("/employee/dashboard?tab=candidates")}>View All Candidates</Button>
@@ -316,7 +316,7 @@ export default function InviteCandidateToJobsPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <Toaster position="top-center" />
       <EmployeeNavbar />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -338,8 +338,8 @@ export default function InviteCandidateToJobsPage({
                   Invite {candidate.salutation ? `${candidate.salutation} ` : ""}
                   {candidate.name} to Jobs
                 </h1>
-                <p className="text-gray-500 dark:text-gray-400">{candidate.email}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{candidate.role}</p>
+                <p className="text-gray-500">{candidate.email}</p>
+                <p className="text-sm text-gray-500">{candidate.role}</p>
               </div>
             </div>
           </CardContent>
@@ -353,9 +353,9 @@ export default function InviteCandidateToJobsPage({
               Your Job Postings
             </CardTitle>
             <div className="flex items-center justify-between">
-              <p className="text-gray-500 dark:text-gray-400">Select jobs to invite {candidate.name} to apply for</p>
+              <p className="text-gray-500">Select jobs to invite {candidate.name} to apply for</p>
               {jobs.length > 0 && (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray-500">
                   Showing {startIndex + 1}-{Math.min(endIndex, jobs.length)} of {jobs.length} jobs
                 </p>
               )}
@@ -382,7 +382,7 @@ export default function InviteCandidateToJobsPage({
               <>
                 <div className="space-y-4">
                   {currentJobs.map((job) => (
-                    <Card key={job._id} className="border border-gray-200 dark:border-gray-700">
+                    <Card key={job._id} className="border border-gray-200">
                       <CardContent className="p-6">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
@@ -394,33 +394,33 @@ export default function InviteCandidateToJobsPage({
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                              <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                              <div className="flex items-center text-sm text-gray-600">
                                 <MapPin className="h-4 w-4 mr-2" />
                                 {job.jobLocation}
                               </div>
-                              <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                              <div className="flex items-center text-sm text-gray-600">
                                 <Clock className="h-4 w-4 mr-2" />
                                 {job.experienceRange}
                               </div>
-                              <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                              <div className="flex items-center text-sm text-gray-600">
                                 <Calendar className="h-4 w-4 mr-2" />
                                 Posted {formatDate(job.createdAt)}
                               </div>
                             </div>
 
                             {job.salaryRange && (
-                              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                              <p className="text-sm text-gray-600 mb-2">
                                 <span className="font-medium">Salary:</span> {job.salaryRange}
                               </p>
                             )}
 
                             {job.department && (
-                              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                              <p className="text-sm text-gray-600 mb-2">
                                 <span className="font-medium">Department:</span> {job.department}
                               </p>
                             )}
 
-                            <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                            <div className="flex items-center justify-between text-sm text-gray-500">
                               <span>{job.applicants} applicants</span>
                               {job.daysLeft > 0 && <span>{job.daysLeft} days left</span>}
                             </div>
@@ -473,10 +473,10 @@ export default function InviteCandidateToJobsPage({
                         </div>
 
                         {job.status !== "open" && (
-                          <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                             <div className="flex items-center">
-                              <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mr-2" />
-                              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                              <AlertTriangle className="h-4 w-4 text-yellow-600 mr-2" />
+                              <p className="text-sm text-yellow-800">
                                 This job is currently {job.status}. Invitations can only be sent for open positions.
                               </p>
                             </div>
