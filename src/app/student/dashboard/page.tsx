@@ -58,6 +58,7 @@ import {
   MessageSquare,
   Layers,
   ChevronLeft,
+  Loader2,
 } from "lucide-react";
 import { MapPinIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -519,6 +520,16 @@ export default function StudentDashboardPage() {
 
   // Store all applications for filtering
   const [allApplications, setAllApplications] = useState<Application[]>([]);
+
+  const [isAssessmentsLoading, setIsAssessmentsLoading] = useState(false);
+
+  const handleAssessmentsClick = () => {
+    setIsAssessmentsLoading(true);
+    setTimeout(() => {
+      setIsAssessmentsLoading(false);
+      router.push("/student/dashboard/assessments");
+    }, 800); // mimic loading
+  };
 
   useEffect(() => {
     const fetchStudentData = async () => {
@@ -2365,6 +2376,18 @@ export default function StudentDashboardPage() {
             >
               <User className="h-4 w-4 inline mr-2" />
               My Profile
+            </button>
+            {/* New Assessments Tab */}
+            <button
+              onClick={handleAssessmentsClick}
+              className={`px-4 py-2 font-medium text-gray-500 hover:text-gray-700 flex items-center`}
+            >
+              {isAssessmentsLoading ? (
+                <Loader2 className="h-4 w-4 inline mr-2 animate-spin" />
+              ) : (
+                <Award className="h-4 w-4 inline mr-2" />
+              )}
+              Assessments
             </button>
             <button
               onClick={() => handleTabChange("settings")}
