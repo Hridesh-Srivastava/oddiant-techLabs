@@ -477,7 +477,10 @@ function solution() {
                   <option value="Full Stack">Full Stack</option>
                   <option value="QA">QA</option>
                   <option value="DevOps">DevOps</option>
-                  <option value="Data">Data</option>
+                  <option value="Problem_Solving">Problem Solving</option>
+                  <option value="Data_Science">Data Science</option>
+                  <option value="Data_Analysis">Data Analysis</option>
+                  <option value="Math/Aptitude">Math/Aptitude</option>
                 </select>
               </div>
 

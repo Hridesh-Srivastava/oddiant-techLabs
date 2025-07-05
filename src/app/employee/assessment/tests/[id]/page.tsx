@@ -348,6 +348,31 @@ export default function TestDetailsPage() {
         }
       }
 
+      // After building candidateMap from results and invitations
+      const candidateEmails = Array.from(candidateMap.keys());
+      // Fetch students with matching emails
+      const res = await fetch(`/api/students/by-emails`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emails: candidateEmails })
+      });
+      if (res.ok) {
+        const { students } = await res.json();
+        for (const student of students) {
+          if (!candidateMap.has(student.email)) {
+            candidateMap.set(student.email, {
+              _id: student._id,
+              name: student.firstName || student.name || student.email.split("@")[0],
+              email: student.email,
+              status: "Student",
+              score: null,
+              completionDate: null,
+              resultsDeclared: false,
+            });
+          }
+        }
+      }
+
       // Convert map to array and sort by status priority
       const candidatesArray = Array.from(candidateMap.values()).sort((a, b) => {
         const statusPriority: Record<string, number> = {

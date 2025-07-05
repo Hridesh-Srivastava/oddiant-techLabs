@@ -118,12 +118,24 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, message: "Job not found" }, { status: 404 })
       }
 
-      // Check if user already exists
+      // Check if user already exists in any collection
       let userId = null
       const existingUser = await db.collection("users").findOne({ email })
 
       if (existingUser) {
         userId = existingUser._id
+      } else {
+        // Check candidates collection if not found in users
+        const existingCandidate = await db.collection("candidates").findOne({ email })
+        if (existingCandidate) {
+          userId = existingCandidate._id
+        } else {
+          // Check students collection if not found in users or candidates
+          const existingStudent = await db.collection("students").findOne({ email })
+          if (existingStudent) {
+            userId = existingStudent._id
+          }
+        }
       }
 
       // Create candidate record with all fields

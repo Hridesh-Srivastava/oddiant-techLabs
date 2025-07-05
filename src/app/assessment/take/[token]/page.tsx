@@ -460,6 +460,7 @@ export default function TakeTestPage() {
         terminated: testTerminated,
         resultsDeclared: false,
         isPreview: isPreviewMode,
+        token: invitation.token, // Ensure token is always sent with the result
       }
 
       // Submit result - use different endpoint for preview

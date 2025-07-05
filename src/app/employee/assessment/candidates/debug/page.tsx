@@ -44,7 +44,9 @@ export default function CandidatesDebugPage() {
       console.log("Debug - All candidates:", data)
 
       if (data.success) {
-        setCandidates(data.candidates || [])
+        // Deduplicate by email in case both candidates and students are present
+        const deduped = (data.candidates || []).filter((c: any, i: any, arr: any) => arr.findIndex((x: any) => x.email === c.email) === i)
+        setCandidates(deduped)
       }
     } catch (error) {
       console.error("Error fetching candidates:", error)

@@ -105,6 +105,17 @@ export async function POST(request: NextRequest) {
             specificTestOnly: true,
           }
 
+          // Look up student by email
+          const student = await db.collection("students").findOne({ email });
+          if (student) {
+            Object.assign(invitation, { studentId: student._id });
+          }
+          // Look up candidate by email
+          const candidate = await db.collection("candidates").findOne({ email });
+          if (candidate) {
+            Object.assign(invitation, { candidateId: candidate._id });
+          }
+
           await db.collection("assessment_invitations").insertOne(invitation)
 
           // Send invitation email

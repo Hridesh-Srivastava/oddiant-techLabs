@@ -152,6 +152,35 @@ const  testId = param.id
       }
     }
 
+    // After processing invitations and results, get all emails in candidateMap
+    const candidateEmails = Array.from(candidateMap.keys());
+
+    // Fetch students with matching emails
+    const students = await db
+      .collection("students")
+      .find({ email: { $in: candidateEmails } })
+      .toArray();
+
+    // Merge students into candidateMap if not already present
+    for (const student of students) {
+      if (!candidateMap.has(student.email)) {
+        candidateMap.set(student.email, {
+          email: student.email,
+          name: student.firstName || student.name || student.email.split("@")[0],
+          testsAssigned: 0,
+          testsCompleted: 0,
+          totalScore: 0,
+          averageScore: 0,
+          score: "N/A",
+          status: "Student",
+          createdAt: student.createdAt || new Date(),
+          completionDate: null,
+          formattedCompletionDate: "N/A",
+          resultsDeclared: false,
+        });
+      }
+    }
+
     // Convert map to array and add IDs
     let candidates = Array.from(candidateMap.values()).map((candidate, index) => ({
       ...candidate,

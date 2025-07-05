@@ -274,6 +274,9 @@ export async function POST(request: NextRequest) {
       createdAt: new Date(),
       completionDate: new Date(),
       resultsDeclared: false, // Default to false - results not declared yet
+      studentId: invitation.studentId || null,
+      candidateId: invitation.candidateId || null,
+      token: invitation.token || null, // Save the invitation token for result mapping
     }
 
     // Insert result into database

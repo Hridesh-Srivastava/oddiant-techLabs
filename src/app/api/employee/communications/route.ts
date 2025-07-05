@@ -31,9 +31,17 @@ export async function POST(request: NextRequest) {
     // Find candidate to get contact information
     let candidate
     try {
+      // Check candidates collection first
       candidate = await db.collection("candidates").findOne({
         _id: new ObjectId(candidateId),
       })
+
+      // If not found in candidates, check students collection
+      if (!candidate) {
+        candidate = await db.collection("students").findOne({
+          _id: new ObjectId(candidateId),
+        })
+      }
     } catch (error) {
       console.error("Error finding candidate:", error)
       return NextResponse.json({ success: false, message: "Invalid candidate ID format" }, { status: 400 })
