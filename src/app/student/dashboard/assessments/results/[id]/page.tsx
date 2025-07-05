@@ -336,7 +336,7 @@ export default function TestResultPage() {
                     </span>
                   </div>
                   <Progress value={data.percentage} className="h-2" />
-                  <p className="text-sm text-gray-500">{data.percentage.toFixed(1)}% correct</p>
+                  <p className="text-sm text-gray-500">{(typeof data.percentage === "number" ? data.percentage : 0).toFixed(1)}% correct</p>
                 </div>
               ))}
             </div>

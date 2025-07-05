@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
     // Build query
     const query: any = { status: "Active" }
-    if (category && category !== "all") query["category"] = category
+    if (category && category !== "all") query["type"] = category
     if (difficulty && difficulty !== "all") query["difficulty"] = difficulty
 
     // Fetch tests
@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
         : 0,
       difficulty: test.difficulty || "intermediate",
       category: test.category || "general",
+      type: test.type || "",
       status: test.status || "Active",
       createdAt: test.createdAt ? (typeof test.createdAt === "string" ? test.createdAt : test.createdAt.toISOString()) : new Date().toISOString(),
     }))

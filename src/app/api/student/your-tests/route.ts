@@ -36,7 +36,8 @@ export async function GET(request: NextRequest) {
       query.status = status
     }
     if (category && category !== "all") {
-      query.category = category
+      // Filter by type only, case-insensitive
+      query["type"] = { $regex: `^${category}$`, $options: "i" };
     }
 
     // Fetch student's test results from assessment_results collection
@@ -60,9 +61,9 @@ export async function GET(request: NextRequest) {
           testId: result.testId?.toString() || "",
           testTitle: test?.name || test?.title || test?.testTitle || "Unknown Test",
           description: test?.description || "",
-          status: result.status || "in-progress",
+          status: result.status, // preserve original case for badge
           score: result.score || null,
-          totalQuestions: test?.questions?.length || test?.totalQuestions || 0,
+          totalQuestions: Array.isArray(test?.sections) ? test.sections.reduce((sum, section) => sum + (section.questions?.length || 0), 0) : (test?.questions?.length || test?.totalQuestions || 0),
           correctAnswers: result.correctAnswers || null,
           duration: test?.duration || 60,
           timeTaken: result.timeTaken || null,
@@ -70,6 +71,7 @@ export async function GET(request: NextRequest) {
           startedAt: result.startedAt,
           difficulty: test?.difficulty || "intermediate",
           category: test?.category || "general",
+          type: test?.type || "", // Add this line to sync type from backend
           grade: result.grade || null,
           progress: progress,
           token: result.token || null, // Ensure token is included in the response

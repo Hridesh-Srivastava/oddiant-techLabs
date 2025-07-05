@@ -21,22 +21,31 @@ export async function GET(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Build query for invitations
-    const query: any = {
+    console.log("[DEBUG] Using userId for query:", studentId);
+    // Build query for invitations using $expr to compare ObjectId to string
+    const baseQuery: any = {
       $or: [
-        { studentId: new ObjectId(studentId) },
-        { candidateId: new ObjectId(studentId) }
-      ],
-      expiresAt: { $gt: new Date() }, // Only non-expired invitations
+        { $expr: { $eq: [ { $toString: "$studentId" }, studentId ] } },
+        { $expr: { $eq: [ { $toString: "$candidateId" }, studentId ] } }
+      ]
     }
-
-    // Add status filter if provided
+    let query = { ...baseQuery };
     if (status && status !== "all") {
-      query.status = status
+      const normalizedStatus = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+      if (normalizedStatus === "Pending") {
+        query = { ...baseQuery, status: "Pending", expiresAt: { $gt: new Date() } };
+      } else if (normalizedStatus === "Completed") {
+        query = { ...baseQuery, status: "Completed" };
+      } else {
+        query = { ...baseQuery, status: normalizedStatus };
+      }
+    } else {
+      query = baseQuery;
     }
-
+    console.log("[DEBUG] Final MongoDB query:", JSON.stringify(query, null, 2));
     // Fetch invitations from assessment_invitations collection (not test_invitations)
-    const invitations = await db.collection("assessment_invitations").find(query).sort({ createdAt: -1 }).toArray()
+    const invitations = await db.collection("assessment_invitations").find(query).sort({ createdAt: -1 }).toArray();
+    console.log("[DEBUG] Invitations found:", invitations.map(i => ({ _id: i._id, studentId: i.studentId, candidateId: i.candidateId, status: i.status, email: i.email })));
 
     // Get test details for each invitation
     const invitationsWithTestDetails = await Promise.all(
@@ -56,9 +65,10 @@ export async function GET(request: NextRequest) {
           expiresAt: invitation.expiresAt,
           status: invitation.status || "pending",
           duration: test?.duration || 60,
-          questions: test?.questions?.length || test?.totalQuestions || 0,
+          questions: Array.isArray(test?.sections) ? test.sections.reduce((sum, section) => sum + (section.questions?.length || 0), 0) : (test?.questions?.length || test?.totalQuestions || 0),
           difficulty: test?.difficulty || "intermediate",
           category: test?.category || "general",
+          type: test?.type || "",
           token: invitation.token, // Include the token for frontend usage
         }
       }),

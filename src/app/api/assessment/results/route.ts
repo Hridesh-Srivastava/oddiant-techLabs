@@ -267,9 +267,13 @@ export async function POST(request: NextRequest) {
       resultData.status = (resultData.score >= (resultData.passingScore || 70)) ? 'Passed' : 'Failed';
     }
 
+    // Fetch the test to get its type
+    const test = await db.collection("assessment_tests").findOne({ _id: new ObjectId(resultData.testId) });
+
     // Create new result
     const newResult = {
       ...resultData,
+      type: test?.type || "", // Always include type from test
       createdBy: invitation.createdBy,
       createdAt: new Date(),
       completionDate: new Date(),

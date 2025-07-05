@@ -34,6 +34,7 @@ interface Test {
   questions: number
   difficulty: string
   category: string
+  type?: string // Add this line
   status: string
   createdAt: string
   token?: string // Added token for new logic
@@ -54,6 +55,7 @@ interface Invitation {
   difficulty: string
   category: string
   token?: string // Added token for new logic
+  type?: string // Add this line to fix linter error
 }
 
 interface YourTest {
@@ -71,6 +73,7 @@ interface YourTest {
   startedAt?: string
   difficulty: string
   category: string
+  type?: string // Add this line to fix linter error
   grade: string | null
   progress?: number
   token?: string // Added token for new logic
@@ -92,6 +95,7 @@ interface Result {
   category: string
   grade: string
   resultStatus: string
+  type?: string // Add this line
 }
 
 export default function StudentAssessmentDashboard() {
@@ -119,11 +123,13 @@ export default function StudentAssessmentDashboard() {
 
     // Filtered lists based on search
     const filteredTests = tests.filter((test) =>
-      test.title.toLowerCase().includes(availableTestsSearch.toLowerCase())
+      test.title.toLowerCase().includes(availableTestsSearch.toLowerCase()) ||
+      (test.id && test.id.toLowerCase().includes(availableTestsSearch.toLowerCase()))
     );
   
   const filteredInvitations = invitations.filter((inv) =>
-    (inv.testTitle || "").toLowerCase().includes(invitationsSearch.toLowerCase())
+    (inv.testTitle || "").toLowerCase().includes(invitationsSearch.toLowerCase()) ||
+    (inv.id && inv.id.toLowerCase().includes(invitationsSearch.toLowerCase()))
   );
   const filteredYourTests = yourTests.filter((test) =>
     (test.testTitle || "").toLowerCase().includes(yourTestsSearch.toLowerCase())
@@ -131,6 +137,82 @@ export default function StudentAssessmentDashboard() {
   const filteredResults = results.filter((result) =>
     (result.testTitle || "").toLowerCase().includes(resultsSearch.toLowerCase())
   );
+
+  // Add state for recent tests filter
+  const [showRecentTests, setShowRecentTests] = useState(false);
+
+  // Add state for recent invitations filter
+  const [showRecentInvitations, setShowRecentInvitations] = useState(false);
+
+  // Add state for recent your tests filter
+  const [showRecentYourTests, setShowRecentYourTests] = useState(false);
+
+  // Add state for recent results filter
+  const [showRecentResults, setShowRecentResults] = useState(false);
+
+  // Category options for test types
+  const categoryOptions = [
+    { value: "all", label: "All Categories" },
+    { value: "Frontend", label: "Frontend" },
+    { value: "Backend", label: "Backend" },
+    { value: "Full Stack", label: "Full Stack" },
+    { value: "QA", label: "QA" },
+    { value: "DevOps", label: "DevOps" },
+    { value: "Problem_Solving", label: "Problem Solving" },
+    { value: "Data_Science", label: "Data Science" },
+    { value: "Data_Analysis", label: "Data Analysis" },
+    { value: "Math/Aptitude", label: "Math/Aptitude" },
+  ];
+
+  // Filtered tests by category
+  const filteredByCategory = categoryFilter === "all"
+    ? filteredTests
+    : filteredTests.filter((test) => (test.type || "").replace(/\s+/g, "_").toLowerCase() === categoryFilter.toLowerCase());
+
+  // Filtered by recent
+  const now = new Date();
+  const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
+  const filteredByRecent = showRecentTests
+    ? filteredByCategory.filter((test) => new Date(test.createdAt) >= fiveDaysAgo)
+    : filteredByCategory;
+
+  // Map UI filter values to backend status values
+  const statusMap: Record<string, string> = {
+    all: "all",
+    pending: "Pending",
+    completed: "Completed",
+  };
+
+  // Filter by status using mapped backend values
+  const filteredByStatus = invitationStatusFilter === "all"
+    ? filteredInvitations
+    : filteredInvitations.filter((inv) => (inv.status || "").toLowerCase() === statusMap[invitationStatusFilter].toLowerCase());
+
+  // Filter by recent
+  const nowInv = new Date();
+  const fiveDaysAgoInv = new Date(nowInv.getTime() - 5 * 24 * 60 * 60 * 1000);
+  const filteredByRecentInv = showRecentInvitations
+    ? filteredByStatus.filter((inv) => new Date(inv.invitedAt) >= fiveDaysAgoInv)
+    : filteredByStatus;
+
+  // Filter for recent your tests (last 5 days)
+  const nowYT = new Date();
+  const fiveDaysAgoYT = new Date(nowYT.getTime() - 5 * 24 * 60 * 60 * 1000);
+  const filteredYourTestsByRecent = showRecentYourTests
+    ? filteredYourTests.filter((test) => new Date(test.completedAt || test.startedAt || 0) >= fiveDaysAgoYT)
+    : filteredYourTests;
+
+  // Update category filter for your tests to use type (like available tests)
+  const filteredYourTestsByCategory = yourTestsCategoryFilter === "all"
+    ? filteredYourTestsByRecent
+    : filteredYourTestsByRecent.filter((test) => (test.type || "").replace(/\s+/g, "_").toLowerCase() === yourTestsCategoryFilter.toLowerCase());
+
+  // Filter for recent results (last 5 days)
+  const nowRes = new Date();
+  const fiveDaysAgoRes = new Date(nowRes.getTime() - 5 * 24 * 60 * 60 * 1000);
+  const filteredResultsByRecent = showRecentResults
+    ? filteredResults.filter((result) => new Date(result.completedAt || 0) >= fiveDaysAgoRes)
+    : filteredResults;
 
   const handleLogout = async () => {
     try {
@@ -160,7 +242,8 @@ export default function StudentAssessmentDashboard() {
       const data = await response.json()
 
       if (data.success) {
-        setTests(data.tests)
+        // Map type from backend
+        setTests(data.tests.map((t: any) => ({ ...t, type: t.type || t.category || "" })))
       }
     } catch (error) {
       console.error("Error fetching tests:", error)
@@ -432,13 +515,29 @@ export default function StudentAssessmentDashboard() {
 
           {/* Available Tests Tab */}
           <TabsContent value="available">
-            <div className="mb-4">
+            <div className="mb-4 flex flex-col md:flex-row md:items-center md:space-x-4 space-y-2 md:space-y-0">
               <Input
                 placeholder="Search available tests..."
                 value={availableTestsSearch}
                 onChange={e => setAvailableTestsSearch(e.target.value)}
                 className="w-full max-w-md"
               />
+              <select
+                className="border rounded px-3 py-2"
+                value={categoryFilter}
+                onChange={e => setCategoryFilter(e.target.value)}
+              >
+                {categoryOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              <Button
+                variant={showRecentTests ? "default" : "outline"}
+                onClick={() => setShowRecentTests(!showRecentTests)}
+                className="ml-2"
+              >
+                {showRecentTests ? "Show All Tests" : "Show Recent Tests"}
+              </Button>
             </div>
             <Card>
               <CardHeader>
@@ -447,30 +546,6 @@ export default function StudentAssessmentDashboard() {
                     <CardTitle className="text-xl">Available Tests</CardTitle>
                     <CardDescription>Choose a test to begin your assessment</CardDescription>
                   </div>
-                  <div className="flex gap-4">
-                  <select
-                      value={categoryFilter}
-                      onChange={(e) => setCategoryFilter(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="all">All Categories</option>
-                      <option value="programming">Programming</option>
-                      <option value="frontend">Frontend</option>
-                      <option value="backend">Backend</option>
-                    </select>
-
-                    <select
-                      value={difficultyFilter}
-                      onChange={(e) => setDifficultyFilter(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="all">All Levels</option>
-                      <option value="beginner">Beginner</option>
-                      <option value="intermediate">Intermediate</option>
-                      <option value="advanced">Advanced</option>
-                    </select>
-
-                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -478,19 +553,15 @@ export default function StudentAssessmentDashboard() {
                   <div className="flex justify-center py-8">
                     <div className="text-gray-500">Loading tests...</div>
                   </div>
-                  ) : filteredTests.length === 0 ? (
+                ) : filteredByRecent.length === 0 ? (
                   <div className="text-center py-8">
                     <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">No tests available with current filters</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {filteredTests.map((test) => {
+                    {filteredByRecent.map((test) => {
                       const token = latestInvitationTokenMap[test.id];
-                      // Debug log to compare tokens and statuses
-                      const testResultTokensStatuses = yourTests.filter(t => t.testId === test.id).map(t => ({ token: t.token, status: t.status }));
-                      console.log('DEBUG: test.id', test.id, 'button token', token, 'result tokens/statuses', testResultTokensStatuses);
-                      // Find if there is a submission for this test and this token (latest invitation)
                       const isTestCompletedForToken = yourTests.some(
                         (t) =>
                           t.testId === test.id &&
@@ -502,6 +573,7 @@ export default function StudentAssessmentDashboard() {
                           <CardHeader>
                             <div className="flex justify-between items-start">
                               <div>
+                                <div className="text-xs text-black mb-1">ID: {test.id}</div>
                                 <CardTitle className="text-lg">{test.title}</CardTitle>
                                 <CardDescription className="mt-2">{test.description}</CardDescription>
                               </div>
@@ -517,7 +589,15 @@ export default function StudentAssessmentDashboard() {
                                 <FileText className="h-4 w-4" />
                                 <span>{test.questions} questions</span>
                               </div>
-                              <Badge variant="outline">{test.category}</Badge>
+                              {/* Test Type */}
+                              {['Frontend','Backend','Full Stack','QA','DevOps','Problem_Solving','Data_Science','Data_Analysis','Math/Aptitude'].includes(test.type || "") && (
+                                <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-semibold">{test.type}</span>
+                              )}
+                              {/* Created At */}
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-4 w-4" />
+                                <span className="text-xs">{formatDate(test.createdAt)}</span>
+                              </div>
                             </div>
                             {token && !isTestCompletedForToken ? (
                               <Button onClick={() => handleStartTest(token)} className="w-full">
@@ -547,13 +627,29 @@ export default function StudentAssessmentDashboard() {
 
           {/* Invitations Tab */}
           <TabsContent value="invitations">
-            <div className="mb-4">
+            <div className="mb-4 flex flex-col md:flex-row md:items-center md:space-x-4 space-y-2 md:space-y-0">
               <Input
                 placeholder="Search invitations..."
                 value={invitationsSearch}
                 onChange={e => setInvitationsSearch(e.target.value)}
                 className="w-full max-w-md"
               />
+              <select
+                value={invitationStatusFilter}
+                onChange={(e) => setInvitationStatusFilter(e.target.value)}
+                className="border rounded px-3 py-2"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+              </select>
+              <Button
+                variant={showRecentInvitations ? "default" : "outline"}
+                onClick={() => setShowRecentInvitations(!showRecentInvitations)}
+                className="ml-2"
+              >
+                {showRecentInvitations ? "Show All Invitations" : "Show Recent Invitations"}
+              </Button>
             </div>
             <Card>
               <CardHeader>
@@ -562,15 +658,6 @@ export default function StudentAssessmentDashboard() {
                     <CardTitle className="text-xl">Test Invitations</CardTitle>
                     <CardDescription>Invitations from instructors and organizations</CardDescription>
                   </div>
-                  <select
-                    value={invitationStatusFilter}
-                    onChange={(e) => setInvitationStatusFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="accepted">Accepted</option>
-                  </select>
                 </div>
               </CardHeader>
               <CardContent>
@@ -578,18 +665,19 @@ export default function StudentAssessmentDashboard() {
                   <div className="flex justify-center py-8">
                     <div className="text-gray-500">Loading invitations...</div>
                   </div>
-                ) : filteredInvitations.length === 0 ? (
+                ) : filteredByRecentInv.length === 0 ? (
                   <div className="text-center py-8">
                     <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">No invitations found</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {filteredInvitations.map((invitation) => (
+                    {filteredByRecentInv.map((invitation) => (
                       <Card key={invitation.id} className="border-l-4 border-l-orange-500">
                         <CardHeader>
                           <div className="flex justify-between items-start">
                             <div>
+                              <div className="text-xs text-black mb-1">ID: {invitation.id}</div>
                               <CardTitle className="text-lg">{invitation.testTitle}</CardTitle>
                               <CardDescription className="mt-2">{invitation.description}</CardDescription>
                               <div className="flex items-center gap-2 mt-3 text-sm text-gray-600">
@@ -610,11 +698,14 @@ export default function StudentAssessmentDashboard() {
                               <FileText className="h-4 w-4" />
                               <span>{invitation.questions} questions</span>
                             </div>
+                            {/* Test Type */}
+                            {['Frontend','Backend','Full Stack','QA','DevOps','Problem_Solving','Data_Science','Data_Analysis','Math/Aptitude'].includes(invitation.type || "") && (
+                              <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-semibold">{invitation.type}</span>
+                            )}
                             <div className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
                               <span>Expires: {formatDate(invitation.expiresAt)}</span>
                             </div>
-                            <Badge className={getDifficultyColor(invitation.difficulty)}>{invitation.difficulty}</Badge>
                           </div>
 
                           {invitation.status === "pending" && (
@@ -629,10 +720,10 @@ export default function StudentAssessmentDashboard() {
                             </div>
                           )}
 
-                          {invitation.status === "accepted" && (
-                            <Button onClick={() => handleStartTest(invitation.testId)} className="w-full">
-                              <Play className="h-4 w-4 mr-2" />
-                              Start Test
+                          {invitation.status === "completed" && (
+                            <Button className="w-full bg-green-600 text-white hover:bg-green-700" disabled>
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Completed
                             </Button>
                           )}
                         </CardContent>
@@ -646,13 +737,29 @@ export default function StudentAssessmentDashboard() {
 
           {/* Your Tests Tab */}
           <TabsContent value="your-tests">
-            <div className="mb-4">
+            <div className="mb-4 flex flex-col md:flex-row md:items-center md:space-x-4 space-y-2 md:space-y-0">
               <Input
                 placeholder="Search your tests..."
                 value={yourTestsSearch}
                 onChange={e => setYourTestsSearch(e.target.value)}
                 className="w-full max-w-md"
               />
+              <select
+                value={yourTestsCategoryFilter}
+                onChange={(e) => setYourTestsCategoryFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {categoryOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              <Button
+                variant={showRecentYourTests ? "default" : "outline"}
+                onClick={() => setShowRecentYourTests(!showRecentYourTests)}
+                className="ml-2"
+              >
+                {showRecentYourTests ? "Show All Tests" : "Your Recent Tests"}
+              </Button>
             </div>
             <Card>
               <CardHeader>
@@ -661,30 +768,6 @@ export default function StudentAssessmentDashboard() {
                     <CardTitle className="text-xl">Your Tests</CardTitle>
                     <CardDescription>Track your completed and in-progress assessments</CardDescription>
                   </div>
-                  <div className="flex gap-4">
-                    <select
-                      value={yourTestsStatusFilter}
-                      onChange={(e) => setYourTestsStatusFilter(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="all">All Status</option>
-                      <option value="completed">Completed</option>
-                      <option value="in-progress">In Progress</option>
-                    </select>
-
-                    <select
-                      value={yourTestsCategoryFilter}
-                      onChange={(e) => setYourTestsCategoryFilter(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="all">All Categories</option>
-                      <option value="programming">Programming</option>
-                      <option value="frontend">Frontend</option>
-                      <option value="backend">Backend</option>
-                      <option value="design">Design</option>
-                      <option value="computer science">Computer Science</option>
-                    </select>
-                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -692,14 +775,14 @@ export default function StudentAssessmentDashboard() {
                   <div className="flex justify-center py-8">
                     <div className="text-gray-500">Loading your tests...</div>
                   </div>
-                ) : filteredYourTests.length === 0 ? (
+                ) : filteredYourTestsByCategory.length === 0 ? (
                   <div className="text-center py-8">
                     <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">No tests found with current filters</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {filteredYourTests.map((test) => (
+                    {filteredYourTestsByCategory.map((test) => (
                       <Card
                         key={test.id}
                         className={`border-l-4 ${test.status === "completed" ? "border-l-green-500" : "border-l-blue-500"}`}
@@ -707,11 +790,27 @@ export default function StudentAssessmentDashboard() {
                         <CardHeader>
                           <div className="flex justify-between items-start">
                             <div>
+                              <div className="text-xs text-black mb-1">ID: {test.testId}</div>
                               <CardTitle className="text-lg">{test.testTitle}</CardTitle>
                               <CardDescription className="mt-2">{test.description}</CardDescription>
+                              {/* Test Type/Category Badge */}
+                              {['Frontend','Backend','Full Stack','QA','DevOps','Problem_Solving','Data_Science','Data_Analysis','Math/Aptitude'].includes(test.type || "") && (
+                                <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-semibold mt-2 inline-block">{test.type}</span>
+                              )}
+                              {/* Given Date */}
+                              <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
+                                <Calendar className="h-4 w-4" />
+                                <span className="text-black">Given on: {formatDate(test.completedAt || test.startedAt || "")}</span>
+                              </div>
                             </div>
                             <div className="flex gap-2">
-                              <Badge className={getStatusColor(test.status)}>{test.status}</Badge>
+                              {test.status === 'Failed' ? (
+                                <span className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">Failed</span>
+                              ) : test.status === 'Passed' ? (
+                                <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-semibold">Passed</span>
+                              ) : (
+                                <Badge className={getStatusColor(test.status)}>{test.status}</Badge>
+                              )}
                               {test.grade && (
                                 <Badge variant="outline" className={getGradeColor(test.grade)}>
                                   {test.grade}
@@ -730,7 +829,6 @@ export default function StudentAssessmentDashboard() {
                               <FileText className="h-4 w-4" />
                               <span>{test.totalQuestions} questions</span>
                             </div>
-                            <Badge variant="outline">{test.category}</Badge>
                           </div>
 
                           {test.status === "completed" && (
@@ -781,13 +879,29 @@ export default function StudentAssessmentDashboard() {
 
           {/* Results Tab */}
           <TabsContent value="results">
-            <div className="mb-4">
+            <div className="mb-4 flex flex-col md:flex-row md:items-center md:space-x-4 space-y-2 md:space-y-0">
               <Input
                 placeholder="Search results..."
                 value={resultsSearch}
                 onChange={e => setResultsSearch(e.target.value)}
                 className="w-full max-w-md"
               />
+              <select
+                value={resultsCategoryFilter}
+                onChange={(e) => setResultsCategoryFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {categoryOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              <Button
+                variant={showRecentResults ? "default" : "outline"}
+                onClick={() => setShowRecentResults(!showRecentResults)}
+                className="ml-2"
+              >
+                {showRecentResults ? "Show All Results" : "Your Recent Results"}
+              </Button>
             </div>
             <Card>
               <CardHeader>
@@ -796,18 +910,6 @@ export default function StudentAssessmentDashboard() {
                     <CardTitle className="text-xl">Test Results</CardTitle>
                     <CardDescription>View detailed results of your completed assessments</CardDescription>
                   </div>
-                  <select
-                    value={resultsCategoryFilter}
-                    onChange={(e) => setResultsCategoryFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="all">All Categories</option>
-                    <option value="programming">Programming</option>
-                    <option value="frontend">Frontend</option>
-                    <option value="backend">Backend</option>
-                    <option value="design">Design</option>
-                    <option value="computer science">Computer Science</option>
-                  </select>
                 </div>
               </CardHeader>
               <CardContent>
@@ -815,20 +917,25 @@ export default function StudentAssessmentDashboard() {
                   <div className="flex justify-center py-8">
                     <div className="text-gray-500">Loading results...</div>
                   </div>
-                ) : filteredResults.length === 0 ? (
+                ) : filteredResultsByRecent.length === 0 ? (
                   <div className="text-center py-8">
                     <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">No published results found</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {filteredResults.map((result) => (
+                    {filteredResultsByRecent.map((result) => (
                       <Card key={result.id} className="border-l-4 border-l-green-500">
                         <CardHeader>
                           <div className="flex justify-between items-start">
                             <div>
+                              <div className="text-xs text-black mb-1">ID: {result.id}</div>
                               <CardTitle className="text-lg">{result.testTitle}</CardTitle>
                               <CardDescription className="mt-2">{result.description}</CardDescription>
+                              {/* Test Type/Category Badge */}
+                              {['Frontend','Backend','Full Stack','QA','DevOps','Problem_Solving','Data_Science','Data_Analysis','Math/Aptitude'].includes(result.type || "") && (
+                                <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-semibold mt-2 inline-block">{result.type}</span>
+                              )}
                             </div>
                             <div className="flex gap-2">
                               <Badge className={getStatusColor(result.resultStatus)}>{result.resultStatus}</Badge>
@@ -850,8 +957,6 @@ export default function StudentAssessmentDashboard() {
                               <FileText className="h-4 w-4" />
                               <span>{result.totalQuestions} questions</span>
                             </div>
-                            <Badge className={getDifficultyColor(result.difficulty)}>{result.difficulty}</Badge>
-                            <Badge variant="outline">{result.category}</Badge>
                           </div>
 
                           <div className="mb-4">
