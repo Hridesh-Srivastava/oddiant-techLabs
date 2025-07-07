@@ -257,6 +257,7 @@ export function AdvancedCodeEditor({
   const [showSettings, setShowSettings] = useState(false)
   const [currentLanguage, setCurrentLanguage] = useState(language)
   const [lineNumbers, setLineNumbers] = useState(true)
+  const [showCopyPasteWarning, setShowCopyPasteWarning] = useState(false);
 
   // Store all code submissions for this question
   const [codeSubmissions, setCodeSubmissions] = useState<CodeSubmission[]>(initialTestCaseResults)
@@ -678,6 +679,13 @@ export function AdvancedCodeEditor({
     return "min(85vh, 1000px)";
   }, [isFullscreen]);
 
+  // Handler for copy/paste
+  const handleCopyPaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    setShowCopyPasteWarning(true);
+    setTimeout(() => setShowCopyPasteWarning(false), 2000);
+  }, []);
+
   return (
     <div className={className} style={{ ...fullscreenStyles, maxWidth: '98vw', width: '100%', margin: '0 auto' }}>
       <Card className="w-full h-full flex flex-col overflow-hidden" style={{ height: cardHeight, minHeight: isFullscreen ? '90vh' : '650px', maxHeight: isFullscreen ? '98vh' : '1000px', width: '100%' }}>
@@ -864,7 +872,40 @@ export function AdvancedCodeEditor({
                 />
               )}
               {/* Code Textarea */}
-              <div className={`flex-1 ${isFullscreen ? 'overflow-auto h-full' : 'min-h-0 h-full overflow-auto'}`}> 
+              <div className={`flex-1 relative ${isFullscreen ? 'overflow-auto h-full' : 'min-h-0 h-full overflow-auto'}`}> 
+                {showCopyPasteWarning && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 10,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      zIndex: 50,
+                      display: 'flex',
+                      justifyContent: 'center',
+                      pointerEvents: 'none',
+                      width: '90%',
+                      maxWidth: 500,
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: 'rgba(255, 0, 0, 0.4)',
+                        color: 'white',
+                        padding: '10px 24px',
+                        borderRadius: '8px',
+                        fontWeight: 600,
+                        fontSize: '1rem',
+                        boxShadow: '0 2px 12px rgba(0,0,0,0.10)',
+                        backdropFilter: 'blur(2px)',
+                        transition: 'opacity 0.3s',
+                        textAlign: 'center',
+                      }}
+                    >
+                      🚫 Copy-pasting is disabled in this editor
+                    </div>
+                  </div>
+                )}
                 <textarea
                   ref={textareaRef}
                   value={value}
@@ -878,6 +919,8 @@ export function AdvancedCodeEditor({
                   }}
                   placeholder="Start coding here..."
                   spellCheck={false}
+                  onCopy={handleCopyPaste}
+                  onPaste={handleCopyPaste}
                 />
               </div>
             </div>
