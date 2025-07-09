@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { toast, Toaster } from "sonner"
-import { RotateCw, Search, Eye, Filter, AlertCircle } from "lucide-react"
+import { RotateCw, Search, Eye, Filter, AlertCircle, LogOut } from "lucide-react"
 
 interface Employee {
   _id: string
@@ -171,6 +171,30 @@ export default function AdminEmployeesPage() {
       )}
 
       <h1 className="text-3xl font-semibold mb-6 text-black">Manage Employees</h1>
+
+      <div className="flex justify-end mb-4">
+        <Button
+          className="flex items-center gap-2 bg-black hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow-md transition-colors duration-150 font-semibold text-base"
+          onClick={async () => {
+            try {
+              const res = await fetch("/api/auth/logout", { method: "POST" })
+              if (res.ok) {
+                toast.success("Logged out successfully")
+                router.push("/auth/employee/login")
+              } else {
+                toast.error("Logout failed")
+              }
+            } catch {
+              toast.error("Logout failed")
+            }
+          }}
+        >
+          <span className="font-medium">Logout</span>
+          <span className="ml-2 flex items-center justify-center w-7 h-7 rounded bg-black group-hover:bg-green-700 transition-colors">
+            <LogOut className="w-4 h-4 text-white" />
+          </span>
+        </Button>
+      </div>
 
       <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
         <div className="flex flex-col md:flex-row items-center gap-2 w-full">
