@@ -57,6 +57,10 @@ export default function InvitationsPage() {
   >([])
   const [isGeneratingLink, setIsGeneratingLink] = useState(false)
 
+  // Search state for test dropdown
+  const [testSearch, setTestSearch] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
   useEffect(() => {
     fetchInvitations()
     fetchAvailableTests()
@@ -104,7 +108,7 @@ export default function InvitationsPage() {
 
   const fetchAvailableTests = async () => {
     try {
-      const response = await fetch("/api/assessment/tests?status=Active", {
+      const response = await fetch("/api/assessment/tests?status=Active&limit=1000", {
         method: "GET",
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -408,6 +412,18 @@ export default function InvitationsPage() {
     reader.readAsArrayBuffer(file)
   }
 
+  // Handle suggestion click
+  const handleSuggestionClick = (test: TestData) => {
+    setSelectedTest(test._id);
+    setTestSearch(test.name);
+    setShowSuggestions(false);
+  };
+
+  // Filtered tests for dropdown
+  const filteredTests = testSearch
+    ? availableTests.filter((test) => test.name.toLowerCase().includes(testSearch.toLowerCase()))
+    : availableTests;
+
   return (
     <AssessmentLayout>
       <div className="container py-6">
@@ -571,18 +587,69 @@ export default function InvitationsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="space-y-2">
+                  <div className="space-y-2" style={{ position: 'relative' }}>
+                    <label htmlFor="test-search" className="block text-sm font-medium">
+                      Search Test
+                    </label>
+                    <Input
+                      id="test-search"
+                      type="text"
+                      placeholder="Search tests..."
+                      value={testSearch}
+                      onChange={e => {
+                        setTestSearch(e.target.value);
+                        setShowSuggestions(true);
+                      }}
+                      onFocus={() => setShowSuggestions(true)}
+                      autoComplete="off"
+                      className="w-full px-3 py-2 border border-input rounded-md mb-2"
+                    />
+                   {showSuggestions && testSearch && filteredTests.length > 0 && (
+                     <ul style={{
+                       position: 'absolute',
+                       zIndex: 10,
+                       background: 'white',
+                       border: '1px solid #e5e7eb',
+                       borderRadius: '0.375rem',
+                       width: '100%',
+                       maxHeight: '180px',
+                       overflowY: 'auto',
+                       marginTop: '-0.5rem',
+                       boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+                     }}>
+                       {filteredTests.map(test => (
+                         <li
+                           key={test._id}
+                           style={{
+                             padding: '0.5rem 1rem',
+                             cursor: 'pointer',
+                             background: selectedTest === test._id ? '#f3f4f6' : 'white'
+                           }}
+                           onMouseDown={e => {
+                             e.preventDefault();
+                             handleSuggestionClick(test);
+                           }}
+                         >
+                           {test.name}
+                         </li>
+                       ))}
+                     </ul>
+                   )}
                     <label htmlFor="test-select" className="block text-sm font-medium">
                       Select Test
                     </label>
                     <select
                       id="test-select"
                       value={selectedTest}
-                      onChange={(e) => setSelectedTest(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedTest(e.target.value);
+                        const found = availableTests.find(t => t._id === e.target.value);
+                        if (found) setTestSearch(found.name);
+                      }}
                       className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-input"
                     >
                       <option value="">Choose a test</option>
-                      {availableTests.map((test) => (
+                      {filteredTests.map((test) => (
                         <option key={test._id} value={test._id}>
                           {test.name}
                         </option>
@@ -647,6 +714,12 @@ export default function InvitationsPage() {
             </Card>
           </div>
         </div>
+        {/* Hide suggestions when clicking outside */}
+        <div
+          tabIndex={-1}
+          style={{ position: 'fixed', inset: 0, zIndex: 9, display: showSuggestions ? 'block' : 'none' }}
+          onMouseDown={() => setShowSuggestions(false)}
+        />
       </div>
     </AssessmentLayout>
   )
