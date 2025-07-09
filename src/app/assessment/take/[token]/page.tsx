@@ -230,7 +230,6 @@ export default function TakeTestPage() {
   // FIXED: Updated function to handle code submissions instead of individual test case results
   const handleCodeSubmissions = useCallback(
     (questionId: string, submissions: CodeSubmission[]) => {
-      console.log(`Storing code submissions for question ${questionId}:`, submissions)
       const currentQuestionData = test?.sections[currentSection]?.questions[currentQuestion]
       if (currentQuestionData && currentQuestionData.id === questionId) {
         const questionKey = `${test.sections[currentSection].id}-${questionId}`
@@ -248,17 +247,18 @@ export default function TakeTestPage() {
           console.warn("Failed to store in localStorage:", e)
         }
 
-        // Update current code stats for counter and badges
+        // Calculate visible (non-hidden) test cases
+        const visibleTestCases = (currentQuestionData.testCases || []).filter((tc: any) => !tc.isHidden)
+        const total = visibleTestCases.length
+        let passed = 0
+        let failed = 0
         if (submissions && submissions.length > 0) {
           const latest = submissions[submissions.length - 1]
-          setCurrentCodeStats({
-            passed: latest.passedCount,
-            failed: latest.totalCount - latest.passedCount,
-            total: latest.totalCount,
-          })
-        } else {
-          setCurrentCodeStats({ passed: 0, failed: 0, total: 0 })
+          // Only count visible test cases
+          passed = (latest.results || []).filter((r: any, idx: number) => visibleTestCases[idx] && r.passed).length
+          failed = total - passed
         }
+        setCurrentCodeStats({ passed, failed, total })
       }
     },
     [test, currentSection, currentQuestion],
@@ -2175,8 +2175,7 @@ export default function TakeTestPage() {
                                           <div className="flex items-center gap-2 flex-wrap">
                                             <span className="text-sm font-medium">Test Cases:</span>
                                             <span className="inline-block px-2 py-1 rounded bg-red-600 text-white text-xs font-mono border border-red-600">
-                                              {currentCodeStats.passed + currentCodeStats.failed}/
-                                              {(test.sections[currentSection].questions[currentQuestion].testCases?.filter((tc: any) => !tc.isHidden)?.length ?? 0)}
+                                              {currentCodeStats.passed + currentCodeStats.failed}/{currentCodeStats.total}
                                             </span>
                                           </div>
                                           <div className="flex items-center gap-2 flex-wrap">

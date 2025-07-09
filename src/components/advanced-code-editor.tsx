@@ -1467,6 +1467,13 @@ export function AdvancedCodeEditor({
     return () => document.removeEventListener("keydown", handleKeyDown)
   }, [handleDownload, handleRunCode])
 
+  // Ensure parent always receives latest test case results for badge/counter updates
+  useEffect(() => {
+    if (onTestCaseResults && questionId) {
+      onTestCaseResults(questionId, codeSubmissions)
+    }
+  }, [codeSubmissions, onTestCaseResults, questionId])
+
   const fullscreenStyles = useMemo(
     () =>
       isFullscreen

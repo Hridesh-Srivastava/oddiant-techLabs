@@ -262,6 +262,51 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Invitation not found" }, { status: 404 })
     }
 
+    // --- RESOLVE FULL CANDIDATE NAME BEFORE INSERTING RESULT ---
+    let resolvedCandidateName = "";
+    if (invitation.studentId || invitation.candidateId || invitation.email) {
+      let candidateDoc = null;
+      if (invitation.studentId) {
+        candidateDoc = await db.collection("students").findOne({ _id: new ObjectId(invitation.studentId) });
+      }
+      if (!candidateDoc && invitation.candidateId) {
+        candidateDoc = await db.collection("candidates").findOne({ _id: new ObjectId(invitation.candidateId) });
+      }
+      if (!candidateDoc && invitation.email) {
+        candidateDoc = await db.collection("students").findOne({ email: invitation.email });
+      }
+      if (!candidateDoc && invitation.email) {
+        candidateDoc = await db.collection("candidates").findOne({ email: invitation.email });
+      }
+      if (candidateDoc) {
+        let fullName = "";
+        if (candidateDoc.salutation && typeof candidateDoc.salutation === "string" && candidateDoc.salutation.trim() !== "") {
+          fullName += candidateDoc.salutation.trim() + " ";
+        }
+        if (candidateDoc.firstName && typeof candidateDoc.firstName === "string" && candidateDoc.firstName.trim() !== "") {
+          fullName += candidateDoc.firstName.trim() + " ";
+        }
+        if (candidateDoc.middleName && typeof candidateDoc.middleName === "string" && candidateDoc.middleName.trim() !== "") {
+          fullName += candidateDoc.middleName.trim() + " ";
+        }
+        if (candidateDoc.lastName && typeof candidateDoc.lastName === "string" && candidateDoc.lastName.trim() !== "") {
+          fullName += candidateDoc.lastName.trim();
+        }
+        fullName = fullName.trim();
+        if (fullName !== "") {
+          resolvedCandidateName = fullName;
+        } else if (candidateDoc.name && typeof candidateDoc.name === "string" && candidateDoc.name.trim() !== "") {
+          resolvedCandidateName = candidateDoc.name.trim();
+        } else {
+          resolvedCandidateName = invitation.email.split("@")[0];
+        }
+      } else {
+        resolvedCandidateName = invitation.email.split("@")[0];
+      }
+    }
+    // Always set candidateName in resultData
+    resultData.candidateName = resolvedCandidateName;
+
     // AI evaluation for written answers
     if (Array.isArray(resultData.answers)) {
       for (const ans of resultData.answers) {

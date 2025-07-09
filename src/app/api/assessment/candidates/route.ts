@@ -179,6 +179,43 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date(),
     }
 
+    // --- RESOLVE FULL CANDIDATE NAME BEFORE INSERTING ---
+    let resolvedCandidateName = "";
+    if (email) {
+      let candidateDoc = null;
+      candidateDoc = await db.collection("students").findOne({ email });
+      if (!candidateDoc) {
+        candidateDoc = await db.collection("candidates").findOne({ email });
+      }
+      if (candidateDoc) {
+        let fullName = "";
+        if (candidateDoc.salutation && typeof candidateDoc.salutation === "string" && candidateDoc.salutation.trim() !== "") {
+          fullName += candidateDoc.salutation.trim() + " ";
+        }
+        if (candidateDoc.firstName && typeof candidateDoc.firstName === "string" && candidateDoc.firstName.trim() !== "") {
+          fullName += candidateDoc.firstName.trim() + " ";
+        }
+        if (candidateDoc.middleName && typeof candidateDoc.middleName === "string" && candidateDoc.middleName.trim() !== "") {
+          fullName += candidateDoc.middleName.trim() + " ";
+        }
+        if (candidateDoc.lastName && typeof candidateDoc.lastName === "string" && candidateDoc.lastName.trim() !== "") {
+          fullName += candidateDoc.lastName.trim();
+        }
+        fullName = fullName.trim();
+        if (fullName !== "") {
+          resolvedCandidateName = fullName;
+        } else if (candidateDoc.name && typeof candidateDoc.name === "string" && candidateDoc.name.trim() !== "") {
+          resolvedCandidateName = candidateDoc.name.trim();
+        } else {
+          resolvedCandidateName = email.split("@")[0];
+        }
+      } else {
+        resolvedCandidateName = email.split("@")[0];
+      }
+    }
+    // Always set name in newCandidate
+    newCandidate.name = resolvedCandidateName;
+
     const result = await db.collection("assessment_candidates").insertOne(newCandidate)
 
     return NextResponse.json(
