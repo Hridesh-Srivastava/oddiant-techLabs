@@ -23,6 +23,8 @@ import {
   Shield,
   Timer,
   RotateCcw,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -44,6 +46,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import ReactMarkdown from "react-markdown"
+import rehypeRaw from "rehype-raw"
 
 interface TestData {
   _id: string
@@ -84,6 +88,7 @@ interface QuestionData {
   codeLanguage?: string
   codeTemplate?: string
   testCases?: any[]
+  instructions?: string
 }
 
 interface CandidateData {
@@ -142,6 +147,7 @@ export default function TestDetailsPage() {
   const [showDeclareIndividualResultDialog, setShowDeclareIndividualResultDialog] = useState(false)
   const [isDeclaringIndividualResult, setIsDeclaringIndividualResult] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Set active tab from URL if present
   useEffect(() => {
@@ -698,6 +704,23 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
     }
   }
 
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true)
+    try {
+      await fetchTest()
+      await fetchResults()
+      await fetchCandidates()
+      await fetchTestStats()
+      toast.success("Page refreshed!")
+    } catch (e) {
+      toast.error("Failed to refresh page.")
+    } finally {
+      setIsRefreshing(false)
+    }
+  }, [fetchTest, fetchResults, fetchCandidates, fetchTestStats])
+
+  // Place auto-refresh effect here, after all functions are defined
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString("en-US", {
@@ -736,6 +759,15 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
         return "bg-gray-100 text-gray-800 hover:bg-gray-100"
     }
   }
+
+  const [currentSectionPage, setCurrentSectionPage] = useState(0);
+
+  const sectionsPerPage = 3;
+  const totalPages = Math.ceil(test?.sections.length || 0 / sectionsPerPage);
+  const paginatedSections = test?.sections.slice(
+    currentSectionPage * sectionsPerPage,
+    (currentSectionPage + 1) * sectionsPerPage
+  ) || [];
 
   if (isLoading) {
     return (
@@ -931,50 +963,79 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
                   <CardTitle>Test Content</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {test.sections.map((section, index) => (
-                      <div key={section.id} className="border rounded-md p-4">
-                        <h3 className="font-medium mb-2">
-                          Section {index + 1}: {section.title}
-                        </h3>
-                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-3">
-                          <div className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1" />
-                            {section.duration} minutes
-                          </div>
-                          <div>{section.questionType}</div>
-                          <div>{section.questions.length} questions</div>
-                        </div>
-                        <div className="space-y-2">
-                          {section.questions.slice(0, 3).map((question, qIndex) => (
-                            <div key={question.id} className="text-sm">
-                              <span className="font-medium">Q{qIndex + 1}:</span>{" "}
-                              {question.text.length > 100 ? `${question.text.substring(0, 100)}...` : question.text}
-                            </div>
-                          ))}
-                          {section.questions.length > 3 && (
-                            <div className="text-sm text-muted-foreground">
-                              + {section.questions.length - 3} more questions
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-
-                    {test.sections.length === 0 && (
-                      <div className="text-center py-6">
-                        <p className="text-muted-foreground">No sections added to this test yet.</p>
-                        <Button
-                          variant="outline"
-                          onClick={() => router.push(`/employee/assessment/tests/${testId}/edit`)}
-                          className="mt-2"
-                        >
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit Test
-                        </Button>
-                      </div>
-                    )}
+                  <div className="mb-6">
+                    <h2 className="text-xl font-bold mb-2">Instructions</h2>
+                    <div className="prose max-w-none">
+                      <ReactMarkdown rehypePlugins={[rehypeRaw]}>{test.instructions || "No instructions provided."}</ReactMarkdown>
+                    </div>
                   </div>
+                  {paginatedSections.map((section, sIdx) => (
+                    <div key={section.id} className="mb-8 border rounded-lg p-4 bg-white shadow-sm">
+                      <h3 className="text-lg font-semibold mb-2">
+                      Section {currentSectionPage * sectionsPerPage + sIdx + 1}: {section.title}
+                      </h3>
+                      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-3">
+                        <div>{section.duration} minutes</div>
+                        <div>{section.questionType}</div>
+                        <div>{section.questions.length} questions</div>
+                      </div>
+                      <div className="space-y-4">
+                        {section.questions.map((question, qIdx) => (
+                          <div key={question.id} className="border rounded-md p-3 bg-gray-50">
+                            <div className="flex flex-wrap gap-2 items-center mb-2">
+                              <span className="font-semibold">Q{qIdx + 1}:</span>
+                              <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800">{question.type}</span>
+                              <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-800">{question.points} marks</span>
+                            </div>
+                            <div className="prose max-w-none mb-2">
+                              <ReactMarkdown rehypePlugins={[rehypeRaw]}>{question.text}</ReactMarkdown>
+                            </div>
+                            {question.type === "Coding" && question.instructions && (
+                              <>
+                                <hr className="my-4 border-t border-blue-200 w-full" />
+                                <div className="prose max-w-none mb-4 border-l-4 border-blue-300 pl-4 bg-blue-50 py-2">
+                                  <div className="font-bold text-blue-800 text-lg mb-2">Instructions:</div>
+                                  <ReactMarkdown rehypePlugins={[rehypeRaw]}>{question.instructions}</ReactMarkdown>
+                                </div>
+                              </>
+                            )}
+                            {question.type === "Multiple Choice" && (
+                              <ul className="list-disc pl-6">
+                                {question.options?.map((opt, i) => (
+                                  <li key={i} className={String(opt).trim() === String(question.correctAnswer).trim() ? "font-bold text-green-700" : ""}>
+                                    {opt}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                            {question.type === "Coding" && (
+                              <div className="mt-2 space-y-2">
+                                {question.codeTemplate && (
+                                  <div>
+                                    <span className="font-medium">Code Template:</span>
+                                    <pre className="bg-gray-100 p-2 rounded overflow-x-auto text-xs">{question.codeTemplate}</pre>
+                                  </div>
+                                )}
+                                {question.testCases && (
+                                  <div>
+                                    <span className="font-medium">Test Cases:</span>
+                                    <ul className="list-decimal pl-6">
+                                      {question.testCases.map((tc, tci) => (
+                                        <li key={tci} className="mb-1">
+                                          <span className="font-medium">Input:</span> <span className="font-mono">{tc.input}</span>
+                                          <span className="ml-2 font-medium">Expected Output:</span> <span className="font-mono">{tc.expectedOutput}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             </div>

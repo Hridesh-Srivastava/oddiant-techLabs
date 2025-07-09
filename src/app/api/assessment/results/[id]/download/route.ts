@@ -41,6 +41,57 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       return NextResponse.json({ success: false, message: "Result not found" }, { status: 404 })
     }
 
+    // Robust candidate name resolution (copied from results API)
+    let candidateName = result.candidateName || ""
+    const isLikelyEmailPrefix = candidateName && typeof candidateName === "string" && !candidateName.includes(" ") && result.candidateEmail && candidateName === result.candidateEmail.split("@")[0];
+    if ((!candidateName || candidateName === result.candidateEmail || isLikelyEmailPrefix) && (result.candidateId || result.studentId || result.candidateEmail)) {
+      let candidateDoc = null;
+      if (result.candidateId) {
+        candidateDoc = await db.collection("candidates").findOne({ _id: new ObjectId(result.candidateId) });
+      }
+      if (!candidateDoc && result.candidateId) {
+        candidateDoc = await db.collection("students").findOne({ _id: new ObjectId(result.candidateId) });
+      }
+      if (!candidateDoc && result.studentId) {
+        candidateDoc = await db.collection("students").findOne({ _id: new ObjectId(result.studentId) });
+      }
+      if (!candidateDoc && result.studentId) {
+        candidateDoc = await db.collection("candidates").findOne({ _id: new ObjectId(result.studentId) });
+      }
+      if (!candidateDoc && result.candidateEmail) {
+        candidateDoc = await db.collection("candidates").findOne({ email: result.candidateEmail });
+      }
+      if (!candidateDoc && result.candidateEmail) {
+        candidateDoc = await db.collection("students").findOne({ email: result.candidateEmail });
+      }
+      if (candidateDoc) {
+        let fullName = ""
+        if (candidateDoc.salutation && typeof candidateDoc.salutation === "string" && candidateDoc.salutation.trim() !== "") {
+          fullName += candidateDoc.salutation.trim() + " ";
+        }
+        if (candidateDoc.firstName && typeof candidateDoc.firstName === "string" && candidateDoc.firstName.trim() !== "") {
+          fullName += candidateDoc.firstName.trim() + " ";
+        }
+        if (candidateDoc.middleName && typeof candidateDoc.middleName === "string" && candidateDoc.middleName.trim() !== "") {
+          fullName += candidateDoc.middleName.trim() + " ";
+        }
+        if (candidateDoc.lastName && typeof candidateDoc.lastName === "string" && candidateDoc.lastName.trim() !== "") {
+          fullName += candidateDoc.lastName.trim();
+        }
+        fullName = fullName.trim();
+        if (fullName !== "") {
+          candidateName = fullName;
+        } else if (candidateDoc.name && typeof candidateDoc.name === "string" && candidateDoc.name.trim() !== "") {
+          candidateName = candidateDoc.name.trim();
+        } else {
+          candidateName = result.candidateEmail;
+        }
+      } else {
+        candidateName = result.candidateEmail;
+      }
+    }
+    result.candidateName = candidateName;
+
     console.log("Result found:", {
       id: result._id,
       candidateEmail: result.candidateEmail,

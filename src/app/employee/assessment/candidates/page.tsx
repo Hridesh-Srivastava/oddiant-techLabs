@@ -33,18 +33,27 @@ export default function CandidatesPage() {
   const [candidates, setCandidates] = useState<CandidateData[]>([])
   const [filteredCandidates, setFilteredCandidates] = useState<CandidateData[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [isExporting, setIsExporting] = useState(false)
+  const [isExporting, setIsExporting] = useState<string | false>(false)
 
   // Filter states
   const [statusFilters, setStatusFilters] = useState<string[]>([])
   const [scoreFilters, setScoreFilters] = useState<string[]>([])
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const candidatesPerPage = 8;
+  const totalPages = Math.ceil(filteredCandidates.length / candidatesPerPage);
+  const paginatedCandidates = filteredCandidates.slice((currentPage - 1) * candidatesPerPage, currentPage * candidatesPerPage);
+
+  // Reset to first page when filters/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredCandidates.length]);
+
   // Status filter options
   const statusOptions = [
     { label: "Completed", value: "Completed" },
-    { label: "In Progress", value: "In Progress" },
     { label: "Invited", value: "Invited" },
-    { label: "Failed", value: "Failed" },
   ]
 
   // Score filter options
@@ -192,26 +201,22 @@ export default function CandidatesPage() {
 
   const handleExportResults = async () => {
     try {
-      setIsExporting(true)
+      setIsExporting('all')
       toast.info("Exporting candidates data...")
 
       // Build query parameters for export
       const params = new URLSearchParams()
-
-      statusFilters.forEach((filter) => params.append("status", filter))
-      scoreFilters.forEach((filter) => params.append("score", filter))
-
-      if (searchTerm) {
-        params.append("search", searchTerm)
+      if (filteredCandidates.length > 0) {
+        filteredCandidates.forEach((candidate) => {
+          params.append("candidateEmail", candidate.email)
+        })
       }
 
-      // Fetch export from API
-      const response = await fetch(`/api/assessment/candidates/export?${params.toString()}`, {
+      // Fetch export from API (use the working export endpoint)
+      const response = await fetch(`/api/assessment/results/export?${params.toString()}`, {
         method: "GET",
         headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
+          "Accept": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         },
       })
 
@@ -221,16 +226,22 @@ export default function CandidatesPage() {
 
       // Get the blob from the response
       const blob = await response.blob()
-
+      const disposition = response.headers.get('Content-Disposition');
+      let filename = `candidates-all-results-${new Date().toISOString().split("T")[0]}.xlsx`;
+      if (disposition && disposition.includes('filename=')) {
+        filename = disposition.split('filename=')[1].replace(/"/g, '').trim();
+      }
       // Create a download link and trigger download
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `candidates-${new Date().toISOString().split("T")[0]}.xlsx`
+      a.download = filename
       document.body.appendChild(a)
       a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url)
+        a.remove()
+      }, 100)
 
       toast.success("Candidates data exported successfully")
     } catch (error) {
@@ -241,6 +252,43 @@ export default function CandidatesPage() {
     }
   }
 
+  // Add this handler for per-candidate export
+  const handleExportCandidateResults = async (candidateEmail: string, testsCompleted: number) => {
+    if (!candidateEmail || testsCompleted === 0) return;
+    try {
+      setIsExporting(candidateEmail);
+      const response = await fetch(`/api/assessment/results/download-all?candidateEmail=${encodeURIComponent(candidateEmail)}`, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        },
+      });
+      if (!response.ok) throw new Error('Failed to download results');
+      const blob = await response.blob();
+      const disposition = response.headers.get('Content-Disposition');
+      let filename = `all-results-${candidateEmail}.xlsx`;
+      if (disposition && disposition.includes('filename=')) {
+        filename = disposition.split('filename=')[1].replace(/"/g, '').trim();
+      }
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        a.remove();
+      }, 100);
+      toast.success('Results downloaded as Excel!');
+    } catch (error) {
+      console.error('Error downloading candidate results:', error);
+      toast.error('Failed to download candidate results.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <AssessmentLayout>
       <div className="container py-6">
@@ -249,9 +297,9 @@ export default function CandidatesPage() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Candidates</h1>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleExportResults} disabled={isExporting}>
+            <Button variant="outline" onClick={handleExportResults} disabled={isExporting !== false}>
               <Download className="h-4 w-4 mr-2" />
-              {isExporting ? "Exporting..." : "Export"}
+              {isExporting !== false ? "Exporting..." : "Export"}
             </Button>
             <Button asChild>
               <Link href="/employee/assessment/invitations">
@@ -419,7 +467,7 @@ export default function CandidatesPage() {
             </div>
           ) : filteredCandidates.length > 0 ? (
             <div>
-              {filteredCandidates.map((candidate) => (
+              {paginatedCandidates.map((candidate) => (
                 <div key={candidate._id} className="p-4 grid grid-cols-7 border-t hover:bg-muted/30 transition-colors">
                   <div className="col-span-2 flex items-center">
                     <Avatar className="h-8 w-8 mr-2">
@@ -430,7 +478,7 @@ export default function CandidatesPage() {
                       <div className="text-sm text-muted-foreground">{candidate.email}</div>
                     </div>
                   </div>
-                  <div className="flex items-center">{candidate.testsAssigned}</div>
+                  <div className="flex items-center ml-6">{candidate.testsAssigned}</div>
                   <div className="flex items-center">{candidate.testsCompleted}</div>
                   <div className="flex items-center">{candidate.averageScore}%</div>
                   <div className="flex items-center">
@@ -438,11 +486,11 @@ export default function CandidatesPage() {
                       variant="outline"
                       className={
                         candidate.status === "Completed"
-                          ? "bg-green-100 text-green-800 hover:bg-green-100"
+                          ? "bg-blue-100 text-blue-800 hover:bg-blue-100"
                           : candidate.status === "In Progress"
-                            ? "bg-blue-100 text-blue-800 hover:bg-blue-100"
+                            ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
                             : candidate.status === "Invited"
-                              ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
+                              ? "bg-gray-100 text-gray-800 hover:bg-gray-100"
                               : "bg-red-100 text-red-800 hover:bg-red-100"
                       }
                     >
@@ -453,9 +501,53 @@ export default function CandidatesPage() {
                     <Button variant="outline" size="sm" asChild>
                       <Link href={`/employee/assessment/candidates/${candidate._id}`}>View</Link>
                     </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="ml-2 flex items-center gap-1"
+                      onClick={() => handleExportCandidateResults(candidate.email, candidate.testsCompleted)}
+                      disabled={candidate.testsCompleted === 0 || isExporting === candidate.email}
+                    >
+                      <Download className="h-4 w-4 mr-1" />
+                      {isExporting === candidate.email ? 'Exporting...' : 'Export'}
+                    </Button>
                   </div>
                 </div>
               ))}
+              {/* Pagination Controls */}
+              <div className="flex items-center justify-center space-x-2 mt-6">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <span className="flex items-center"><svg className="h-4 w-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>Previous</span>
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                  <Button
+                    key={pageNum}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={
+                      pageNum === currentPage
+                        ? "bg-blue-500 text-white hover:bg-blue-600"
+                        : "hover:bg-gray-100"
+                    }
+                  >
+                    {pageNum}
+                  </Button>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  <span className="flex items-center">Next<svg className="h-4 w-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="text-center py-12">

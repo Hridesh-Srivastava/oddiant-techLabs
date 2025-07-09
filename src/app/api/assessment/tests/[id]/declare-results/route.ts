@@ -30,47 +30,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const { db } = await connectToDatabase()
     console.log("Database connected successfully")
 
-    // First, get ALL results for this test to debug
-    console.log("Fetching all results for test...")
-    const allResults = await db.collection("assessment_results").find({}).toArray()
-
-    console.log(`Total results in database: ${allResults.length}`)
-
-    // Filter results for this specific test
-    const testResults = allResults.filter((result) => {
-      const resultTestId = result.testId?.toString()
-      const currentTestId = testId?.toString()
-      const matches = resultTestId === currentTestId
-
-      if (matches) {
-        console.log(`Found result for test: ${result.candidateEmail}, declared: ${result.resultsDeclared}`)
-      }
-
-      return matches
-    })
-
-    console.log(`Results for this test: ${testResults.length}`)
-
-    // Find undeclared results
-    const undeclaredResults = testResults.filter((result) => {
-      const isUndeclared = !result.resultsDeclared || result.resultsDeclared === false
-      console.log(`Result ${result.candidateEmail}: declared=${result.resultsDeclared}, isUndeclared=${isUndeclared}`)
-      return isUndeclared
-    })
-
-    console.log(`Found ${undeclaredResults.length} undeclared results`)
-
-    if (undeclaredResults.length === 0) {
-      console.log("No new results to declare")
-      return NextResponse.json(
-        {
-          success: false,
-          message: "No new results to declare",
-        },
-        { status: 400 },
-      )
-    }
-
     // Get test details for email
     const test = await db.collection("assessment_tests").findOne({
       _id: new ObjectId(testId),
@@ -96,43 +55,111 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     let declaredCount = 0
     let emailsSent = 0
 
-    // Process each undeclared result
-    for (const result of undeclaredResults) {
-      try {
-        console.log(`Processing result for ${result.candidateEmail}...`)
+    // Fully robust: keep processing batches until all undeclared results are handled
+    const BATCH_SIZE = 20;
+    while (true) {
+      console.log('Batch start: fetching undeclared results...');
+      const undeclaredResults = await db.collection("assessment_results")
+        .find({
+          $and: [
+            { $or: [ { testId: testId }, { testId: new ObjectId(testId) } ] },
+            { $or: [ { resultsDeclared: false }, { resultsDeclared: { $exists: false } } ] }
+          ]
+        })
+        .limit(BATCH_SIZE)
+        .toArray();
+      console.log(`Fetched ${undeclaredResults.length} undeclared results`);
+      undeclaredResults.forEach(r => {
+        console.log(`Result: _id=${r._id}, testId=${r.testId} (${typeof r.testId}), resultsDeclared=${r.resultsDeclared}`);
+      });
+      if (undeclaredResults.length === 0) break;
+      await Promise.all(undeclaredResults.map(async (result) => {
+        try {
+          console.log(`Processing result for ${result.candidateEmail}...`)
 
-        // Determine pass/fail status
-        const isPassed = result.score >= test.passingScore
-        const finalStatus = isPassed ? "Passed" : "Failed"
+          // Determine pass/fail status
+          const isPassed = result.score >= test.passingScore
+          const finalStatus = isPassed ? "Passed" : "Failed"
 
-        // Update result in database
-        const updateResult = await db.collection("assessment_results").updateOne(
-          { _id: result._id },
-          {
-            $set: {
-              resultsDeclared: true,
-              status: finalStatus,
-              declaredAt: new Date(),
-              declaredBy: new ObjectId(userId),
+          // Update result in database
+          const updateResult = await db.collection("assessment_results").updateOne(
+            { _id: result._id },
+            {
+              $set: {
+                resultsDeclared: true,
+                status: finalStatus,
+                declaredAt: new Date(),
+                declaredBy: new ObjectId(userId),
+              },
             },
-          },
-        )
+          )
 
-        console.log(
-          `Update result for ${result.candidateEmail}:`,
-          updateResult.modifiedCount > 0 ? "Success" : "Failed",
-        )
+          console.log(
+            `Update result for ${result.candidateEmail}:`,
+            updateResult.modifiedCount > 0 ? "Success" : "Failed",
+          )
 
-        if (updateResult.modifiedCount > 0) {
-          declaredCount++
-          console.log(`Result declared for ${result.candidateEmail}: ${finalStatus}`)
+          if (updateResult.modifiedCount > 0) {
+            declaredCount++
+            console.log(`Result declared for ${result.candidateEmail}: ${finalStatus}`)
 
-          // Send email notification
-          try {
-            await sendEmail({
-              to: result.candidateEmail,
-              subject: `Your ${test.name} Assessment Results`,
-              text: `
+            // Robust candidate name resolution before sending email
+            let candidateName = result.candidateName || ""
+            const isLikelyEmailPrefix = candidateName && typeof candidateName === "string" && !candidateName.includes(" ") && result.candidateEmail && candidateName === result.candidateEmail.split("@")[0];
+            if ((!candidateName || candidateName === result.candidateEmail || isLikelyEmailPrefix) && (result.candidateId || result.studentId || result.candidateEmail)) {
+              let candidateDoc = null;
+              if (result.candidateId) {
+                candidateDoc = await db.collection("candidates").findOne({ _id: new ObjectId(result.candidateId) });
+              }
+              if (!candidateDoc && result.candidateId) {
+                candidateDoc = await db.collection("students").findOne({ _id: new ObjectId(result.candidateId) });
+              }
+              if (!candidateDoc && result.studentId) {
+                candidateDoc = await db.collection("students").findOne({ _id: new ObjectId(result.studentId) });
+              }
+              if (!candidateDoc && result.studentId) {
+                candidateDoc = await db.collection("candidates").findOne({ _id: new ObjectId(result.studentId) });
+              }
+              if (!candidateDoc && result.candidateEmail) {
+                candidateDoc = await db.collection("candidates").findOne({ email: result.candidateEmail });
+              }
+              if (!candidateDoc && result.candidateEmail) {
+                candidateDoc = await db.collection("students").findOne({ email: result.candidateEmail });
+              }
+              if (candidateDoc) {
+                let fullName = ""
+                if (candidateDoc.salutation && typeof candidateDoc.salutation === "string" && candidateDoc.salutation.trim() !== "") {
+                  fullName += candidateDoc.salutation.trim() + " ";
+                }
+                if (candidateDoc.firstName && typeof candidateDoc.firstName === "string" && candidateDoc.firstName.trim() !== "") {
+                  fullName += candidateDoc.firstName.trim() + " ";
+                }
+                if (candidateDoc.middleName && typeof candidateDoc.middleName === "string" && candidateDoc.middleName.trim() !== "") {
+                  fullName += candidateDoc.middleName.trim() + " ";
+                }
+                if (candidateDoc.lastName && typeof candidateDoc.lastName === "string" && candidateDoc.lastName.trim() !== "") {
+                  fullName += candidateDoc.lastName.trim();
+                }
+                fullName = fullName.trim();
+                if (fullName !== "") {
+                  candidateName = fullName;
+                } else if (candidateDoc.name && typeof candidateDoc.name === "string" && candidateDoc.name.trim() !== "") {
+                  candidateName = candidateDoc.name.trim();
+                } else {
+                  candidateName = result.candidateEmail;
+                }
+              } else {
+                candidateName = result.candidateEmail;
+              }
+            }
+            result.candidateName = candidateName;
+
+            // Send email notification
+            try {
+              await sendEmail({
+                to: result.candidateEmail,
+                subject: `Your ${test.name} Assessment Results`,
+                text: `
                 Dear ${result.candidateName || "Candidate"},
 
                 Your assessment results for "${test.name}" have been declared.
@@ -151,7 +178,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
                 ${employee.firstName} ${employee.lastName}
                 ${employee.companyName}
               `,
-              html: `
+                html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
                   <h2 style="color: #333;">Assessment Results Declared</h2>
                   <p>Dear ${result.candidateName || "Candidate"},</p>
@@ -175,19 +202,27 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
                   ${employee.companyName}</p>
                 </div>
               `,
-            })
+              })
 
-            emailsSent++
-            console.log(`Email sent to ${result.candidateEmail}`)
-          } catch (emailError) {
-            console.error(`Failed to send email to ${result.candidateEmail}:`, emailError)
-            // Continue with other results even if email fails
+              emailsSent++
+              console.log(`Email sent to ${result.candidateEmail}`)
+            } catch (emailError) {
+              console.error(`Failed to send email to ${result.candidateEmail}:`, emailError)
+              // Continue with other results even if email fails
+            }
           }
+        } catch (resultError) {
+          console.error(`Failed to process result for ${result.candidateEmail}:`, resultError)
+          // Continue with other results
         }
-      } catch (resultError) {
-        console.error(`Failed to process result for ${result.candidateEmail}:`, resultError)
-        // Continue with other results
-      }
+      }));
+      const remaining = await db.collection("assessment_results").countDocuments({
+        $and: [
+          { $or: [ { testId: testId }, { testId: new ObjectId(testId) } ] },
+          { $or: [ { resultsDeclared: false }, { resultsDeclared: { $exists: false } } ] }
+        ]
+      });
+      console.log(`Remaining undeclared results after batch: ${remaining}`);
     }
 
     console.log(`Declaration complete: ${declaredCount} results declared, ${emailsSent} emails sent`)

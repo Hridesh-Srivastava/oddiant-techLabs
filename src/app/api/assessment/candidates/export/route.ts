@@ -22,105 +22,130 @@ export async function GET(request: NextRequest) {
     const score = url.searchParams.get("score")
     const search = url.searchParams.get("search")
 
-    // First, get all invitations to find candidates
-    const invitations = await db
-      .collection("assessment_invitations")
-      .find({
-        createdBy: new ObjectId(userId),
-      })
-      .toArray()
+    // Fetch candidates from assessment_candidates (like the UI)
+    const candidates = await db
+      .collection("assessment_candidates")
+      .find({ createdBy: new ObjectId(userId) })
+      .sort({ createdAt: -1 })
+      .toArray();
 
-    // Create a map of email to candidate data
-    const candidateMap = new Map()
-
-    // Process invitations to build candidate data
-    for (const invitation of invitations) {
-      const email = invitation.email
-
-      if (!candidateMap.has(email)) {
-        // Initialize candidate data
-        candidateMap.set(email, {
-          email,
-          name: email.split("@")[0], // Simple name extraction
-          testsAssigned: 0,
-          testsCompleted: 0,
-          totalScore: 0,
-          averageScore: 0,
-          status: "Invited",
-          createdAt: invitation.createdAt,
-        })
-      }
-
-      const candidateData = candidateMap.get(email)
-      candidateData.testsAssigned++
-
-      if (invitation.status === "Completed") {
-        candidateData.testsCompleted++
-      }
-    }
-
-    // Get all results to calculate scores and status
-    const results = await db
-      .collection("assessment_results")
-      .find({
-        createdBy: new ObjectId(userId),
-      })
-      .toArray()
-
-    // Update candidate data with results
-    for (const result of results) {
-      const email = result.candidateEmail
-      if (candidateMap.has(email)) {
-        const candidateData = candidateMap.get(email)
-        candidateData.totalScore += result.score
-        candidateData.averageScore = Math.round(candidateData.totalScore / candidateData.testsCompleted)
-
-        // Update status based on most recent completion
-        if (result.resultsDeclared) {
-          if (result.status === "Passed") {
-            candidateData.status = "Passed"
-          } else {
-            candidateData.status = "Failed"
+    // For each candidate, calculate stats and robust full name
+    const candidatesWithStats = await Promise.all(
+      candidates.map(async (candidate) => {
+        // Robust full name resolution
+        let candidateName = candidate.name || "";
+        const isLikelyEmailPrefix = candidateName && typeof candidateName === "string" && !candidateName.includes(" ") && candidate.email && candidateName === candidate.email.split("@")[0];
+        if ((!candidateName || candidateName === candidate.email || isLikelyEmailPrefix) && candidate.email) {
+          let candidateDoc = null;
+          candidateDoc = await db.collection("students").findOne({ email: candidate.email });
+          if (!candidateDoc) {
+            candidateDoc = await db.collection("candidates").findOne({ email: candidate.email });
           }
-        } else {
-          candidateData.status = "Completed"
+          if (!candidateDoc && candidate._id) {
+            candidateDoc = await db.collection("students").findOne({ _id: new ObjectId(candidate._id) });
+          }
+          if (!candidateDoc && candidate._id) {
+            candidateDoc = await db.collection("candidates").findOne({ _id: new ObjectId(candidate._id) });
+          }
+          if (candidateDoc) {
+            let fullName = "";
+            if (candidateDoc.salutation && typeof candidateDoc.salutation === "string" && candidateDoc.salutation.trim() !== "") {
+              fullName += candidateDoc.salutation.trim() + " ";
+            }
+            if (candidateDoc.firstName && typeof candidateDoc.firstName === "string" && candidateDoc.firstName.trim() !== "") {
+              fullName += candidateDoc.firstName.trim() + " ";
+            }
+            if (candidateDoc.middleName && typeof candidateDoc.middleName === "string" && candidateDoc.middleName.trim() !== "") {
+              fullName += candidateDoc.middleName.trim() + " ";
+            }
+            if (candidateDoc.lastName && typeof candidateDoc.lastName === "string" && candidateDoc.lastName.trim() !== "") {
+              fullName += candidateDoc.lastName.trim();
+            }
+            fullName = fullName.trim();
+            if (fullName !== "") {
+              candidateName = fullName;
+            } else if (candidateDoc.name && typeof candidateDoc.name === "string" && candidateDoc.name.trim() !== "") {
+              candidateName = candidateDoc.name.trim();
+            } else {
+              candidateName = candidate.email;
+            }
+          } else {
+            candidateName = candidate.email;
+          }
         }
-      }
-    }
-
-    // Convert map to array
-    let candidates = Array.from(candidateMap.values())
+        // Get invitation count
+        const invitationCount = await db.collection("assessment_invitations").countDocuments({
+          email: candidate.email,
+          createdBy: new ObjectId(userId),
+        });
+        // Get completed results count
+        const completedResults = await db
+          .collection("assessment_results")
+          .find({ candidateEmail: candidate.email })
+          .toArray();
+        // Calculate average score
+        let averageScore = 0;
+        if (completedResults.length > 0) {
+          const totalScore = completedResults.reduce((sum, result) => sum + (result.score || 0), 0);
+          averageScore = Math.round(totalScore / completedResults.length);
+        }
+        // Find latest invitation for this candidate
+        const latestInvitation = await db.collection("assessment_invitations").find({
+          email: candidate.email,
+          createdBy: new ObjectId(userId),
+        }).sort({ invitedAt: -1 }).limit(1).toArray();
+        let status = "Invited";
+        if (latestInvitation.length > 0) {
+          const invitation = latestInvitation[0];
+          if (invitation.status === "Pending") {
+            status = "Pending";
+          } else if (invitation.status === "Completed") {
+            status = "Completed";
+          } else {
+            status = invitation.status;
+          }
+        }
+        return {
+          name: candidateName,
+          email: candidate.email,
+          testsAssigned: invitationCount,
+          testsCompleted: completedResults.length,
+          averageScore: averageScore ? `${averageScore}%` : "N/A",
+          status: status,
+          createdAt: candidate.createdAt ? new Date(candidate.createdAt).toLocaleDateString() : "N/A",
+        };
+      })
+    );
 
     // Apply filters
+    let filteredCandidates = candidatesWithStats;
     if (status) {
-      candidates = candidates.filter((candidate) => candidate.status === status)
+      filteredCandidates = filteredCandidates.filter((candidate) => candidate.status === status);
     }
-
     if (score) {
-      candidates = candidates.filter((candidate) => {
-        const avgScore = candidate.averageScore
-        if (score === "> 90%" && avgScore > 90) return true
-        if (score === "80-90%" && avgScore >= 80 && avgScore <= 90) return true
-        if (score === "70-80%" && avgScore >= 70 && avgScore < 80) return true
-        if (score === "< 70%" && avgScore < 70) return true
-        return false
-      })
+      filteredCandidates = filteredCandidates.filter((candidate) => {
+        const avgScore = parseInt(candidate.averageScore);
+        if (score === "> 90%" && avgScore > 90) return true;
+        if (score === "80-90%" && avgScore >= 80 && avgScore <= 90) return true;
+        if (score === "70-80%" && avgScore >= 70 && avgScore < 80) return true;
+        if (score === "< 70%" && avgScore < 70) return true;
+        return false;
+      });
     }
-
     if (search) {
-      const searchLower = search.toLowerCase()
-      candidates = candidates.filter(
+      const searchLower = search.toLowerCase();
+      filteredCandidates = filteredCandidates.filter(
         (candidate) =>
-          candidate.name.toLowerCase().includes(searchLower) || candidate.email.toLowerCase().includes(searchLower),
-      )
+          candidate.name.toLowerCase().includes(searchLower) || candidate.email.toLowerCase().includes(searchLower)
+      );
     }
 
     // Create Excel workbook
-    const workbook = new ExcelJS.Workbook()
-    workbook.creator = "Assessment Platform"
-    workbook.created = new Date()
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "Assessment Platform";
+    workbook.created = new Date();
 
-    const worksheet = workbook.addWorksheet("Candidates")
+    const worksheet = workbook.addWorksheet("Candidates");
 
     // Add headers
     worksheet.columns = [
@@ -131,31 +156,23 @@ export async function GET(request: NextRequest) {
       { header: "Average Score", key: "averageScore", width: 15 },
       { header: "Status", key: "status", width: 15 },
       { header: "Created Date", key: "createdAt", width: 20 },
-    ]
+    ];
 
     // Style the header row
-    const headerRow = worksheet.getRow(1)
-    headerRow.font = { bold: true }
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true };
     headerRow.fill = {
       type: "pattern",
       pattern: "solid",
       fgColor: { argb: "FFE0E0E0" },
-    }
-    headerRow.alignment = { vertical: "middle", horizontal: "center" }
-    headerRow.commit()
+    };
+    headerRow.alignment = { vertical: "middle", horizontal: "center" };
+    headerRow.commit();
 
     // Add data
-    candidates.forEach((candidate) => {
-      worksheet.addRow({
-        name: candidate.name || "N/A",
-        email: candidate.email || "N/A",
-        testsAssigned: candidate.testsAssigned || 0,
-        testsCompleted: candidate.testsCompleted || 0,
-        averageScore: candidate.averageScore ? `${candidate.averageScore}%` : "N/A",
-        status: candidate.status || "N/A",
-        createdAt: candidate.createdAt ? new Date(candidate.createdAt).toLocaleDateString() : "N/A",
-      })
-    })
+    filteredCandidates.forEach((candidate) => {
+      worksheet.addRow(candidate);
+    });
 
     // Apply some styling to all cells
     worksheet.eachRow((row, rowNumber) => {

@@ -66,7 +66,12 @@ export async function GET(request: NextRequest) {
           totalQuestions: Array.isArray(test?.sections) ? test.sections.reduce((sum, section) => sum + (section.questions?.length || 0), 0) : (test?.questions?.length || test?.totalQuestions || 0),
           correctAnswers: result.correctAnswers || null,
           duration: test?.duration || 60,
-          timeTaken: result.timeTaken || null,
+          timeTaken:
+            result.timeTaken && result.timeTaken > 0
+              ? result.timeTaken
+              : (result.completedAt || result.completionDate) && result.startedAt
+                ? Math.max(1, Math.round(((new Date(result.completedAt || result.completionDate).getTime() - new Date(result.startedAt).getTime()) / 60000)))
+                : null,
           completedAt: result.completionDate || result.completedAt || null,
           startedAt: result.startedAt,
           difficulty: test?.difficulty || "intermediate",

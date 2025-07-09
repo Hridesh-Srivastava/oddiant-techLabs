@@ -78,6 +78,48 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
     console.log("Found candidate:", candidate.name, candidate.email)
 
+    // Robust full name resolution (copied from list API)
+    let candidateName = candidate.name || ""
+    const isLikelyEmailPrefix = candidateName && typeof candidateName === "string" && !candidateName.includes(" ") && candidate.email && candidateName === candidate.email.split("@")[0];
+    if ((!candidateName || candidateName === candidate.email || isLikelyEmailPrefix) && candidate.email) {
+      let candidateDoc = null;
+      candidateDoc = await db.collection("students").findOne({ email: candidate.email });
+      if (!candidateDoc) {
+        candidateDoc = await db.collection("candidates").findOne({ email: candidate.email });
+      }
+      if (!candidateDoc && candidate._id) {
+        candidateDoc = await db.collection("students").findOne({ _id: new ObjectId(candidate._id) });
+      }
+      if (!candidateDoc && candidate._id) {
+        candidateDoc = await db.collection("candidates").findOne({ _id: new ObjectId(candidate._id) });
+      }
+      if (candidateDoc) {
+        let fullName = ""
+        if (candidateDoc.salutation && typeof candidateDoc.salutation === "string" && candidateDoc.salutation.trim() !== "") {
+          fullName += candidateDoc.salutation.trim() + " ";
+        }
+        if (candidateDoc.firstName && typeof candidateDoc.firstName === "string" && candidateDoc.firstName.trim() !== "") {
+          fullName += candidateDoc.firstName.trim() + " ";
+        }
+        if (candidateDoc.middleName && typeof candidateDoc.middleName === "string" && candidateDoc.middleName.trim() !== "") {
+          fullName += candidateDoc.middleName.trim() + " ";
+        }
+        if (candidateDoc.lastName && typeof candidateDoc.lastName === "string" && candidateDoc.lastName.trim() !== "") {
+          fullName += candidateDoc.lastName.trim();
+        }
+        fullName = fullName.trim();
+        if (fullName !== "") {
+          candidateName = fullName;
+        } else if (candidateDoc.name && typeof candidateDoc.name === "string" && candidateDoc.name.trim() !== "") {
+          candidateName = candidateDoc.name.trim();
+        } else {
+          candidateName = candidate.email;
+        }
+      } else {
+        candidateName = candidate.email;
+      }
+    }
+
     // Get invitation count for this candidate
     const invitationCount = await db.collection("assessment_invitations").countDocuments({
       email: candidate.email,
@@ -116,6 +158,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
         success: true,
         candidate: {
           ...candidate,
+          name: candidateName,
           _id: candidate._id.toString(),
           testsAssigned: invitationCount,
           testsCompleted: completedResults.length,

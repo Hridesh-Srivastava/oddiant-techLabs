@@ -118,13 +118,13 @@ export async function GET(request: NextRequest) {
       }
 
       console.log(`Final filtered results count: ${filteredResults.length}`)
-      return await createExcelFile(filteredResults, testParam)
+      return await createExcelFile(filteredResults, testParam, db)
     } else {
       // No test filter - get all results for this user (if we had user-based filtering)
       console.log("No test filter provided, fetching all results")
       const results = await db.collection("assessment_results").find({}).sort({ completionDate: -1 }).toArray()
       console.log(`Found ${results.length} total results`)
-      return await createExcelFile(results)
+      return await createExcelFile(results, undefined, db)
     }
   } catch (error) {
     console.error("=== Export Error ===")
@@ -188,7 +188,7 @@ async function createEmptyExcel(testId?: string) {
   })
 }
 
-async function createExcelFile(results: any[], testId?: string) {
+async function createExcelFile(results: any[], testId?: string, db?: any) {
   console.log(`Creating Excel file with ${results.length} results`)
 
   // Create Excel workbook
@@ -221,15 +221,55 @@ async function createExcelFile(results: any[], testId?: string) {
   headerRow.alignment = { vertical: "middle", horizontal: "center" }
 
   // Add data
-  results.forEach((result, index) => {
-    console.log(`Adding result ${index + 1}:`, {
-      candidateName: result.candidateName,
-      email: result.candidateEmail,
-      testName: result.testName,
-      score: result.score,
-      status: result.status,
-    })
-
+  for (const result of results) {
+    let candidateName = result.candidateName || ""
+    const isLikelyEmailPrefix = candidateName && typeof candidateName === "string" && !candidateName.includes(" ") && result.candidateEmail && candidateName === result.candidateEmail.split("@")[0];
+    if ((!candidateName || candidateName === result.candidateEmail || isLikelyEmailPrefix) && (result.candidateId || result.studentId || result.candidateEmail)) {
+      let candidateDoc = null;
+      if (result.candidateId) {
+        candidateDoc = await db.collection("candidates").findOne({ _id: new ObjectId(result.candidateId) });
+      }
+      if (!candidateDoc && result.candidateId) {
+        candidateDoc = await db.collection("students").findOne({ _id: new ObjectId(result.candidateId) });
+      }
+      if (!candidateDoc && result.studentId) {
+        candidateDoc = await db.collection("students").findOne({ _id: new ObjectId(result.studentId) });
+      }
+      if (!candidateDoc && result.studentId) {
+        candidateDoc = await db.collection("candidates").findOne({ _id: new ObjectId(result.studentId) });
+      }
+      if (!candidateDoc && result.candidateEmail) {
+        candidateDoc = await db.collection("candidates").findOne({ email: result.candidateEmail });
+      }
+      if (!candidateDoc && result.candidateEmail) {
+        candidateDoc = await db.collection("students").findOne({ email: result.candidateEmail });
+      }
+      if (candidateDoc) {
+        let fullName = ""
+        if (candidateDoc.salutation && typeof candidateDoc.salutation === "string" && candidateDoc.salutation.trim() !== "") {
+          fullName += candidateDoc.salutation.trim() + " ";
+        }
+        if (candidateDoc.firstName && typeof candidateDoc.firstName === "string" && candidateDoc.firstName.trim() !== "") {
+          fullName += candidateDoc.firstName.trim() + " ";
+        }
+        if (candidateDoc.middleName && typeof candidateDoc.middleName === "string" && candidateDoc.middleName.trim() !== "") {
+          fullName += candidateDoc.middleName.trim() + " ";
+        }
+        if (candidateDoc.lastName && typeof candidateDoc.lastName === "string" && candidateDoc.lastName.trim() !== "") {
+          fullName += candidateDoc.lastName.trim();
+        }
+        fullName = fullName.trim();
+        if (fullName !== "") {
+          result.candidateName = fullName;
+        } else if (candidateDoc.name && typeof candidateDoc.name === "string" && candidateDoc.name.trim() !== "") {
+          result.candidateName = candidateDoc.name.trim();
+        } else {
+          result.candidateName = result.candidateEmail;
+        }
+      } else {
+        result.candidateName = result.candidateEmail;
+      }
+    }
     worksheet.addRow({
       candidateName: result.candidateName || "N/A",
       candidateEmail: result.candidateEmail || "N/A",
@@ -240,7 +280,7 @@ async function createExcelFile(results: any[], testId?: string) {
       completionDate: result.completionDate ? new Date(result.completionDate).toLocaleDateString() : "N/A",
       resultsDeclared: result.resultsDeclared ? "Yes" : "No",
     })
-  })
+  }
 
   // Apply styling to all cells
   worksheet.eachRow((row, rowNumber) => {

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { toast, Toaster } from "sonner"
-import { FileText, Plus, RefreshCw } from "lucide-react"
+import { FileText, Plus, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -41,6 +41,20 @@ export default function AssessmentDashboard() {
   const [recentResults, setRecentResults] = useState<ResultData[]>([])
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [activeTab, setActiveTab] = useState("recent-tests")
+  const [recentTestsPage, setRecentTestsPage] = useState(1)
+  const [recentResultsPage, setRecentResultsPage] = useState(1)
+  const TESTS_PER_PAGE = 8
+  const RESULTS_PER_PAGE = 8
+
+  // Reset page to 1 when data changes
+  useEffect(() => { setRecentTestsPage(1) }, [recentTests])
+  useEffect(() => { setRecentResultsPage(1) }, [recentResults])
+
+  // Pagination logic
+  const paginatedTests = recentTests.slice((recentTestsPage-1)*TESTS_PER_PAGE, recentTestsPage*TESTS_PER_PAGE)
+  const paginatedResults = recentResults.slice((recentResultsPage-1)*RESULTS_PER_PAGE, recentResultsPage*RESULTS_PER_PAGE)
+  const totalTestsPages = Math.max(1, Math.ceil(recentTests.length / TESTS_PER_PAGE))
+  const totalResultsPages = Math.max(1, Math.ceil(recentResults.length / RESULTS_PER_PAGE))
 
   useEffect(() => {
     fetchDashboardData()
@@ -322,6 +336,7 @@ export default function AssessmentDashboard() {
                     ))}
                   </div>
                 ) : recentTests.length > 0 ? (
+                  <>
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
@@ -334,7 +349,7 @@ export default function AssessmentDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {recentTests.map((test) => (
+                        {paginatedTests.map((test) => (
                           <tr key={test._id} className="border-b hover:bg-muted/50">
                             <td className="py-3 px-4">
                               <Link
@@ -402,6 +417,43 @@ export default function AssessmentDashboard() {
                       </tbody>
                     </table>
                   </div>
+                  {/* Pagination Controls */}
+                  <div className="flex justify-center items-center gap-2 mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRecentTestsPage((p) => Math.max(1, p - 1))}
+                      disabled={recentTestsPage === 1}
+                      className="flex items-center"
+                    >
+                      <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                    </Button>
+                    {Array.from({ length: totalTestsPages }, (_, i) => (
+                      <Button
+                        key={i}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setRecentTestsPage(i + 1)}
+                        className={
+                          recentTestsPage === i + 1
+                            ? "bg-blue-600 text-white hover:bg-blue-700"
+                            : "hover:bg-gray-100"
+                        }
+                      >
+                        {i + 1}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRecentTestsPage((p) => Math.min(totalTestsPages, p + 1))}
+                      disabled={recentTestsPage === totalTestsPages}
+                      className="flex items-center"
+                    >
+                      Next <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </div>
+                  </>
                 ) : (
                   <div className="text-center py-8">
                     <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -433,6 +485,7 @@ export default function AssessmentDashboard() {
                     ))}
                   </div>
                 ) : recentResults.length > 0 ? (
+                  <>
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
@@ -442,11 +495,10 @@ export default function AssessmentDashboard() {
                           <th className="text-left py-3 px-4 font-medium text-muted-foreground">Score</th>
                           <th className="text-left py-3 px-4 font-medium text-muted-foreground">Completion Date</th>
                           <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
-                          {/* <th className="text-left py-3 px-4 font-medium text-muted-foreground">Actions</th> */}
                         </tr>
                       </thead>
                       <tbody>
-                        {recentResults.map((result) => (
+                        {paginatedResults.map((result) => (
                           <tr key={result._id} className="border-b hover:bg-muted/50">
                             <td className="py-3 px-4 font-medium">{result.candidateName}</td>
                             <td className="py-3 px-4">{result.testName}</td>
@@ -461,16 +513,48 @@ export default function AssessmentDashboard() {
                                 {result.status}
                               </span>
                             </td>
-                            {/* <td className="py-3 px-4">
-                              <Button variant="outline" size="sm" asChild>
-                                <Link href={`/employee/assessment/results/${result._id}`}>View Details</Link>
-                              </Button>
-                            </td> */}
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
+                  {/* Pagination Controls */}
+                  <div className="flex justify-center items-center gap-2 mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRecentResultsPage((p) => Math.max(1, p - 1))}
+                      disabled={recentResultsPage === 1}
+                      className="flex items-center"
+                    >
+                      <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                    </Button>
+                    {Array.from({ length: totalResultsPages }, (_, i) => (
+                      <Button
+                        key={i}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setRecentResultsPage(i + 1)}
+                        className={
+                          recentResultsPage === i + 1
+                            ? "bg-blue-600 text-white hover:bg-blue-700"
+                            : "hover:bg-gray-100"
+                        }
+                      >
+                        {i + 1}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRecentResultsPage((p) => Math.min(totalResultsPages, p + 1))}
+                      disabled={recentResultsPage === totalResultsPages}
+                      className="flex items-center"
+                    >
+                      Next <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </div>
+                  </>
                 ) : (
                   <div className="text-center py-8">
                     <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

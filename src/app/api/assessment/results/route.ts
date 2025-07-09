@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import { getUserFromRequest } from "@/lib/auth"
 import { ObjectId } from "mongodb"
+import JSZip from "jszip"
 
 // 1. Load Gemini API key and URL from env
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -123,12 +124,65 @@ export async function GET(request: NextRequest) {
     // Apply sorting
     resultsQuery = resultsQuery.sort({ [sort]: -1 })
 
-    // Apply limit if specified
-    if (limit) {
-      resultsQuery = resultsQuery.limit(limit)
-    }
+       // Apply limit if specified
+       if (limit) {
+        resultsQuery = resultsQuery.limit(limit)
+      }
+  
 
     const results = await resultsQuery.toArray()
+
+    // Robust candidate name resolution for each result
+    for (const result of results) {
+      const candidateName = result.candidateName || ""
+      const isLikelyEmailPrefix = candidateName && typeof candidateName === "string" && !candidateName.includes(" ") && result.candidateEmail && candidateName === result.candidateEmail.split("@")[0];
+      if ((!candidateName || candidateName === result.candidateEmail || isLikelyEmailPrefix) && (result.candidateId || result.studentId || result.candidateEmail)) {
+        let candidateDoc = null;
+        if (result.candidateId) {
+          candidateDoc = await db.collection("candidates").findOne({ _id: new ObjectId(result.candidateId) });
+        }
+        if (!candidateDoc && result.candidateId) {
+          candidateDoc = await db.collection("students").findOne({ _id: new ObjectId(result.candidateId) });
+        }
+        if (!candidateDoc && result.studentId) {
+          candidateDoc = await db.collection("students").findOne({ _id: new ObjectId(result.studentId) });
+        }
+        if (!candidateDoc && result.studentId) {
+          candidateDoc = await db.collection("candidates").findOne({ _id: new ObjectId(result.studentId) });
+        }
+        if (!candidateDoc && result.candidateEmail) {
+          candidateDoc = await db.collection("candidates").findOne({ email: result.candidateEmail });
+        }
+        if (!candidateDoc && result.candidateEmail) {
+          candidateDoc = await db.collection("students").findOne({ email: result.candidateEmail });
+        }
+        if (candidateDoc) {
+          let fullName = ""
+          if (candidateDoc.salutation && typeof candidateDoc.salutation === "string" && candidateDoc.salutation.trim() !== "") {
+            fullName += candidateDoc.salutation.trim() + " ";
+          }
+          if (candidateDoc.firstName && typeof candidateDoc.firstName === "string" && candidateDoc.firstName.trim() !== "") {
+            fullName += candidateDoc.firstName.trim() + " ";
+          }
+          if (candidateDoc.middleName && typeof candidateDoc.middleName === "string" && candidateDoc.middleName.trim() !== "") {
+            fullName += candidateDoc.middleName.trim() + " ";
+          }
+          if (candidateDoc.lastName && typeof candidateDoc.lastName === "string" && candidateDoc.lastName.trim() !== "") {
+            fullName += candidateDoc.lastName.trim();
+          }
+          fullName = fullName.trim();
+          if (fullName !== "") {
+            result.candidateName = fullName;
+          } else if (candidateDoc.name && typeof candidateDoc.name === "string" && candidateDoc.name.trim() !== "") {
+            result.candidateName = candidateDoc.name.trim();
+          } else {
+            result.candidateName = result.candidateEmail;
+          }
+        } else {
+          result.candidateName = result.candidateEmail;
+        }
+      }
+    }
 
     // Calculate stats
     let averageScore = 0
@@ -156,16 +210,24 @@ export async function GET(request: NextRequest) {
 
     const completionRate = totalInvitations > 0 ? Math.round((completedTests / totalInvitations) * 100) : 0
 
+
     // Add cache control headers to prevent caching
     const headers = new Headers()
     headers.append("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
     headers.append("Pragma", "no-cache")
     headers.append("Expires", "0")
 
+    // Map results to AssessmentResultData structure as before
+    const mappedResults = results.map((result) => ({
+      ...result,
+      _id: result._id?.toString() || "",
+      testId: result.testId?.toString() || "",
+    }));
+
     return NextResponse.json(
       {
         success: true,
-        results,
+        results: mappedResults,
         stats: {
           averageScore,
           passRate,
@@ -222,23 +284,61 @@ export async function POST(request: NextRequest) {
         }
         // MCQ robust evaluation
         if (ans.questionType === 'Multiple Choice') {
-          let userAnswerText = ans.answer;
-          let correctAnswerText = ans.correctAnswer;
-          // If answer is an index (number or string), convert to option text
-          if (Array.isArray(ans.options)) {
-            if (!isNaN(Number(ans.answer)) && ans.options[Number(ans.answer)] !== undefined) {
-              userAnswerText = ans.options[Number(ans.answer)];
-            }
-            if (!isNaN(Number(ans.correctAnswer)) && ans.options[Number(ans.correctAnswer)] !== undefined) {
-              correctAnswerText = ans.options[Number(ans.correctAnswer)];
-            }
-          }
-          if (isMCQAnswerCorrect(userAnswerText, correctAnswerText, ans.options)) {
-            ans.points = ans.maxPoints;
-            ans.isCorrect = true;
-          } else {
+          // Award 0 points if answer is blank or not provided
+          if (
+            ans.answer === undefined ||
+            ans.answer === null ||
+            (typeof ans.answer === "string" && ans.answer.trim() === "") ||
+            (Array.isArray(ans.answer) && ans.answer.length === 0)
+          ) {
             ans.points = 0;
             ans.isCorrect = false;
+          } else {
+            let userAnswerText = ans.answer;
+            let correctAnswerText = ans.correctAnswer;
+            // Always fetch the correct answer from the test definition in the database
+            if (Array.isArray(ans.options) && ans.questionId && resultData.testId) {
+              // Fetch the correct answer for this question from the test definition
+              const testDoc = await db.collection("assessment_tests").findOne({ _id: new ObjectId(resultData.testId) });
+              let foundCorrect = false;
+              if (testDoc && Array.isArray(testDoc.sections)) {
+                for (const section of testDoc.sections) {
+                  if (Array.isArray(section.questions)) {
+                    for (const q of section.questions) {
+                      if (q.id === ans.questionId && typeof q.correctAnswer === "string" && q.correctAnswer.trim() !== "") {
+                        correctAnswerText = q.correctAnswer;
+                        ans.correctAnswer = correctAnswerText; // Always set the true correct answer for result record
+                        foundCorrect = true;
+                        break;
+                      }
+                    }
+                  }
+                  if (foundCorrect) break;
+                }
+              }
+            }
+            if (Array.isArray(ans.options)) {
+              // Normalize options array
+              const normalizedOptions = ans.options.map((opt: string) => String(opt).trim().toLowerCase());
+              const normalizedUserAnswer = String(userAnswerText).trim().toLowerCase();
+              const normalizedCorrectAnswer = String(correctAnswerText).trim().toLowerCase();
+              const userIdx = normalizedOptions.findIndex((opt: string) => opt === normalizedUserAnswer);
+              const correctIdx = normalizedOptions.findIndex((opt: string) => opt === normalizedCorrectAnswer);
+              if (userIdx !== -1 && userIdx === correctIdx && userIdx !== -1) {
+                ans.points = ans.maxPoints;
+                ans.isCorrect = true;
+                continue;
+              }
+              userAnswerText = normalizedUserAnswer;
+              correctAnswerText = normalizedCorrectAnswer;
+            }
+            if (userAnswerText === correctAnswerText && userAnswerText !== "") {
+              ans.points = ans.maxPoints;
+              ans.isCorrect = true;
+            } else {
+              ans.points = 0;
+              ans.isCorrect = false;
+            }
           }
         }
         // Coding partial points
@@ -271,21 +371,52 @@ export async function POST(request: NextRequest) {
     const test = await db.collection("assessment_tests").findOne({ _id: new ObjectId(resultData.testId) });
 
     // Create new result
+    const now = new Date();
     const newResult = {
       ...resultData,
+      timeTaken:
+        resultData.startedAt && resultData.completionDate
+          ? Math.max(1, Math.round((new Date(resultData.completionDate).getTime() - new Date(resultData.startedAt).getTime()) / 60000))
+          : resultData.duration || 0,
       type: test?.type || "", // Always include type from test
       createdBy: invitation.createdBy,
-      createdAt: new Date(),
-      completionDate: new Date(),
+      createdAt: now,
+      completionDate: now,
+      startedAt: resultData.startedAt || invitation.startedAt || now, // fallback to now if not present
       resultsDeclared: false, // Default to false - results not declared yet
       studentId: invitation.studentId || null,
       candidateId: invitation.candidateId || null,
       token: invitation.token || null, // Save the invitation token for result mapping
     }
 
-    // Insert result into database
-    const result = await db.collection("assessment_results").insertOne(newResult)
+    // Always use attemptNumber: 1 for single-attempt tests
+    newResult.attemptNumber = 1;
 
+    // Atomic upsert: insert if not exists, else do nothing
+    const upsertResult = await db.collection("assessment_results").updateOne(
+      {
+        testId: newResult.testId,
+        candidateEmail: newResult.candidateEmail,
+        token: newResult.token,
+        attemptNumber: 1,
+      },
+      { $setOnInsert: newResult },
+      { upsert: true }
+    );
+
+    // If upsertedCount is 0, result already exists
+    if (upsertResult.upsertedCount === 0) {
+      // Fetch the existing result's _id
+      const existing = await db.collection("assessment_results").findOne({
+        testId: newResult.testId,
+        candidateEmail: newResult.candidateEmail,
+        token: newResult.token,
+        attemptNumber: 1,
+      });
+      return NextResponse.json({ success: false, message: "Result already submitted for this invitation.", resultId: existing?._id }, { status: 409 });
+    }
+
+    // If upsertedCount is 1, result was created successfully
     // Update invitation status
     await db.collection("assessment_invitations").updateOne(
       { _id: new ObjectId(resultData.invitationId) },
@@ -336,7 +467,7 @@ export async function POST(request: NextRequest) {
 
     // Do NOT send result email here - it will be sent when results are declared
 
-    return NextResponse.json({ success: true, resultId: result.insertedId }, { status: 201 })
+    return NextResponse.json({ success: true, resultId: upsertResult.upsertedId }, { status: 201 })
   } catch (error) {
     console.error("Error creating result:", error)
     return NextResponse.json({ success: false, message: "Failed to create result" }, { status: 500 })

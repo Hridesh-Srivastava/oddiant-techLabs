@@ -52,6 +52,8 @@ export async function GET(request: Request, context: any) {
             explanation: q.explanation || "",
             points: q.points || 0,
             timeSpent: userAnswerObj?.timeSpent || 0,
+            // Add codingTestResults for coding questions
+            ...(q.type === 'Coding' && userAnswerObj?.codingTestResults ? { codingTestResults: userAnswerObj.codingTestResults } : {}),
           };
         })
       );

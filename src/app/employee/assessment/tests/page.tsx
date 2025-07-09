@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { toast, Toaster } from "sonner"
-import { Plus, Search, X, Filter, ChevronDown } from "lucide-react"
+import { Plus, Search, X, Filter, ChevronDown, ArrowRight, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -59,8 +59,18 @@ export default function TestsPage() {
   const [showTypeFilter, setShowTypeFilter] = useState(false)
   const [showDurationFilter, setShowDurationFilter] = useState(false)
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const testsPerPage = 10;
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Reset to first page when filters/search/tab change
   useEffect(() => {
-    fetchTests()
+    setCurrentPage(1);
+  }, [searchTerm, durationFilters, typeFilters, activeTab]);
+
+  useEffect(() => {
+    fetchTests(currentPage)
 
     // Get initial filters from URL if any
     const initialDurationFilters = searchParams.getAll("duration")
@@ -77,19 +87,21 @@ export default function TestsPage() {
     if (tab && ["Active", "Draft", "Archived"].includes(tab)) {
       setActiveTab(tab)
     }
-  }, [searchParams])
+  }, [searchParams, currentPage])
 
   useEffect(() => {
     applyFilters()
   }, [searchTerm, activeTab, durationFilters, typeFilters, tests])
 
-  const fetchTests = async () => {
+  const fetchTests = async (page = 1) => {
     try {
       setIsLoading(true)
 
       // Build query parameters
       const params = new URLSearchParams()
       params.append("status", activeTab)
+      params.append("page", String(page))
+      params.append("limit", String(testsPerPage))
 
       durationFilters.forEach((filter) => {
         params.append("duration", filter)
@@ -117,6 +129,7 @@ export default function TestsPage() {
 
       if (data.success) {
         setTests(data.tests || [])
+        setTotalPages(data.pagination?.pages || 1)
       } else {
         throw new Error(data.message || "Failed to fetch tests")
       }
@@ -124,6 +137,7 @@ export default function TestsPage() {
       console.error("Error fetching tests:", error)
       toast.error("Failed to load tests. Please try again.")
       setTests([])
+      setTotalPages(1)
     } finally {
       setIsLoading(false)
     }
@@ -410,7 +424,7 @@ export default function TestsPage() {
         </div>
       ) : filteredTests.length > 0 ? (
         <div className="space-y-4">
-          {filteredTests.map((test) => (
+          {tests.map((test) => (
             <div key={test._id} className="border rounded-lg p-4 bg-background hover:bg-muted/50 transition-colors">
               <div className="flex justify-between items-start">
                 <div>
@@ -465,6 +479,40 @@ export default function TestsPage() {
               </div>
             </div>
           ))}
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex justify-center mt-6 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="flex items-center"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+              </Button>
+              {[...Array(totalPages)].map((_, idx) => (
+                <Button
+                  key={idx + 1}
+                  variant={currentPage === idx + 1 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(idx + 1)}
+                  className={currentPage === idx + 1 ? "bg-blue-600 text-white hover:bg-blue-700" : ""}
+                >
+                  {idx + 1}
+                </Button>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="flex items-center"
+              >
+                Next <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-center py-12 border rounded-lg bg-background">

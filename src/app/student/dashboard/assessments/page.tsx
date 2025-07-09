@@ -22,6 +22,8 @@ import {
   Briefcase,
   Settings,
   Award,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -121,12 +123,12 @@ export default function StudentAssessmentDashboard() {
   const [yourTestsSearch, setYourTestsSearch] = useState("");
   const [resultsSearch, setResultsSearch] = useState("");
 
-    // Filtered lists based on search
-    const filteredTests = tests.filter((test) =>
-      test.title.toLowerCase().includes(availableTestsSearch.toLowerCase()) ||
-      (test.id && test.id.toLowerCase().includes(availableTestsSearch.toLowerCase()))
-    );
-  
+  // Filtered lists based on search
+  const filteredTests = tests.filter((test) =>
+    test.title.toLowerCase().includes(availableTestsSearch.toLowerCase()) ||
+    (test.id && test.id.toLowerCase().includes(availableTestsSearch.toLowerCase()))
+  );
+
   const filteredInvitations = invitations.filter((inv) =>
     (inv.testTitle || "").toLowerCase().includes(invitationsSearch.toLowerCase()) ||
     (inv.id && inv.id.toLowerCase().includes(invitationsSearch.toLowerCase()))
@@ -149,20 +151,6 @@ export default function StudentAssessmentDashboard() {
 
   // Add state for recent results filter
   const [showRecentResults, setShowRecentResults] = useState(false);
-
-  // Category options for test types
-  const categoryOptions = [
-    { value: "all", label: "All Categories" },
-    { value: "Frontend", label: "Frontend" },
-    { value: "Backend", label: "Backend" },
-    { value: "Full Stack", label: "Full Stack" },
-    { value: "QA", label: "QA" },
-    { value: "DevOps", label: "DevOps" },
-    { value: "Problem_Solving", label: "Problem Solving" },
-    { value: "Data_Science", label: "Data Science" },
-    { value: "Data_Analysis", label: "Data Analysis" },
-    { value: "Math/Aptitude", label: "Math/Aptitude" },
-  ];
 
   // Filtered tests by category
   const filteredByCategory = categoryFilter === "all"
@@ -213,6 +201,39 @@ export default function StudentAssessmentDashboard() {
   const filteredResultsByRecent = showRecentResults
     ? filteredResults.filter((result) => new Date(result.completedAt || 0) >= fiveDaysAgoRes)
     : filteredResults;
+
+  // Pagination state and logic (now after all filtered variables)
+  const [availablePage, setAvailablePage] = useState(1)
+  const [invitationsPage, setInvitationsPage] = useState(1)
+  const [yourTestsPage, setYourTestsPage] = useState(1)
+  const [resultsPage, setResultsPage] = useState(1)
+  const PER_PAGE = 8
+  useEffect(() => { setAvailablePage(1) }, [availableTestsSearch, categoryFilter, difficultyFilter, showRecentTests])
+  useEffect(() => { setInvitationsPage(1) }, [invitationsSearch, invitationStatusFilter, showRecentInvitations])
+  useEffect(() => { setYourTestsPage(1) }, [yourTestsSearch, yourTestsStatusFilter, yourTestsCategoryFilter, showRecentYourTests])
+  useEffect(() => { setResultsPage(1) }, [resultsSearch, resultsCategoryFilter, showRecentResults])
+  const paginatedAvailable = filteredByRecent.slice((availablePage-1)*PER_PAGE, availablePage*PER_PAGE)
+  const paginatedInvitations = filteredByRecentInv.slice((invitationsPage-1)*PER_PAGE, invitationsPage*PER_PAGE)
+  const paginatedYourTests = filteredYourTestsByCategory.slice((yourTestsPage-1)*PER_PAGE, yourTestsPage*PER_PAGE)
+  const paginatedResults = filteredResultsByRecent.slice((resultsPage-1)*PER_PAGE, resultsPage*PER_PAGE)
+  const totalAvailablePages = Math.max(1, Math.ceil(filteredByRecent.length / PER_PAGE))
+  const totalInvitationsPages = Math.max(1, Math.ceil(filteredByRecentInv.length / PER_PAGE))
+  const totalYourTestsPages = Math.max(1, Math.ceil(filteredYourTestsByCategory.length / PER_PAGE))
+  const totalResultsPages = Math.max(1, Math.ceil(filteredResultsByRecent.length / PER_PAGE))
+
+  // Category options for test types
+  const categoryOptions = [
+    { value: "all", label: "All Categories" },
+    { value: "Frontend", label: "Frontend" },
+    { value: "Backend", label: "Backend" },
+    { value: "Full Stack", label: "Full Stack" },
+    { value: "QA", label: "QA" },
+    { value: "DevOps", label: "DevOps" },
+    { value: "Problem_Solving", label: "Problem Solving" },
+    { value: "Data_Science", label: "Data Science" },
+    { value: "Data_Analysis", label: "Data Analysis" },
+    { value: "Math/Aptitude", label: "Math/Aptitude" },
+  ];
 
   const handleLogout = async () => {
     try {
@@ -553,14 +574,14 @@ export default function StudentAssessmentDashboard() {
                   <div className="flex justify-center py-8">
                     <div className="text-gray-500">Loading tests...</div>
                   </div>
-                ) : filteredByRecent.length === 0 ? (
+                ) : paginatedAvailable.length === 0 ? (
                   <div className="text-center py-8">
                     <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">No tests available with current filters</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {filteredByRecent.map((test) => {
+                    {paginatedAvailable.map((test) => {
                       const token = latestInvitationTokenMap[test.id];
                       const isTestCompletedForToken = yourTests.some(
                         (t) =>
@@ -621,6 +642,17 @@ export default function StudentAssessmentDashboard() {
                     })}
                   </div>
                 )}
+                <div className="flex justify-center items-center gap-2 mt-4">
+                  <Button variant="outline" size="sm" onClick={() => setAvailablePage(p => Math.max(1, p-1))} disabled={availablePage===1} className="flex items-center">
+                    <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                  </Button>
+                  {Array.from({length: totalAvailablePages}, (_,i) => (
+                    <Button key={i} variant="outline" size="sm" onClick={()=>setAvailablePage(i+1)} className={availablePage===i+1?"bg-blue-600 text-white hover:bg-blue-700":"hover:bg-gray-100"}>{i+1}</Button>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={()=>setAvailablePage(p=>Math.min(totalAvailablePages,p+1))} disabled={availablePage===totalAvailablePages} className="flex items-center">
+                    Next <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -665,14 +697,14 @@ export default function StudentAssessmentDashboard() {
                   <div className="flex justify-center py-8">
                     <div className="text-gray-500">Loading invitations...</div>
                   </div>
-                ) : filteredByRecentInv.length === 0 ? (
+                ) : paginatedInvitations.length === 0 ? (
                   <div className="text-center py-8">
                     <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">No invitations found</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {filteredByRecentInv.map((invitation) => (
+                    {paginatedInvitations.map((invitation) => (
                       <Card key={invitation.id} className="border-l-4 border-l-orange-500">
                         <CardHeader>
                           <div className="flex justify-between items-start">
@@ -731,6 +763,17 @@ export default function StudentAssessmentDashboard() {
                     ))}
                   </div>
                 )}
+                <div className="flex justify-center items-center gap-2 mt-4">
+                  <Button variant="outline" size="sm" onClick={() => setInvitationsPage(p => Math.max(1, p-1))} disabled={invitationsPage===1} className="flex items-center">
+                    <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                  </Button>
+                  {Array.from({length: totalInvitationsPages}, (_,i) => (
+                    <Button key={i} variant="outline" size="sm" onClick={()=>setInvitationsPage(i+1)} className={invitationsPage===i+1?"bg-blue-600 text-white hover:bg-blue-700":"hover:bg-gray-100"}>{i+1}</Button>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={()=>setInvitationsPage(p=>Math.min(totalInvitationsPages,p+1))} disabled={invitationsPage===totalInvitationsPages} className="flex items-center">
+                    Next <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -775,14 +818,14 @@ export default function StudentAssessmentDashboard() {
                   <div className="flex justify-center py-8">
                     <div className="text-gray-500">Loading your tests...</div>
                   </div>
-                ) : filteredYourTestsByCategory.length === 0 ? (
+                ) : paginatedYourTests.length === 0 ? (
                   <div className="text-center py-8">
                     <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">No tests found with current filters</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {filteredYourTestsByCategory.map((test) => (
+                    {paginatedYourTests.map((test) => (
                       <Card
                         key={test.id}
                         className={`border-l-4 ${test.status === "completed" ? "border-l-green-500" : "border-l-blue-500"}`}
@@ -804,13 +847,7 @@ export default function StudentAssessmentDashboard() {
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              {test.status === 'Failed' ? (
-                                <span className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">Failed</span>
-                              ) : test.status === 'Passed' ? (
-                                <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-semibold">Passed</span>
-                              ) : (
-                                <Badge className={getStatusColor(test.status)}>{test.status}</Badge>
-                              )}
+                              {/* Removed Passed/Failed badge for Your Tests */}
                               {test.grade && (
                                 <Badge variant="outline" className={getGradeColor(test.grade)}>
                                   {test.grade}
@@ -838,7 +875,7 @@ export default function StudentAssessmentDashboard() {
                                 <span>
                                   Correct: {test.correctAnswers}/{test.totalQuestions}
                                 </span>
-                                <span>Time: {test.timeTaken} min</span>
+                                <span>Time: {typeof test.timeTaken === 'number' && test.timeTaken > 0 ? `${Math.round(test.timeTaken)} min` : 'N/A'}</span>
                               </div>
                               <Progress value={test.score || 0} className="h-2" />
                               <p className="text-xs text-gray-500 mt-1">Completed on {formatDate(test.completedAt!)}</p>
@@ -873,6 +910,17 @@ export default function StudentAssessmentDashboard() {
                     ))}
                   </div>
                 )}
+                <div className="flex justify-center items-center gap-2 mt-4">
+                  <Button variant="outline" size="sm" onClick={() => setYourTestsPage(p => Math.max(1, p-1))} disabled={yourTestsPage===1} className="flex items-center">
+                    <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                  </Button>
+                  {Array.from({length: totalYourTestsPages}, (_,i) => (
+                    <Button key={i} variant="outline" size="sm" onClick={()=>setYourTestsPage(i+1)} className={yourTestsPage===i+1?"bg-blue-600 text-white hover:bg-blue-700":"hover:bg-gray-100"}>{i+1}</Button>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={()=>setYourTestsPage(p=>Math.min(totalYourTestsPages,p+1))} disabled={yourTestsPage===totalYourTestsPages} className="flex items-center">
+                    Next <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -917,14 +965,14 @@ export default function StudentAssessmentDashboard() {
                   <div className="flex justify-center py-8">
                     <div className="text-gray-500">Loading results...</div>
                   </div>
-                ) : filteredResultsByRecent.length === 0 ? (
+                ) : paginatedResults.length === 0 ? (
                   <div className="text-center py-8">
                     <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">No published results found</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {filteredResultsByRecent.map((result) => (
+                    {paginatedResults.map((result) => (
                       <Card key={result.id} className="border-l-4 border-l-green-500">
                         <CardHeader>
                           <div className="flex justify-between items-start">
@@ -965,7 +1013,7 @@ export default function StudentAssessmentDashboard() {
                               <span>
                                 Correct: {result.correctAnswers}/{result.totalQuestions}
                               </span>
-                              <span>Time: {result.timeTaken} min</span>
+                              <span>Time: {typeof result.timeTaken === 'number' && result.timeTaken > 0 ? `${Math.round(result.timeTaken)} min` : 'N/A'}</span>
                             </div>
                             <Progress value={result.score || 0} className="h-2" />
                             <p className="text-xs text-gray-500 mt-1">Completed on {formatDate(result.completedAt!)}</p>
@@ -980,6 +1028,17 @@ export default function StudentAssessmentDashboard() {
                     ))}
                   </div>
                 )}
+                <div className="flex justify-center items-center gap-2 mt-4">
+                  <Button variant="outline" size="sm" onClick={() => setResultsPage(p => Math.max(1, p-1))} disabled={resultsPage===1} className="flex items-center">
+                    <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                  </Button>
+                  {Array.from({length: totalResultsPages}, (_,i) => (
+                    <Button key={i} variant="outline" size="sm" onClick={()=>setResultsPage(i+1)} className={resultsPage===i+1?"bg-blue-600 text-white hover:bg-blue-700":"hover:bg-gray-100"}>{i+1}</Button>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={()=>setResultsPage(p=>Math.min(totalResultsPages,p+1))} disabled={resultsPage===totalResultsPages} className="flex items-center">
+                    Next <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

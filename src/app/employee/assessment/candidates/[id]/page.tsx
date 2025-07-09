@@ -94,6 +94,18 @@ export default function CandidateDetailsPage() {
   const [results, setResults] = useState<ResultData[]>([])
   const [verifications, setVerifications] = useState<VerificationData[]>([])
 
+  // Pagination state for tabs
+  const [invPage, setInvPage] = useState(1);
+  const [resPage, setResPage] = useState(1);
+  const [verPage, setVerPage] = useState(1);
+  const perPage = 8;
+  const invTotalPages = Math.ceil(invitations.length / perPage);
+  const resTotalPages = Math.ceil(results.length / perPage);
+  const verTotalPages = Math.ceil(verifications.length / perPage);
+  const paginatedInvitations = invitations.slice((invPage - 1) * perPage, invPage * perPage);
+  const paginatedResults = results.slice((resPage - 1) * perPage, resPage * perPage);
+  const paginatedVerifications = verifications.slice((verPage - 1) * perPage, verPage * perPage);
+
   const [showInviteDialog, setShowInviteDialog] = useState(false)
   const [selectedTest, setSelectedTest] = useState<string | null>(null)
   const [isSendingInvitation, setIsSendingInvitation] = useState(false)
@@ -535,6 +547,43 @@ export default function CandidateDetailsPage() {
     }
   }
 
+  // Add this handler
+  const handleDownloadAllResults = async () => {
+    if (!candidate?.email || results.length === 0) return;
+    try {
+      setActionLoading('download-all');
+      const response = await fetch(`/api/assessment/results/download-all?candidateEmail=${encodeURIComponent(candidate.email)}`, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        },
+      });
+      if (!response.ok) throw new Error('Failed to download all results');
+      const blob = await response.blob();
+      const disposition = response.headers.get('Content-Disposition');
+      let filename = `all-results-${candidate.email}.xlsx`;
+      if (disposition && disposition.includes('filename=')) {
+        filename = disposition.split('filename=')[1].replace(/"/g, '').trim();
+      }
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        a.remove();
+      }, 100);
+      toast.success('All results downloaded as Excel!');
+    } catch (error) {
+      console.error('Error downloading all results:', error);
+      toast.error('Failed to download all results.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-6">
@@ -633,7 +682,7 @@ export default function CandidateDetailsPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-foreground">{candidate.name}</h1>
+            <h1 className="text-3xl font-bold text-foreground">{candidate.name || candidate.email}</h1>
             <p className="text-muted-foreground">{candidate.email}</p>
           </div>
         </div>
@@ -681,10 +730,11 @@ export default function CandidateDetailsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Test Invitations</CardTitle>
-              <CardDescription>View and manage all test invitations sent to {candidate.name}.</CardDescription>
+              <CardDescription>View and manage all test invitations sent to {candidate.name || candidate.email}.</CardDescription>
             </CardHeader>
             <CardContent>
               {invitations.length > 0 ? (
+                <>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full">
                     <thead>
@@ -697,7 +747,7 @@ export default function CandidateDetailsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {invitations.map((invitation) => (
+                      {paginatedInvitations.map((invitation) => (
                         <tr key={invitation._id} className="border-t hover:bg-muted/30">
                           <td className="py-3 px-4">{invitation.testName}</td>
                           <td className="py-3 px-4">
@@ -736,11 +786,23 @@ export default function CandidateDetailsPage() {
                                 </>
                               )}
                               {invitation.status === "Completed" && (
-                                <Button variant="outline" size="sm" asChild>
-                                  <Link href={`/employee/assessment/results?invitation=${invitation._id}`}>
-                                    View Result
-                                  </Link>
-                                </Button>
+                                (() => {
+                                  // Find the result for this invitation
+                                  const matchingResult = results.find(
+                                    (r) => r.testId === invitation.testId && r.candidateEmail === invitation.email
+                                  );
+                                  return matchingResult ? (
+                                    <Button variant="outline" size="sm" asChild>
+                                      <Link href={`/employee/assessment/results/${matchingResult._id}`}>
+                                        View Result
+                                      </Link>
+                                    </Button>
+                                  ) : (
+                                    <Button variant="outline" size="sm" disabled>
+                                      View Result
+                                    </Button>
+                                  );
+                                })()
                               )}
                               {invitation.status === "Cancelled" && (
                                 <span className="text-sm text-muted-foreground">Cancelled</span>
@@ -767,6 +829,43 @@ export default function CandidateDetailsPage() {
                     </tbody>
                   </table>
                 </div>
+                {/* Pagination Controls for Invitations */}
+                {invTotalPages > 1 && (
+                  <div className="flex items-center justify-center space-x-2 mt-6">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setInvPage((p) => Math.max(1, p - 1))}
+                      disabled={invPage === 1}
+                    >
+                      <span className="flex items-center"><svg className="h-4 w-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>Previous</span>
+                    </Button>
+                    {Array.from({ length: invTotalPages }, (_, i) => i + 1).map((pageNum) => (
+                      <Button
+                        key={pageNum}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setInvPage(pageNum)}
+                        className={
+                          pageNum === invPage
+                            ? "bg-blue-500 text-white hover:bg-blue-600"
+                            : "hover:bg-gray-100"
+                        }
+                      >
+                        {pageNum}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setInvPage((p) => Math.min(invTotalPages, p + 1))}
+                      disabled={invPage === invTotalPages}
+                    >
+                      <span className="flex items-center">Next<svg className="h-4 w-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
+                    </Button>
+                  </div>
+                )}
+                </>
               ) : (
                 <div className="text-center py-8">
                   <Mail className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -785,10 +884,23 @@ export default function CandidateDetailsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Test Results</CardTitle>
-              <CardDescription>View all test results for {candidate.name}.</CardDescription>
+              <CardDescription>View all test results for {candidate.name || candidate.email}.</CardDescription>
+              <div className="flex justify-end mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownloadAllResults}
+                  disabled={results.length === 0 || actionLoading === 'download-all'}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  {actionLoading === 'download-all' ? 'Downloading...' : 'Download All'}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {results.length > 0 ? (
+                <>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full">
                     <thead>
@@ -798,12 +910,11 @@ export default function CandidateDetailsPage() {
                         <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
                         <th className="text-left py-3 px-4 font-medium text-muted-foreground">Duration</th>
                         <th className="text-left py-3 px-4 font-medium text-muted-foreground">Completed</th>
-                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">Declared</th>
                         <th className="text-left py-3 px-4 font-medium text-muted-foreground">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {results.map((result) => (
+                      {paginatedResults.map((result) => (
                         <tr key={result._id} className="border-t hover:bg-muted/30">
                           <td className="py-3 px-4">{result.testName}</td>
                           <td className="py-3 px-4">{result.score}%</td>
@@ -815,16 +926,15 @@ export default function CandidateDetailsPage() {
                           <td className="py-3 px-4">{result.duration} min</td>
                           <td className="py-3 px-4">{formatDate(result.completionDate)}</td>
                           <td className="py-3 px-4">
-                            {result.resultsDeclared ? (
-                              <CheckCircle className="h-5 w-5 text-green-500" />
-                            ) : (
-                              <XCircle className="h-5 w-5 text-red-500" />
-                            )}
-                          </td>
-                          <td className="py-3 px-4">
                             <div className="flex gap-2">
-                              <Button variant="outline" size="sm" asChild>
-                                <Link href={`/employee/assessment/results/${result._id}`}>View</Link>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDownloadResult(result._id)}
+                                disabled={actionLoading === result._id}
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Download
                               </Button>
                               {!result.resultsDeclared && (
                                 <Button
@@ -833,28 +943,10 @@ export default function CandidateDetailsPage() {
                                   onClick={() => handleDeclareResult(result._id)}
                                   disabled={actionLoading === result._id}
                                 >
-                                  {actionLoading === result._id ? (
-                                    <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
-                                  ) : (
-                                    <CheckCircle className="h-4 w-4 mr-2" />
-                                  )}
+                                  <CheckCircle className="h-4 w-4 mr-2" />
                                   Declare
                                 </Button>
                               )}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDownloadResult(result._id)}
-                                disabled={actionLoading === result._id}
-                                className="bg-green-50 hover:bg-green-100 text-green-700"
-                              >
-                                {actionLoading === result._id ? (
-                                  <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                  <Download className="h-4 w-4 mr-2" />
-                                )}
-                                Excel
-                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -862,6 +954,43 @@ export default function CandidateDetailsPage() {
                     </tbody>
                   </table>
                 </div>
+                {/* Pagination Controls for Results */}
+                {resTotalPages > 1 && (
+                  <div className="flex items-center justify-center space-x-2 mt-6">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setResPage((p) => Math.max(1, p - 1))}
+                      disabled={resPage === 1}
+                    >
+                      <span className="flex items-center"><svg className="h-4 w-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>Previous</span>
+                    </Button>
+                    {Array.from({ length: resTotalPages }, (_, i) => i + 1).map((pageNum) => (
+                      <Button
+                        key={pageNum}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setResPage(pageNum)}
+                        className={
+                          pageNum === resPage
+                            ? "bg-blue-500 text-white hover:bg-blue-600"
+                            : "hover:bg-gray-100"
+                        }
+                      >
+                        {pageNum}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setResPage((p) => Math.min(resTotalPages, p + 1))}
+                      disabled={resPage === resTotalPages}
+                    >
+                      <span className="flex items-center">Next<svg className="h-4 w-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
+                    </Button>
+                  </div>
+                )}
+                </>
               ) : (
                 <div className="text-center py-8">
                   <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -876,61 +1005,93 @@ export default function CandidateDetailsPage() {
         <TabsContent value="verifications" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>ID Verifications</CardTitle>
-              <CardDescription>View ID and face verification images submitted by {candidate.name}.</CardDescription>
+              <CardTitle>Verifications</CardTitle>
+              <CardDescription>View all verifications for {candidate.name || candidate.email}.</CardDescription>
             </CardHeader>
             <CardContent>
               {verifications.length > 0 ? (
+                <>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full">
                     <thead>
                       <tr className="bg-muted/50">
-                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">Test</th>
                         <th className="text-left py-3 px-4 font-medium text-muted-foreground">ID Card</th>
                         <th className="text-left py-3 px-4 font-medium text-muted-foreground">Face</th>
-                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">Submitted</th>
+                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">Created</th>
+                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">Updated</th>
                         <th className="text-left py-3 px-4 font-medium text-muted-foreground">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {verifications.map((verification) => {
-                        // Find the invitation for this verification
-                        const invitation = invitations.find((inv) => inv._id === verification.invitationId)
-
-                        return (
-                          <tr key={verification._id} className="border-t hover:bg-muted/30">
-                            <td className="py-3 px-4">{invitation?.testName || "Unknown Test"}</td>
-                            <td className="py-3 px-4">
-                              {verification.idCardImageUrl ? (
-                                <CheckCircle className="h-5 w-5 text-green-500" />
-                              ) : (
-                                <XCircle className="h-5 w-5 text-red-500" />
-                              )}
-                            </td>
-                            <td className="py-3 px-4">
-                              {verification.faceImageUrl ? (
-                                <CheckCircle className="h-5 w-5 text-green-500" />
-                              ) : (
-                                <XCircle className="h-5 w-5 text-red-500" />
-                              )}
-                            </td>
-                            <td className="py-3 px-4">{formatDate(verification.createdAt)}</td>
-                            <td className="py-3 px-4">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => viewVerification(verification)}
-                                disabled={!verification.idCardImageUrl && !verification.faceImageUrl}
-                              >
-                                View Images
-                              </Button>
-                            </td>
-                          </tr>
-                        )
-                      })}
+                      {paginatedVerifications.map((verification) => (
+                        <tr key={verification._id} className="border-t hover:bg-muted/30">
+                          <td className="py-3 px-4">
+                            {verification.idCardImageUrl ? (
+                              <a href={verification.idCardImageUrl} target="_blank" rel="noopener noreferrer">
+                                <img src={verification.idCardImageUrl} alt="ID Card" className="h-12 rounded" />
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground">N/A</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            {verification.faceImageUrl ? (
+                              <a href={verification.faceImageUrl} target="_blank" rel="noopener noreferrer">
+                                <img src={verification.faceImageUrl} alt="Face" className="h-12 rounded-full" />
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground">N/A</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">{formatDate(verification.createdAt)}</td>
+                          <td className="py-3 px-4">{formatDate(verification.updatedAt)}</td>
+                          <td className="py-3 px-4">
+                            <Button variant="outline" size="sm" onClick={() => viewVerification(verification)}>
+                              View
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
+                {/* Pagination Controls for Verifications */}
+                {verTotalPages > 1 && (
+                  <div className="flex items-center justify-center space-x-2 mt-6">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setVerPage((p) => Math.max(1, p - 1))}
+                      disabled={verPage === 1}
+                    >
+                      <span className="flex items-center"><svg className="h-4 w-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>Previous</span>
+                    </Button>
+                    {Array.from({ length: verTotalPages }, (_, i) => i + 1).map((pageNum) => (
+                      <Button
+                        key={pageNum}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setVerPage(pageNum)}
+                        className={
+                          pageNum === verPage
+                            ? "bg-blue-500 text-white hover:bg-blue-600"
+                            : "hover:bg-gray-100"
+                        }
+                      >
+                        {pageNum}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setVerPage((p) => Math.min(verTotalPages, p + 1))}
+                      disabled={verPage === verTotalPages}
+                    >
+                      <span className="flex items-center">Next<svg className="h-4 w-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
+                    </Button>
+                  </div>
+                )}
+                </>
               ) : (
                 <div className="text-center py-8">
                   <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

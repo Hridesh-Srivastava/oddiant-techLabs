@@ -277,7 +277,8 @@ export default function ResultsPage() {
       const data = await response.json()
 
       if (data.success) {
-        toast.success(`${data.resultsCount} results declared and emails sent to candidates`)
+        // Use declaredCount and emailsSent from API response for robust feedback
+        toast.success(`${data.declaredCount || 0} results declared and ${data.emailsSent || 0} emails sent to candidates`)
         fetchResults() // Refresh the results
       } else {
         throw new Error(data.message || "Failed to declare results")
@@ -321,6 +322,17 @@ export default function ResultsPage() {
       result.testName.toLowerCase().includes(query)
     )
   })
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const resultsPerPage = 10;
+  const totalPages = Math.ceil(filteredResults.length / resultsPerPage);
+  const paginatedResults = filteredResults.slice((currentPage - 1) * resultsPerPage, currentPage * resultsPerPage);
+
+  // Reset to first page when filters/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredResults.length]);
 
   return (
     <AssessmentLayout>
@@ -540,7 +552,7 @@ export default function ResultsPage() {
                   </tr>
                 ))
               ) : filteredResults.length > 0 ? (
-                filteredResults.map((result) => (
+                paginatedResults.map((result) => (
                   <tr key={result._id} className="border-t hover:bg-muted/30">
                     <td className="py-3 px-4">
                       <div>
@@ -604,6 +616,42 @@ export default function ResultsPage() {
             </tbody>
           </table>
         </div>
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center space-x-2 mt-6">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              <span className="flex items-center"><svg className="h-4 w-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>Previous</span>
+            </Button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+              <Button
+                key={pageNum}
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(pageNum)}
+                className={
+                  pageNum === currentPage
+                    ? "bg-blue-500 text-white hover:bg-blue-600"
+                    : "hover:bg-gray-100"
+                }
+              >
+                {pageNum}
+              </Button>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              <span className="flex items-center">Next<svg className="h-4 w-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Declare Individual Result Dialog */}

@@ -4,6 +4,8 @@ import { getUserFromRequest } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  console.log("=== API DEBUG: assessment/results/[id]/route.ts GET handler called ===");
+  console.log("CWD:", process.cwd());
   try {
     // Get user ID from request
     const userId = await getUserFromRequest(request)
@@ -25,6 +27,76 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
     if (!result) {
       return NextResponse.json({ success: false, message: "Result not found" }, { status: 404 })
+    }
+
+    // Try to get candidate name from candidates or students collection
+    let candidateName = result.candidateName || ""
+    const isLikelyEmailPrefix = candidateName && typeof candidateName === "string" && !candidateName.includes(" ") && result.candidateEmail && candidateName === result.candidateEmail.split("@")[0];
+    if ((!candidateName || candidateName === result.candidateEmail || isLikelyEmailPrefix) && (result.candidateId || result.studentId || result.candidateEmail)) {
+      let candidateDoc = null;
+      console.log("DEBUG: result.studentId =", result.studentId, typeof result.studentId);
+      console.log("DEBUG: result.candidateId =", result.candidateId, typeof result.candidateId);
+      console.log("DEBUG: result.candidateEmail =", result.candidateEmail, typeof result.candidateEmail);
+      if (result.candidateId) {
+        candidateDoc = await db.collection("candidates").findOne({ _id: new ObjectId(result.candidateId) });
+        console.log("DEBUG: candidateDoc after candidateId/candidates lookup =", candidateDoc);
+      }
+      if (!candidateDoc && result.candidateId) {
+        candidateDoc = await db.collection("students").findOne({ _id: new ObjectId(result.candidateId) });
+        console.log("DEBUG: candidateDoc after candidateId/students lookup =", candidateDoc);
+      }
+      if (!candidateDoc && result.studentId) {
+        candidateDoc = await db.collection("students").findOne({ _id: new ObjectId(result.studentId) });
+        console.log("DEBUG: candidateDoc after studentId/students lookup =", candidateDoc);
+      }
+      if (!candidateDoc && result.studentId) {
+        candidateDoc = await db.collection("candidates").findOne({ _id: new ObjectId(result.studentId) });
+        console.log("DEBUG: candidateDoc after studentId/candidates lookup =", candidateDoc);
+      }
+      if (!candidateDoc && result.candidateEmail) {
+        candidateDoc = await db.collection("candidates").findOne({ email: result.candidateEmail });
+        console.log("DEBUG: candidateDoc after candidateEmail/candidates lookup =", candidateDoc);
+      }
+      if (!candidateDoc && result.candidateEmail) {
+        candidateDoc = await db.collection("students").findOne({ email: result.candidateEmail });
+        console.log("DEBUG: candidateDoc after candidateEmail/students lookup =", candidateDoc);
+      }
+      if (candidateDoc) {
+        // DEBUG: Log candidateDoc and all name fields
+        console.log("candidateDoc for name resolution:", JSON.stringify({
+          salutation: candidateDoc.salutation,
+          firstName: candidateDoc.firstName,
+          middleName: candidateDoc.middleName,
+          lastName: candidateDoc.lastName,
+          name: candidateDoc.name,
+          email: candidateDoc.email,
+          _id: candidateDoc._id
+        }, null, 2));
+        // Build full name: salutation + firstName + middleName + lastName
+        let fullName = ""
+        if (candidateDoc.salutation && typeof candidateDoc.salutation === "string" && candidateDoc.salutation.trim() !== "") {
+          fullName += candidateDoc.salutation.trim() + " ";
+        }
+        if (candidateDoc.firstName && typeof candidateDoc.firstName === "string" && candidateDoc.firstName.trim() !== "") {
+          fullName += candidateDoc.firstName.trim() + " ";
+        }
+        if (candidateDoc.middleName && typeof candidateDoc.middleName === "string" && candidateDoc.middleName.trim() !== "") {
+          fullName += candidateDoc.middleName.trim() + " ";
+        }
+        if (candidateDoc.lastName && typeof candidateDoc.lastName === "string" && candidateDoc.lastName.trim() !== "") {
+          fullName += candidateDoc.lastName.trim();
+        }
+        fullName = fullName.trim();
+        if (fullName !== "") {
+          candidateName = fullName;
+        } else if (candidateDoc.name && typeof candidateDoc.name === "string" && candidateDoc.name.trim() !== "") {
+          candidateName = candidateDoc.name.trim();
+        } else {
+          candidateName = result.candidateEmail;
+        }
+      } else {
+        candidateName = result.candidateEmail;
+      }
     }
 
     // Get test details
@@ -56,6 +128,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
           ...result,
           _id: result._id.toString(),
           testId: result.testId.toString(),
+          candidateName, // <-- always use the resolved candidateName
         },
         test: test
           ? {
@@ -116,9 +189,13 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
       updateData.score = body.score
     }
 
-    // Handle status updates
-    if (body.status) {
-      updateData.status = body.status
+    // Always fetch the test and set status based on score and passingScore
+    const test = await db.collection("assessment_tests").findOne({
+      _id: new ObjectId(existingResult.testId),
+    })
+    const passingScore = test?.passingScore ?? 70
+    if (updateData.score !== undefined) {
+      updateData.status = updateData.score >= passingScore ? "Passed" : "Failed"
     }
 
     // Handle results declaration

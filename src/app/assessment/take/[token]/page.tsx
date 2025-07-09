@@ -288,31 +288,29 @@ export default function TakeTestPage() {
                 const stored = localStorage.getItem(`submissions_${sessionQuestionKey}`)
                 if (stored) {
                   storedSubmissions = JSON.parse(stored)
+                } else {
+                  // Also check by questionId only (for robust fallback)
+                  const storedByQid = localStorage.getItem(`submissions_${question.id}`)
+                  if (storedByQid) {
+                    storedSubmissions = JSON.parse(storedByQid)
+                  }
                 }
               } catch (e) {
                 console.warn("Failed to load from localStorage during submission:", e)
               }
             }
 
-            // Check if user has written code but not executed it
-            const userCode = answers[questionKey] as string
-            const hasCode = userCode && userCode.trim() !== "" && userCode.trim() !== question.codeTemplate?.trim()
-
-            if (hasCode && (!storedSubmissions || storedSubmissions.length === 0)) {
-              toast.error(
-                `Please run your code for coding questions to execute test cases before submitting. Check Question: "${question.text.substring(0, 50)}..."`,
-              )
-              return true // Found unexecuted coding question
+            // If there is code present but no code execution results, prevent submission
+            if ((codes[questionKey] && codes[questionKey].trim() !== "") && (!storedSubmissions || storedSubmissions.length === 0)) {
+              toast.error(`Please run your code at least once for coding question: "${question.text}" before submitting.`)
+              setIsSubmitting(false)
+              return true // Prevent submission
             }
           }
           return false
         })
       })
-
-      if (codingQuestionsValidation) {
-        setIsSubmitting(false)
-        return // Stop submission
-      }
+      if (codingQuestionsValidation) return
 
       // Disable webcam functionality when submitting
       setWebcamEnabled(false)
@@ -341,7 +339,13 @@ export default function TakeTestPage() {
           // Enhanced scoring logic for different question types
           if (question.type === "Multiple Choice") {
             const userAnswerStr = typeof userAnswer === "string" ? userAnswer : Array.isArray(userAnswer) ? userAnswer.join(", ") : ""
-            const correctAnswerStr = typeof question.correctAnswer === "string" ? question.correctAnswer : Array.isArray(question.correctAnswer) ? question.correctAnswer[0] || "" : ""
+            // Always use the correct answer from the test definition, fallback to first option if missing
+            let correctAnswerStr = ""
+            if (typeof question.correctAnswer === "string" && question.correctAnswer.trim() !== "") {
+              correctAnswerStr = question.correctAnswer
+            } else if (Array.isArray(question.options) && question.options.length > 0) {
+              correctAnswerStr = question.options[0]
+            }
             if (isMCQAnswerCorrect(userAnswerStr, correctAnswerStr, question.options)) {
               isCorrect = true;
               earnedPoints += question.points;
@@ -351,7 +355,7 @@ export default function TakeTestPage() {
               questionText: question.text,
               questionType: question.type,
               answer: userAnswerStr,
-              correctAnswer: correctAnswerStr,
+              correctAnswer: correctAnswerStr, // Always use from test definition or fallback
               options: question.options || [],
               isCorrect,
               points: isCorrect ? question.points : 0,
@@ -375,6 +379,12 @@ export default function TakeTestPage() {
                 const stored = localStorage.getItem(`submissions_${sessionQuestionKey}`)
                 if (stored) {
                   storedSubmissions = JSON.parse(stored)
+                } else {
+                  // Also check by questionId only (for robust fallback)
+                  const storedByQid = localStorage.getItem(`submissions_${question.id}`)
+                  if (storedByQid) {
+                    storedSubmissions = JSON.parse(storedByQid)
+                  }
                 }
               } catch (e) {
                 console.warn("Failed to load from localStorage during submission:", e)
@@ -1418,6 +1428,20 @@ export default function TakeTestPage() {
       }
     } catch (e) { /* ignore */ }
 
+    // Reset codes state for all coding questions to their template (or empty string)
+    if (test) {
+      const newCodes: { [key: string]: string } = {};
+      test.sections.forEach(section => {
+        section.questions.forEach(question => {
+          if (question.type === "Coding") {
+            const questionKey = `${section.id}-${question.id}`;
+            newCodes[questionKey] = question.codeTemplate || "";
+          }
+        });
+      });
+      setCodes(newCodes);
+    }
+
     setActiveTab("test")
     setStartTime(new Date())
     // Ensure webcam is started only if enabled
@@ -1493,23 +1517,27 @@ export default function TakeTestPage() {
       .padStart(2, "0")}`
   }
 
+  // PROGRESS BAR: Show progress based on current question navigation, not answers
   const calculateProgress = () => {
     if (!test) return 0
     let totalQuestions = 0
-    let answeredQuestions = 0
-
-    test.sections.forEach((section) => {
-      totalQuestions += section.questions.length
-      section.questions.forEach((question) => {
-        const questionKey = `${section.id}-${question.id}`
-        const answer = answers[questionKey]
-        if (answer && (typeof answer === "string" ? answer.trim() !== "" : answer.length > 0)) {
-          answeredQuestions++
-        }
-      })
-    })
-
-    return totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0
+    let currentQuestionNumber = 0
+    // Flatten all questions to get the absolute index
+    const allQuestions = test.sections.flatMap((section) => section.questions)
+    totalQuestions = allQuestions.length
+    // Find the absolute index of the current question
+    let questionCount = 0
+    for (let s = 0; s < test.sections.length; s++) {
+      if (s < currentSection) {
+        questionCount += test.sections[s].questions.length
+      } else if (s === currentSection) {
+        questionCount += currentQuestion
+        break
+      }
+    }
+    currentQuestionNumber = questionCount
+    // Progress is based on the question you are currently viewing (1-based)
+    return totalQuestions > 0 ? Math.round(((currentQuestionNumber + 1) / totalQuestions) * 100) : 0
   }
 
   // System check functions

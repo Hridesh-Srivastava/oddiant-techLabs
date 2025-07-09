@@ -27,6 +27,47 @@ export async function GET(request: NextRequest) {
     // For each candidate, get their stats
     const candidatesWithStats = await Promise.all(
       candidates.map(async (candidate) => {
+        // Robust full name resolution
+        let candidateName = candidate.name || ""
+        const isLikelyEmailPrefix = candidateName && typeof candidateName === "string" && !candidateName.includes(" ") && candidate.email && candidateName === candidate.email.split("@")[0];
+        if ((!candidateName || candidateName === candidate.email || isLikelyEmailPrefix) && candidate.email) {
+          let candidateDoc = null;
+          candidateDoc = await db.collection("students").findOne({ email: candidate.email });
+          if (!candidateDoc) {
+            candidateDoc = await db.collection("candidates").findOne({ email: candidate.email });
+          }
+          if (!candidateDoc && candidate._id) {
+            candidateDoc = await db.collection("students").findOne({ _id: new ObjectId(candidate._id) });
+          }
+          if (!candidateDoc && candidate._id) {
+            candidateDoc = await db.collection("candidates").findOne({ _id: new ObjectId(candidate._id) });
+          }
+          if (candidateDoc) {
+            let fullName = ""
+            if (candidateDoc.salutation && typeof candidateDoc.salutation === "string" && candidateDoc.salutation.trim() !== "") {
+              fullName += candidateDoc.salutation.trim() + " ";
+            }
+            if (candidateDoc.firstName && typeof candidateDoc.firstName === "string" && candidateDoc.firstName.trim() !== "") {
+              fullName += candidateDoc.firstName.trim() + " ";
+            }
+            if (candidateDoc.middleName && typeof candidateDoc.middleName === "string" && candidateDoc.middleName.trim() !== "") {
+              fullName += candidateDoc.middleName.trim() + " ";
+            }
+            if (candidateDoc.lastName && typeof candidateDoc.lastName === "string" && candidateDoc.lastName.trim() !== "") {
+              fullName += candidateDoc.lastName.trim();
+            }
+            fullName = fullName.trim();
+            if (fullName !== "") {
+              candidateName = fullName;
+            } else if (candidateDoc.name && typeof candidateDoc.name === "string" && candidateDoc.name.trim() !== "") {
+              candidateName = candidateDoc.name.trim();
+            } else {
+              candidateName = candidate.email;
+            }
+          } else {
+            candidateName = candidate.email;
+          }
+        }
         // Get invitation count
         const invitationCount = await db.collection("assessment_invitations").countDocuments({
           email: candidate.email,
@@ -48,8 +89,26 @@ export async function GET(request: NextRequest) {
           averageScore = Math.round(totalScore / completedResults.length)
         }
 
+        // Find latest invitation for this candidate
+        const latestInvitation = await db.collection("assessment_invitations").find({
+          email: candidate.email,
+          createdBy: new ObjectId(userId),
+        }).sort({ invitedAt: -1 }).limit(1).toArray();
+        let status = "Invited";
+        if (latestInvitation.length > 0) {
+          const invitation = latestInvitation[0];
+          if (invitation.status === "Pending") {
+            status = "Pending";
+          } else if (invitation.status === "Completed") {
+            status = "Completed";
+          } else {
+            status = invitation.status;
+          }
+        }
         return {
           ...candidate,
+          name: candidateName,
+          status: status,
           _id: candidate._id.toString(),
           testsAssigned: invitationCount,
           testsCompleted: completedResults.length,

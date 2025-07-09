@@ -19,6 +19,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import ReactMarkdown from "react-markdown"
+import rehypeRaw from "rehype-raw"
 
 interface ResultData {
   _id: string
@@ -337,11 +339,45 @@ export default function ResultDetailsPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button
+            variant="outline"
+            onClick={async () => {
+              try {
+                const res = await fetch(`/api/assessment/results/${result._id}/download`, {
+                  method: 'GET',
+                  headers: {
+                    'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                  },
+                });
+                if (!res.ok) throw new Error('Failed to download Excel');
+                const blob = await res.blob();
+                // Try to get filename from Content-Disposition
+                let filename = `assessment-result.xlsx`;
+                const disposition = res.headers.get('Content-Disposition');
+                if (disposition && disposition.includes('filename=')) {
+                  filename = disposition.split('filename=')[1].replace(/"/g, '').trim();
+                }
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                  window.URL.revokeObjectURL(url);
+                  a.remove();
+                }, 100);
+              } catch (err) {
+                toast.error('Failed to download Excel. Please try again.');
+              }
+            }}
+          >
             <Download className="h-4 w-4 mr-2" />
             Download Excel
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => {
+            window.location.href = `mailto:${result.candidateEmail}`;
+          }}>
             <Mail className="h-4 w-4 mr-2" />
             Email Candidate
           </Button>
@@ -400,7 +436,7 @@ export default function ResultDetailsPage() {
             <CardContent>
               <div className="space-y-6">
                 {result.answers.map((answer, index) => (
-                  <div key={answer.questionId} className="border-b pb-6 last:border-b-0">
+                  <div key={`${answer.questionId}-${index}`} className="border-b pb-6 last:border-b-0">
                     <div className="flex justify-between items-start mb-3">
                       <h3 className="text-lg font-medium">Question {index + 1}</h3>
                       <div className="flex items-center gap-2">
@@ -415,19 +451,25 @@ export default function ResultDetailsPage() {
                       </div>
                     </div>
 
-                    <p className="text-muted-foreground mb-3">{answer.questionText}</p>
+                    {/* Render question text with markdown and HTML support */}
+                    <div className="text-muted-foreground mb-3">
+                      <ReactMarkdown rehypePlugins={[rehypeRaw]}>{answer.questionText}</ReactMarkdown>
+                    </div>
 
                     <div className="space-y-3">
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Candidate Answer:</Label>
-                        <div className="mt-1 p-3 bg-muted rounded-md">
-                          {answer.questionType === "Multiple Choice" && Array.isArray(answer.options)
-                            ? answer.options.find(opt => String(opt).trim().toLowerCase() === String(answer.answer).trim().toLowerCase()) || answer.answer || "No answer provided"
-                            : Array.isArray(answer.answer)
-                              ? answer.answer.join(", ")
-                              : answer.answer || "No answer provided"}
+                      {/* Only show Candidate Answer if not coding type */}
+                      {answer.questionType !== 'Coding' && (
+                        <div>
+                          <Label className="text-sm font-medium text-muted-foreground">Candidate Answer:</Label>
+                          <div className="mt-1 p-3 bg-muted rounded-md">
+                            {answer.questionType === "Multiple Choice" && Array.isArray(answer.options)
+                              ? answer.options.find(opt => String(opt).trim().toLowerCase() === String(answer.answer).trim().toLowerCase()) || answer.answer || "No answer provided"
+                              : Array.isArray(answer.answer)
+                                ? answer.answer.join(", ")
+                                : answer.answer || "No answer provided"}
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       {answer.questionType === "Multiple Choice" && answer.correctAnswer && (
                         <div>
@@ -536,11 +578,49 @@ export default function ResultDetailsPage() {
               <CardTitle>Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button className="w-full" variant="outline">
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`/api/assessment/results/${result._id}/download`, {
+                      method: 'GET',
+                      headers: {
+                        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                      },
+                    });
+                    if (!res.ok) throw new Error('Failed to download Excel');
+                    const blob = await res.blob();
+                    let filename = `assessment-result.xlsx`;
+                    const disposition = res.headers.get('Content-Disposition');
+                    if (disposition && disposition.includes('filename=')) {
+                      filename = disposition.split('filename=')[1].replace(/"/g, '').trim();
+                    }
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                      window.URL.revokeObjectURL(url);
+                      a.remove();
+                    }, 100);
+                  } catch (err) {
+                    toast.error('Failed to download Excel. Please try again.');
+                  }
+                }}
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Download Excel
               </Button>
-              <Button className="w-full" variant="outline">
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={() => {
+                  window.location.href = `mailto:${result.candidateEmail}`;
+                }}
+              >
                 <Mail className="h-4 w-4 mr-2" />
                 Email Candidate
               </Button>
