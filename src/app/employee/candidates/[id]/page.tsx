@@ -933,7 +933,7 @@ export default function CandidateDetailsPage({
                 )}
 
                 {/* Skills */}
-                {candidate.skills && candidate.skills.length > 0 && (
+                {Array.isArray(candidate.skills) && candidate.skills.length > 0 ? (
                   <>
                     <Separator />
                     <div>
@@ -950,7 +950,7 @@ export default function CandidateDetailsPage({
                       </div>
                     </div>
                   </>
-                )}
+                ) : null}
 
                 {/* Portfolio & Social Links */}
                 {(candidate.portfolioLink || candidate.socialMediaLink) && (
