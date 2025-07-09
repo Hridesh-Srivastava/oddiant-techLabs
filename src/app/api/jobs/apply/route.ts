@@ -215,6 +215,14 @@ export async function POST(request: NextRequest) {
         appliedDate: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
+        candidateName: [salutation, firstName, middleName, lastName].filter(Boolean).join(' '),
+        candidateEmail: email,
+        applicationCollection: "candidates",
+        history: [{
+          status: "applied",
+          date: new Date(),
+          note: "Application submitted"
+        }],
       }
 
       const applicationResult = await db.collection("job_applications").insertOne(application, { session })

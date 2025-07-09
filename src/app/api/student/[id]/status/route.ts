@@ -119,7 +119,7 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
           updatedAt: new Date(),
 
           // Include basic user info for easier querying
-          studentName: `${targetUser.firstName || ""} ${targetUser.lastName || ""}`.trim() || "Unknown",
+          studentName: [targetUser.salutation, targetUser.firstName, targetUser.middleName, targetUser.lastName].filter(Boolean).join(' ') || "Unknown",
           studentEmail: targetUser.email || "",
         }
 

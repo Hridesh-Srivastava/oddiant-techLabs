@@ -89,7 +89,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       applicantName: `${user.firstName} ${user.lastName}`,
       applicantEmail: user.email,
       applicantPhone: user.phone || "",
-      studentName: `${user.firstName} ${user.lastName}`, // For backward compatibility
+      studentName: [user.salutation, user.firstName, user.middleName, user.lastName].filter(Boolean).join(' '), // Full name with salutation and middle name
       studentEmail: user.email,
 
       // Job details for reference

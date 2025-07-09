@@ -61,10 +61,15 @@ export async function POST(request: NextRequest) {
       if (!candidate) {
         // Create a new candidate record if user exists but no candidate record
         if (existingUser) {
+          const fullName = [existingUser.salutation, existingUser.firstName, existingUser.middleName, existingUser.lastName]
+            .filter(Boolean)
+            .join(' ');
           const newCandidate = {
-            name: existingUser.firstName + " " + existingUser.lastName,
+            name: fullName,
             firstName: existingUser.firstName || "",
+            middleName: existingUser.middleName || "",
             lastName: existingUser.lastName || "",
+            salutation: existingUser.salutation || "",
             email: existingUser.email,
             phone: existingUser.phone || "",
             status: "Applied",
@@ -81,34 +86,25 @@ export async function POST(request: NextRequest) {
           candidateId = candidateResult.insertedId
           candidate = { ...newCandidate, _id: candidateResult.insertedId } as any
         }
-        // If student exists but no candidate record
+        // If student exists but no candidate record, DO NOT create a new candidate entry
         else if (existingStudent) {
-          const newCandidate = {
-            name: existingStudent.firstName + " " + existingStudent.lastName,
-            firstName: existingStudent.firstName || "",
-            lastName: existingStudent.lastName || "",
-            email: existingStudent.email,
-            phone: existingStudent.phone || "",
-            status: "Applied",
-            role: job.jobTitle,
-            location: job.jobLocation || "",
-            experience: job.experienceRange || "",
-            appliedDate: new Date(),
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            studentId: existingStudent._id,
-          }
-
-          const candidateResult = await db.collection("candidates").insertOne(newCandidate, { session })
-          candidateId = candidateResult.insertedId
-          candidate = { ...newCandidate, _id: candidateResult.insertedId } as any
+          // For students users, do not create/update candidates entry
+          // Instead, use studentId for job application and skip candidate creation
+          candidateId = null;
         }
       } else {
         candidateId = candidate._id
       }
 
-      // Ensure candidateId is not null before proceeding
-      if (!candidateId) {
+      // If user is a students user and not a candidate, use studentId for job application
+      const applicationCandidateId = candidateId;
+      let applicationStudentId = null;
+      if (!candidateId && existingStudent) {
+        applicationStudentId = existingStudent._id;
+      }
+
+      // Ensure at least one ID is present before proceeding
+      if (!applicationCandidateId && !applicationStudentId) {
         await session.abortTransaction()
         return NextResponse.json({ success: false, message: "Failed to create or find candidate" }, { status: 500 })
       }
@@ -116,7 +112,8 @@ export async function POST(request: NextRequest) {
       // Check if already applied to this job
       const existingApplication = await db.collection("job_applications").findOne({
         jobId: new ObjectId(jobId),
-        candidateId: candidateId,
+        ...(applicationCandidateId ? { candidateId: applicationCandidateId } : {}),
+        ...(applicationStudentId ? { studentId: applicationStudentId } : {}),
       })
 
       if (existingApplication) {
@@ -131,11 +128,34 @@ export async function POST(request: NextRequest) {
       // Create job application record
       const application = {
         jobId: new ObjectId(jobId),
-        candidateId: candidateId,
+        ...(applicationCandidateId ? { candidateId: applicationCandidateId } : {}),
+        ...(applicationStudentId ? { studentId: applicationStudentId } : {}),
         status: "Applied",
         appliedDate: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
+        // Add full student info if student user
+        ...(existingStudent ? {
+          studentName: [existingStudent.salutation, existingStudent.firstName, existingStudent.middleName, existingStudent.lastName].filter(Boolean).join(' '),
+          studentEmail: existingStudent.email || existingStudent.email1,
+          applicationCollection: "students",
+          history: [{
+            status: "applied",
+            date: new Date(),
+            note: "Application submitted"
+          }],
+        } : {}),
+        // Add full candidate info if candidate user
+        ...(candidate && !existingStudent ? {
+          candidateName: [candidate.salutation, candidate.firstName, candidate.middleName, candidate.lastName].filter(Boolean).join(' '),
+          candidateEmail: candidate.email,
+          applicationCollection: "candidates",
+          history: [{
+            status: "applied",
+            date: new Date(),
+            note: "Application submitted"
+          }],
+        } : {}),
       }
 
       const applicationResult = await db.collection("job_applications").insertOne(application, { session })
@@ -146,13 +166,16 @@ export async function POST(request: NextRequest) {
       // Commit the transaction
       await session.commitTransaction()
 
-      // Send confirmation email to candidate
+      // Send confirmation email to candidate/student
       try {
+        const fullNameForEmail = (candidate && candidate.name) ||
+          (existingStudent && [existingStudent.salutation, existingStudent.firstName, existingStudent.middleName, existingStudent.lastName].filter(Boolean).join(' ')) ||
+          "Applicant";
         await sendEmail({
           to: email,
           subject: `Application Received: ${job.jobTitle} at ${job.companyName}`,
           text: `
-            Dear ${candidate?.name || "Applicant"},
+            Dear ${fullNameForEmail},
 
             Thank you for applying for the ${job.jobTitle} position at ${job.companyName}.
 
@@ -164,7 +187,7 @@ export async function POST(request: NextRequest) {
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
               <h2 style="color: #333;">Application Received</h2>
-              <p>Dear ${candidate?.name || "Applicant"},</p>
+              <p>Dear ${fullNameForEmail},</p>
               <p>Thank you for applying for the <strong>${job.jobTitle}</strong> position at <strong>${job.companyName}</strong>.</p>
               <p>We have received your application and will review it shortly. If your qualifications match our requirements, we will contact you for the next steps.</p>
               <p>Best regards,<br>${job.companyName} Recruitment Team</p>
@@ -181,8 +204,9 @@ export async function POST(request: NextRequest) {
           success: true,
           exists: true,
           message: "Application submitted successfully",
-          candidateId: candidateId.toString(),
-          source: existingStudent ? "student" : existingUser ? "user" : "candidate",
+          candidateId: applicationCandidateId ? applicationCandidateId.toString() : undefined,
+          studentId: applicationStudentId ? applicationStudentId.toString() : undefined,
+          source: applicationStudentId ? "student" : applicationCandidateId ? "candidate" : "user",
         },
         { status: 201 },
       )

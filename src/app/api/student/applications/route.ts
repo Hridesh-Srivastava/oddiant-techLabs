@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
         },
       ],
       // Include basic user info for easier querying
-      studentName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Unknown",
+      studentName: [user.salutation, user.firstName, user.middleName, user.lastName].filter(Boolean).join(' ') || "Unknown",
       studentEmail: user.email || "",
       // Include employer ID for isolation
       employerId: job.employerId || null,
