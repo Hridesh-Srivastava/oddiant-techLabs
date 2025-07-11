@@ -13,42 +13,14 @@ export async function GET(request: NextRequest) {
 
     console.log("Auth check - User ID:", userId, "User Type:", userType)
 
-    // Check if this is email access (no authentication)
-    const referer = request.headers.get("referer") || ""
-    const isEmailAccess = referer.includes("/admin/verify-employee/") || !userId
-
-    if (isEmailAccess) {
-      console.log("Email access detected, allowing temporary admin access")
-
-      // For email access, verify admin exists and allow access
-      const { db } = await connectToDatabase()
-      const adminEmail = process.env.EMAIL_TO
-      let admin = await db.collection("admins").findOne({ email: adminEmail })
-
-      if (!admin) {
-        const hashedPassword = await bcrypt.hash("Hridesh123!", 10)
-        const result = await db.collection("admins").insertOne({
-          email: adminEmail,
-          password: hashedPassword,
-          role: "admin",
-          name: "Admin",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })
-        admin = await db.collection("admins").findOne({ _id: result.insertedId })
-      }
-    } else {
-      // Normal authentication check for logged-in users
-      if (!userId) {
-        console.log("No user ID found - unauthorized")
-        return NextResponse.json({ success: false, message: "Unauthorized - No user ID" }, { status: 401 })
-      }
-
-      // Verify user is admin
-      if (userType !== "admin") {
-        console.log("User type is not admin:", userType)
-        return NextResponse.json({ success: false, message: "Forbidden - Not admin" }, { status: 403 })
-      }
+    // Strict authentication: Only allow if logged in as admin
+    if (!userId) {
+      console.log("No user ID found - unauthorized")
+      return NextResponse.json({ success: false, message: "Unauthorized - No user ID" }, { status: 401 })
+    }
+    if (userType !== "admin") {
+      console.log("User type is not admin:", userType)
+      return NextResponse.json({ success: false, message: "Forbidden - Not admin" }, { status: 403 })
     }
 
     // Connect to database
@@ -85,7 +57,7 @@ export async function GET(request: NextRequest) {
     headers.append("Expires", "0")
 
     return NextResponse.json(
-      { success: true, employees: sanitizedEmployees, isEmailAccess },
+      { success: true, employees: sanitizedEmployees, isEmailAccess: false },
       {
         status: 200,
         headers: headers,

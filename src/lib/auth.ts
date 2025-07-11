@@ -77,15 +77,7 @@ export async function setAuthCookie(token: string): Promise<void> {
 
 // Clear auth cookie
 export async function clearAuthCookie(): Promise<void> {
-  (await cookies()).set({
-    name: "auth_token",
-    value: "",
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    sameSite: "lax",
-    expires: new Date(0), // Expire immediately
-  })
+  (await cookies()).delete("auth_token")
 }
 
 // Get user ID from request
