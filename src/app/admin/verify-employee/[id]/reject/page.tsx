@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -30,6 +30,21 @@ export default function RejectEmployeePage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const employeeId = params.id as string
+
+  // Minimal auth check on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch(`/api/admin/employee/${employeeId}`, { credentials: "include" })
+        if (res.status === 401 || res.status === 403) {
+          router.replace("/auth/employee/login")
+        }
+      } catch (e) {
+        // Network error, do nothing
+      }
+    }
+    if (employeeId) checkAuth()
+  }, [employeeId, router])
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
