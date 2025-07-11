@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useEffect, useState, useRef } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -48,28 +48,89 @@ interface EmployeeData {
 
 // List of industries for dropdown
 const industries = [
-  "Information Technology",
-  "Healthcare",
-  "Finance",
+  "Advertising/PR/Events",
+  "Agriculture/Dairy/Forestry/Fishing",
+  "Airlines/Aviation/Aerospace",
+  "Architecture & Interior Design",
+  "Automotive /Automobile",
+  "Banking /Financial Services /NBFC /Fintech",
+  "Beverages/Liquor",
+  "Chemical /Fertilisers",
+  "Computer Graphics",
+  "Construction Materials",
+  "Consulting Firms",
+  "Cosmetic /Beauty Products",
+  "Digital Marketing /Social Media",
   "Education",
-  "Manufacturing",
-  "Retail",
-  "Hospitality",
-  "Real Estate",
-  "Construction",
-  "Transportation",
-  "Media & Entertainment",
-  "Telecommunications",
-  "Energy",
-  "Agriculture",
+  "Educational Institute /Higher Education /School",
+  "E-Learning /Edutech",
+  "Electrical Appliances & Manufacturing",
+  "Electronics Manufacturing",
+  "Engineering & Design",
+  "Entertainment/Media/Publishing",
+  "Farming",
+  "Fashion/Apparels",
+  "Feed Manufacturing",
+  "FMCG",
+  "FnB /QSR /Restaurants",
+  "Food & Fruits Production/Edibles",
+  "Fresher",
+  "Gems & Jewellery",
+  "Government/PSU/Defence",
+  "Hardware /Steel /Iron",
+  "Hardware Machinery  & Equipments",
+  "Heat Ventilation Air Conditioning (HVAC)",
+  "Hospitality /Hotels",
+  "Hospitals/Healthcare/Diagnostics",
+  "Infrastructure /Construction & Engineering",
+  "Insurance",
+  "Internet/E-commerce",
+  "IT/Computers - Hardware & Networking",
+  "IT/Computers - Software",
+  "ITES/BPO",
+  "Jewellary /Gold/Diamonds",
+  "KPO/Research/Analytics",
+  "Law Enforcement/Security Services",
+  "Leather",
+  "Legal/Law Firm",
+  "Logistics /Transportation & Courier",
+  "Market Research",
+  "Medical Equipment Manufacturing",
+  "Mining",
+  "NGO/Social Services",
   "Other",
+  "Overseas /Immigration",
+  "Paints & Febrication",
+  "Petrolium & Natural Gas, Resources",
+  "Pharma & Life Sciences",
+  "Plastic,Rubber & Tyres",
+  "Power/Energy",
+  "Printing & Publications",
+  "Real Estate",
+  "Recruitment/Staffing/RPO",
+  "Retail Outlets",
+  "Semiconductor",
+  "Shipping/Marine Services",
+  "Stationary /Office Equipments",
+  "Stoks & Brokrage /Investment Firm",
+  "Telecom /ISP",
+  "Textiles/Yarn/Fabrics/Garments",
+  "Trading/Import/Export",
+  "Travel/Tourism",
+  "Waste Management & Treatment",
+  "Wellness/Fitness/Sports",
+  "Wood & Timber",
 ]
 
 // List of team sizes for dropdown
 const teamSizes = ["1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5000+"]
 
-// Document types
-const documentTypes = ["GST Certificate", "PAN Card", "Incorporation Certificate"]
+// Document types (code => display name)
+const documentTypeOptions = [
+  { value: "gst", label: "GST Certificate" },
+  { value: "pan", label: "PAN Card" },
+  { value: "incorporation_certificate", label: "Incorporation Certificate" },
+]
 
 // List of locations from India with city first, then state
 const locations = [
@@ -587,10 +648,16 @@ const locations = [
 export default function AppealPage() {
   const router = useRouter()
   const { id } = useParams()
+  const searchParams = useSearchParams()
+  const token = searchParams.get("token")
   const [employeeData, setEmployeeData] = useState<EmployeeData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string | null>(null)
+  // Move these hooks to the top level
+  const [resendStatus, setResendStatus] = useState<string | null>(null)
+  const [resending, setResending] = useState(false)
 
   // Add these new state variables for location search
   const [locationSearchTerm, setLocationSearchTerm] = useState("")
@@ -649,10 +716,14 @@ export default function AppealPage() {
   }, [])
 
   useEffect(() => {
+    if (!token) {
+      setError("Missing or invalid appeal link. Please use the link from your email.")
+      return
+    }
     const fetchEmployeeData = async () => {
       try {
         // Use the correct API endpoint
-        const response = await fetch(`/api/employee/appeal/${id}`, {
+        const response = await fetch(`/api/employee/appeal/${id}?token=${token}`, {
           cache: "no-store",
           headers: {
             pragma: "no-cache",
@@ -665,32 +736,40 @@ export default function AppealPage() {
         }
 
         const data = await response.json()
-        setEmployeeData(data)
-        console.log("Employee data:", data)
+        if (!data.success) {
+          setError(data.message || "Invalid or expired appeal link.")
+        } else {
+          setEmployeeData(data)
+          console.log("Employee data:", data)
 
-        // Initialize form data with existing values
-        setFormData({
-          firstName: data.employee.firstName || "",
-          middleName: data.employee.middleName || "",
-          lastName: data.employee.lastName || "",
-          phone: data.employee.phone || "",
-          designation: data.employee.designation || "",
-          linkedinProfile: data.employee.linkedinProfile || "",
-          companyName: data.employee.companyName || "",
-          companyLocation: data.employee.companyLocation || "",
-          companyIndustry: data.employee.companyIndustry || "",
-          teamSize: data.employee.teamSize || "",
-          documentType: data.employee.documentType || data.employee.kycDetails?.documentType || "",
-          documentNumber: data.employee.kycNumber || data.employee.kycDetails?.kycNumber || "",
-          email: data.employee.email || "",
-          documentFile: null,
-          reason: "",
-          companyWebsite: data.employee.companyWebsite || "",
-          companyLinkedin: data.employee.companyLinkedin || "",
-          socialMediaLinks: data.employee.socialMediaLinks || [],
-        })
+          // Initialize form data with existing values
+          setFormData({
+            firstName: data.employee.firstName || "",
+            middleName: data.employee.middleName || "",
+            lastName: data.employee.lastName || "",
+            phone: data.employee.phone || "",
+            designation: data.employee.designation || "",
+            linkedinProfile: data.employee.linkedinProfile || "",
+            companyName: data.employee.companyName || "",
+            companyLocation: data.employee.companyLocation || "",
+            companyIndustry: data.employee.companyIndustry || data.employee.industry || "",
+            teamSize: data.employee.teamSize || "",
+            documentType:
+              data.employee.documentType && documentTypeOptions.some(opt => opt.value === data.employee.documentType)
+                ? data.employee.documentType
+                : documentTypeOptions.find(opt => opt.label === (data.employee.documentType || data.employee.kycDetails?.documentType))?.value || "",
+            documentNumber: data.employee.kycNumber || data.employee.kycDetails?.kycNumber || "",
+            email: data.employee.email || "",
+            documentFile: null,
+            reason: "",
+            companyWebsite: data.employee.companyWebsite || "",
+            companyLinkedin: data.employee.companyLinkedin || "",
+            socialMediaLinks: data.employee.socialMediaLinks || [],
+          })
+        }
       } catch (error) {
         console.error("Could not fetch employee data:", error)
+        setError("Failed to fetch employee data. Please try again.")
         toast.error("Failed to fetch employee data. Please try again.")
       } finally {
         setIsLoading(false)
@@ -698,7 +777,7 @@ export default function AppealPage() {
     }
 
     fetchEmployeeData()
-  }, [id])
+  }, [id, token])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -850,6 +929,39 @@ export default function AppealPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  if (error) {
+    const handleResend = async () => {
+      setResending(true)
+      setResendStatus(null)
+      try {
+        const response = await fetch(`/api/employee/appeal/${id}`, { method: "POST" })
+        const data = await response.json()
+        if (response.ok && data.success) {
+          setResendStatus("A new appeal link has been sent to your email.")
+        } else {
+          setResendStatus(data.message || "Failed to resend appeal link.")
+        }
+      } catch {
+        setResendStatus("Failed to resend appeal link. Please try again later.")
+      } finally {
+        setResending(false)
+      }
+    }
+    return (
+      <div className="min-h-screen flex items-center justify-center flex-col gap-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-5 w-5" />
+          <AlertTitle>Appeal Link Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+        <Button onClick={handleResend} disabled={resending} className="mt-4">
+          {resending ? "Resending..." : "Resend Appeal Link"}
+        </Button>
+        {resendStatus && <div className="text-sm text-gray-700 mt-2">{resendStatus}</div>}
+      </div>
+    )
   }
 
   if (isLoading) {
@@ -1168,9 +1280,9 @@ export default function AppealPage() {
                 required
               >
                 <option value="">Select document type</option>
-                {documentTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
+                {documentTypeOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
                   </option>
                 ))}
               </select>

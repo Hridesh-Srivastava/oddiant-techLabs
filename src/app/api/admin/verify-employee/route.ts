@@ -4,6 +4,7 @@ import { getUserFromRequest, getUserTypeFromRequest } from "@/lib/auth"
 import { sendEmail } from "@/lib/email"
 import { ObjectId } from "mongodb"
 import bcrypt from "bcryptjs"
+import crypto from "crypto"
 
 export async function POST(request: NextRequest) {
   try {
@@ -124,7 +125,11 @@ The Oddiant Techlabs Team`,
         return NextResponse.json({ success: false, message: "Rejection reason is required" }, { status: 400 })
       }
 
-      // Update employee as rejected
+      // Generate secure, random, expiring appeal token
+      const appealToken = crypto.randomBytes(32).toString("hex")
+      const appealTokenExpiry = new Date(Date.now() + 2 * 60 * 1000) // 2 minutes from now for testing
+
+      // Update employee as rejected and store token
       await db.collection("employees").updateOne(
         { _id: new ObjectId(employeeId) },
         {
@@ -135,6 +140,9 @@ The Oddiant Techlabs Team`,
             rejectionComments: rejectionComments || "",
             updatedAt: new Date(),
             status: "rejected",
+            appealToken,
+            appealTokenExpiry,
+            appealTokenUsed: false,
           },
           $unset: { verified: "", verifiedAt: "" },
         },
@@ -167,7 +175,9 @@ ${rejectionComments ? `Additional Comments: ${rejectionComments}` : ""}
 
 If you would like to appeal this decision, you can update your information and resubmit your application by clicking the link below:
 
-${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/employee/appeal/${employeeId}
+${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/employee/appeal/${employeeId}?token=${appealToken}
+
+This appeal link will expire in 7 days.
 
 If you have any questions, please contact our support team at support@oddiant.com.
 
@@ -178,21 +188,18 @@ The Oddiant Techlabs Team`,
               <h2 style="color: #333;">Regarding Your Account Application</h2>
               <p>Dear ${employee.firstName},</p>
               <p>Thank you for your interest in Oddiant Techlabs. After reviewing your application, we regret to inform you that we are unable to approve your account at this time.</p>
-              
               <div style="background-color: #f8f8f8; padding: 15px; border-radius: 5px; margin: 15px 0;">
                 <p><strong>Reason:</strong> ${readableReason}</p>
                 ${rejectionComments ? `<p><strong>Additional Comments:</strong> ${rejectionComments}</p>` : ""}
               </div>
-              
               <p>If you would like to appeal this decision, you can update your information and resubmit your application by clicking the button below:</p>
-              
               <div style="text-align: center; margin: 25px 0;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/employee/appeal/${employeeId}" 
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/employee/appeal/${employeeId}?token=${appealToken}" 
                    style="background-color: #6366F1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
                   Appeal and Update Information
                 </a>
               </div>
-              
+              <p style="color: #b91c1c; font-weight: bold;">This appeal link will expire in 7 days.</p>
               <p>If you have any questions, please contact our support team at <a href="mailto:support@oddiant.com">support@oddiant.com</a>.</p>
               <p>Best regards,<br>The Oddiant Techlabs Team</p>
             </div>
