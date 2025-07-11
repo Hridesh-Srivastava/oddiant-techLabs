@@ -2,44 +2,32 @@ import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 import bcrypt from "bcryptjs"
+import { getUserFromRequest, getUserTypeFromRequest } from "@/lib/auth"
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id: employeeId } = await params
+    // Strict authentication: Only allow if logged in as admin
+    const userId = await getUserFromRequest(request)
+    const userType = await getUserTypeFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ success: false, message: "Unauthorized - No user ID" }, { status: 401 })
+    }
+    if (userType !== "admin") {
+      return NextResponse.json({ success: false, message: "Forbidden - Not admin" }, { status: 403 })
+    }
 
+    const { id: employeeId } = await params
     if (!employeeId) {
       return NextResponse.json({ success: false, message: "Employee ID is required" }, { status: 400 })
     }
-
     const { db } = await connectToDatabase()
-
     // Find employee by ID
     const employee = await db.collection("employees").findOne({ _id: new ObjectId(employeeId) })
-
     if (!employee) {
       return NextResponse.json({ success: false, message: "Employee not found" }, { status: 404 })
     }
-
-    // For email link access, create temporary admin session
-    const adminEmail = process.env.EMAIL_TO
-    let admin = await db.collection("admins").findOne({ email: adminEmail })
-
-    if (!admin) {
-      const hashedPassword = await bcrypt.hash("Hridesh123!", 10)
-      const result = await db.collection("admins").insertOne({
-        email: adminEmail,
-        password: hashedPassword,
-        role: "admin",
-        name: "Admin",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      admin = await db.collection("admins").findOne({ _id: result.insertedId })
-    }
-
     // Remove sensitive information
     const { password, ...employeeData } = employee
-
     // Ensure proper typing
     const sanitizedEmployee = {
       ...employeeData,
@@ -53,17 +41,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       verified: Boolean(employee.verified),
       rejected: Boolean(employee.rejected),
     }
-
     return NextResponse.json(
       {
         success: true,
         employee: sanitizedEmployee,
-        isEmailAccess: true,
+        isEmailAccess: false,
       },
       { status: 200 },
     )
   } catch (error) {
-    console.error("Error fetching employee for email access:", error)
+    console.error("Error fetching employee for admin access:", error)
     return NextResponse.json({ success: false, message: "Failed to fetch employee" }, { status: 500 })
   }
 }
