@@ -134,13 +134,24 @@ export async function POST(req: NextRequest) {
     if (middleName) updateData.middleName = middleName
     if (linkedinProfile) updateData.linkedinProfile = linkedinProfile
 
-    // Add document URL if uploaded
+    // Add document URL if uploaded, and always sync documentType in documents.kyc
     if (documentUrl) {
       updateData.documents = {
         ...employee.documents,
         kyc: {
+          ...(employee.documents?.kyc || {}),
           url: documentUrl,
           uploadedAt: new Date(),
+          documentType,
+        },
+      }
+    } else {
+      // If not uploading a new document, still sync documentType in documents.kyc
+      updateData.documents = {
+        ...employee.documents,
+        kyc: {
+          ...(employee.documents?.kyc || {}),
+          documentType,
         },
       }
     }
