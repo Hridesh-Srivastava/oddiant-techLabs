@@ -127,7 +127,7 @@ The Oddiant Techlabs Team`,
 
       // Generate secure, random, expiring appeal token
       const appealToken = crypto.randomBytes(32).toString("hex")
-      const appealTokenExpiry = new Date(Date.now() + 2 * 60 * 1000) // 2 minutes from now for testing
+      const appealTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
 
       // Update employee as rejected and store token
       await db.collection("employees").updateOne(

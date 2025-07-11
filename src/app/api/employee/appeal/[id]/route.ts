@@ -75,7 +75,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     }
     // Generate new token and expiry
     const appealToken = crypto.randomBytes(32).toString("hex")
-    const appealTokenExpiry = new Date(Date.now() + 2 * 60 * 1000) // 2 minutes for testing
+    const appealTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
     await db.collection("employees").updateOne(
       { _id: new ObjectId(id) },
       { $set: { appealToken, appealTokenExpiry, appealTokenUsed: false } }

@@ -38,6 +38,7 @@ interface EmployeeData {
     documents?: {
       kyc?: {
         url: string
+        documentType: string | null
       }
     }
     companyWebsite?: string | null
@@ -754,10 +755,31 @@ export default function AppealPage() {
             companyLocation: data.employee.companyLocation || "",
             companyIndustry: data.employee.companyIndustry || data.employee.industry || "",
             teamSize: data.employee.teamSize || "",
-            documentType:
-              data.employee.documentType && documentTypeOptions.some(opt => opt.value === data.employee.documentType)
-                ? data.employee.documentType
-                : documentTypeOptions.find(opt => opt.label === (data.employee.documentType || data.employee.kycDetails?.documentType))?.value || "",
+            documentType: (() => {
+              // 1. Top-level code
+              if (data.employee.documentType && documentTypeOptions.some(opt => opt.value === data.employee.documentType)) {
+                return data.employee.documentType;
+              }
+              // 2. kycDetails code
+              if (data.employee.kycDetails?.documentType && documentTypeOptions.some(opt => opt.value === data.employee.kycDetails.documentType)) {
+                return data.employee.kycDetails.documentType;
+              }
+              // 3. documents.kyc code
+              if (data.employee.documents?.kyc?.documentType && documentTypeOptions.some(opt => opt.value === data.employee.documents.kyc.documentType)) {
+                return data.employee.documents.kyc.documentType;
+              }
+              // 4. Top-level label
+              const topLabel = documentTypeOptions.find(opt => opt.label === data.employee.documentType)?.value;
+              if (topLabel) return topLabel;
+              // 5. kycDetails label
+              const kycDetailsLabel = documentTypeOptions.find(opt => opt.label === data.employee.kycDetails?.documentType)?.value;
+              if (kycDetailsLabel) return kycDetailsLabel;
+              // 6. documents.kyc label
+              const kycDocLabel = documentTypeOptions.find(opt => opt.label === data.employee.documents?.kyc?.documentType)?.value;
+              if (kycDocLabel) return kycDocLabel;
+              // fallback
+              return data.employee.documentType || data.employee.kycDetails?.documentType || data.employee.documents?.kyc?.documentType || "";
+            })(),
             documentNumber: data.employee.kycNumber || data.employee.kycDetails?.kycNumber || "",
             email: data.employee.email || "",
             documentFile: null,
@@ -766,6 +788,11 @@ export default function AppealPage() {
             companyLinkedin: data.employee.companyLinkedin || "",
             socialMediaLinks: data.employee.socialMediaLinks || [],
           })
+          console.log(
+            'Top:', data.employee.documentType,
+            'KYC Details:', data.employee.kycDetails?.documentType,
+            'KYC Doc:', data.employee.documents?.kyc?.documentType
+          );
         }
       } catch (error) {
         console.error("Could not fetch employee data:", error)
@@ -1280,6 +1307,12 @@ export default function AppealPage() {
                 required
               >
                 <option value="">Select document type</option>
+                {/* Fallback option for unknown value */}
+                {formData.documentType && !documentTypeOptions.some(opt => opt.value === formData.documentType) && (
+                  <option value={formData.documentType} disabled>
+                    Unknown: {formData.documentType}
+                  </option>
+                )}
                 {documentTypeOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
