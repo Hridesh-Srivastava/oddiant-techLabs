@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input"
 import { AdvancedCodeEditor } from "@/components/advanced-code-editor"
 import { useCameraManager } from "@/hooks/useCameraManager"
 import { CameraVideo } from "@/components/camera-video"
+import ReactMarkdown from "react-markdown"
+import rehypeRaw from "rehype-raw"
 
 interface TestData {
   _id: string
@@ -54,6 +56,7 @@ interface QuestionData {
   codeLanguage?: string
   codeTemplate?: string
   testCases?: any[]
+  instructions?: string
 }
 
 interface StepCompletion {
@@ -61,6 +64,24 @@ interface StepCompletion {
   idVerification: boolean
   examRules: boolean
   instructions: boolean
+}
+
+// Add MCQ answer normalization helper (from take page)
+function isMCQAnswerCorrect(userAnswer: any, correctAnswer: any, options?: string[]) {
+  const normalize = (val: any) =>
+    typeof val === 'string' ? val.trim().toLowerCase() : Array.isArray(val) ? val.map(v => String(v).trim().toLowerCase()).sort() : String(val).trim().toLowerCase();
+  const ua = normalize(userAnswer);
+  const ca = normalize(correctAnswer);
+  if (Array.isArray(ua) && Array.isArray(ca)) {
+    return JSON.stringify(ua) === JSON.stringify(ca);
+  }
+  if (ua === ca) return true;
+  if (options && typeof userAnswer === 'string' && typeof correctAnswer === 'string') {
+    const userIdx = options.findIndex(opt => normalize(opt) === ua);
+    const correctIdx = options.findIndex(opt => normalize(opt) === ca);
+    if (userIdx !== -1 && userIdx === correctIdx) return true;
+  }
+  return false;
 }
 
 export default function TestPreviewPage() {
@@ -110,16 +131,32 @@ export default function TestPreviewPage() {
   const [studentId, setStudentId] = useState("")
   const [isCapturingFace, setIsCapturingFace] = useState(false)
 
+  // Add this state to store coding test case results for each question
+  const [codingResults, setCodingResults] = useState<Record<string, any[]>>({});
+
+  // Add state to track if test cases have been run for each coding question
+  const [hasRunTestCases, setHasRunTestCases] = useState<Record<string, boolean>>({});
+
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Add state for submission loading
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Prevent infinite loop in instructions auto-complete effect
+  const hasCompletedInstructions = useRef(false);
+
   // Update system checks when camera status changes
   useEffect(() => {
-    setSystemChecks((prev) => ({
-      ...prev,
-      cameraAccess: cameraManager.status === "active",
-    }))
-  }, [cameraManager.status])
+    setSystemChecks((prev) => {
+      const newCameraAccess = cameraManager.status === "active";
+      if (prev.cameraAccess === newCameraAccess) return prev;
+      return {
+        ...prev,
+        cameraAccess: newCameraAccess,
+      };
+    });
+  }, [cameraManager.status]);
 
   // Start camera when dialogs open - ONLY ONCE!
   useEffect(() => {
@@ -230,14 +267,23 @@ export default function TestPreviewPage() {
   // Auto-complete instructions when accessing with all prerequisites
   useEffect(() => {
     if (
+      !hasCompletedInstructions.current &&
       stepCompletion.systemCheck &&
       stepCompletion.idVerification &&
       stepCompletion.examRules &&
       activeTab === "instructions" &&
       !stepCompletion.instructions
     ) {
-      console.log("Auto-completing instructions step")
-      completeStep("instructions")
+      console.log("Auto-completing instructions step");
+      completeStep("instructions");
+      hasCompletedInstructions.current = true;
+    }
+    // Reset the ref if user goes back to a previous step
+    if (
+      hasCompletedInstructions.current &&
+      (!stepCompletion.systemCheck || !stepCompletion.idVerification || !stepCompletion.examRules)
+    ) {
+      hasCompletedInstructions.current = false;
     }
   }, [
     stepCompletion.systemCheck,
@@ -245,7 +291,7 @@ export default function TestPreviewPage() {
     stepCompletion.examRules,
     activeTab,
     stepCompletion.instructions,
-  ])
+  ]);
 
   // SIMPLIFIED image capture
   const captureImage = useCallback(async () => {
@@ -409,10 +455,10 @@ export default function TestPreviewPage() {
   }
 
   // Test functions
+  const deepCopy = (obj: any) => JSON.parse(JSON.stringify(obj));
   const fetchTest = async () => {
     try {
-      setIsLoading(true)
-
+      setIsLoading(true);
       const response = await fetch(`/api/assessment/tests/${testId}`, {
         method: "GET",
         headers: {
@@ -420,35 +466,35 @@ export default function TestPreviewPage() {
           Pragma: "no-cache",
           Expires: "0",
         },
-      })
-
+      });
       if (!response.ok) {
-        throw new Error("Failed to fetch test")
+        throw new Error("Failed to fetch test");
       }
-
-      const data = await response.json()
-
+      const data = await response.json();
       if (data.success) {
-        const testData = data.test
-
+        // Deep copy test data to avoid mutating original
+        const testData = deepCopy(data.test);
         if (testData.settings.shuffleQuestions) {
-          testData.sections = testData.sections.map((section: SectionData) => ({
-            ...section,
-            questions: shuffleArray([...section.questions]),
-          }))
+          testData.sections = testData.sections.map((section: SectionData) => {
+            // Always shuffle a new copy of the questions array
+            const shuffledQuestions = shuffleArray([...section.questions]);
+            return {
+              ...section,
+              questions: shuffledQuestions,
+            };
+          });
         }
-
-        setTest(testData)
+        setTest(testData);
       } else {
-        throw new Error(data.message || "Failed to fetch test")
+        throw new Error(data.message || "Failed to fetch test");
       }
     } catch (error) {
-      console.error("Error fetching test:", error)
-      toast.error("Failed to load test. Please try again.")
+      console.error("Error fetching test:", error);
+      toast.error("Failed to load test. Please try again.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const enableFullscreen = async () => {
     try {
@@ -481,13 +527,27 @@ export default function TestPreviewPage() {
   const handleAnswer = (questionId: string, answer: string | string[]) => {
     const currentQuestionData = test?.sections[currentSection]?.questions[currentQuestion]
     if (currentQuestionData) {
-      const questionKey = `${test.sections[currentSection].id}-${currentQuestionData.id}`
       setAnswers((prev) => ({
         ...prev,
-        [questionKey]: answer,
+        [questionId]: answer,
       }))
     }
   }
+
+  // For coding questions, store test case results (memoized, only update if changed)
+  const handleCodingTestCaseResults = useCallback((questionId: string, results: any[]) => {
+    setCodingResults((prev) => {
+      if (JSON.stringify(prev[questionId]) === JSON.stringify(results)) return prev;
+      return {
+        ...prev,
+        [questionId]: results,
+      };
+    });
+    setHasRunTestCases((prev) => ({
+      ...prev,
+      [questionId]: true,
+    }));
+  }, []);
 
   const getCurrentQuestionKey = () => {
     const currentQuestionData = test?.sections[currentSection]?.questions[currentQuestion]
@@ -522,62 +582,84 @@ export default function TestPreviewPage() {
   }
 
   const handleSubmitTest = async () => {
+    setIsSubmitting(true);
     try {
-      let totalPoints = 0
-      let earnedPoints = 0
-
+      let totalPoints = 0;
+      const earnedPoints = 0;
+      const allAnswers: any[] = [];
       test?.sections.forEach((section) => {
         section.questions.forEach((question) => {
-          totalPoints += question.points
-          const questionKey = `${section.id}-${question.id}`
-          const userAnswer = answers[questionKey]
-
-          if (question.type === "Multiple Choice" && userAnswer === question.correctAnswer) {
-            earnedPoints += question.points
+          totalPoints += question.points;
+          const questionKey = `${section.id}-${question.id}`;
+          const userAnswer = answers[questionKey] || "";
+          const answerObj: any = {
+            questionId: question.id,
+            questionText: question.text,
+            questionType: question.type,
+            answer: userAnswer,
+            options: question.options || [],
+            correctAnswer: question.correctAnswer || null,
+            codingTestResults: null,
+          };
+          if (question.type === "Coding") {
+            const codeSubmissions = codingResults[question.id] || [];
+            let codingTestResults = [];
+            if (Array.isArray(codeSubmissions) && codeSubmissions.length > 0 && codeSubmissions[codeSubmissions.length - 1]?.results) {
+              codingTestResults = codeSubmissions[codeSubmissions.length - 1].results;
+            } else if (Array.isArray(question.testCases)) {
+              // If never run, create default array for all test cases
+              codingTestResults = question.testCases.map(tc => ({
+                input: tc.input || '',
+                expectedOutput: tc.expectedOutput || '',
+                actualOutput: '',
+                passed: false
+              }));
+            }
+            answerObj.codingTestResults = codingTestResults;
           }
-        })
-      })
-
-      const score = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0
-      const status = score >= (test?.passingScore || 70) ? "Passed" : "Failed"
-
+          allAnswers.push(answerObj);
+        });
+      });
+      const score = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+      const status = score >= (test?.passingScore || 70) ? "Passed" : "Failed";
       const resultData = {
         testId: testId,
         testName: test?.name || "Preview Test",
         score: score,
         status: status,
         duration: Math.round(((test?.duration || 0) * 60 - timeLeft) / 60),
-        answers: Object.entries(answers).map(([questionKey, answer]) => ({
-          questionId: questionKey,
-          answer,
-          isCorrect: false,
-          points: 0,
-        })),
+        answers: allAnswers,
         tabSwitchCount: tabSwitchCount,
         terminated: testTerminated,
-      }
-
+      };
       const response = await fetch("/api/assessment/preview-results", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(resultData),
-      })
-
+      });
+      let backendScore = score;
+      let backendStatus = status;
       if (response.ok) {
-        toast.success(`Test completed! Score: ${score}% (${status}) - Preview Mode`)
+        const data = await response.json();
+        if (data && typeof data.score !== 'undefined' && typeof data.status !== 'undefined') {
+          backendScore = data.score;
+          backendStatus = data.status;
+        }
+        toast.success(`Test completed! Score: ${backendScore}% (${backendStatus}) - Preview Mode`);
       } else {
-        toast.success(`Test completed! Score: ${score}% (${status}) - Preview Mode (Result not saved)`)
+        toast.success(`Test completed! Score: ${backendScore}% (${backendStatus}) - Preview Mode (Result not saved)`);
       }
-
-      router.push(`/employee/assessment/tests/${testId}`)
+      router.push(`/employee/assessment/tests/${testId}`);
     } catch (error) {
-      console.error("Error submitting test:", error)
-      toast.success("Test submitted successfully (Preview Mode)")
-      router.push(`/employee/assessment/tests/${testId}`)
+      console.error("Error submitting test:", error);
+      toast.success("Test submitted successfully (Preview Mode)");
+      router.push(`/employee/assessment/tests/${testId}`);
+    } finally {
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const handleTestTermination = () => {
     setTestTerminated(true)
@@ -598,24 +680,22 @@ export default function TestPreviewPage() {
   }
 
   const calculateProgress = () => {
-    if (!test) return 0
-    let totalQuestions = 0
-    let answeredQuestions = 0
-
-    test.sections.forEach((section) => {
-      totalQuestions += section.questions.length
-      section.questions.forEach((question) => {
-        const questionKey = `${section.id}-${question.id}`
-        const answer = answers[questionKey]
-
-        if (answer && (typeof answer === "string" ? answer.trim() !== "" : answer.length > 0)) {
-          answeredQuestions++
+    if (!test) return 0;
+    let totalQuestions = 0;
+    let currentIndex = 0;
+    let found = false;
+    test.sections.forEach((section, sIdx) => {
+      section.questions.forEach((q, qIdx) => {
+        if (!found && sIdx === currentSection && qIdx === currentQuestion) {
+          found = true;
+          currentIndex = totalQuestions;
         }
-      })
-    })
-
-    return totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0
-  }
+        totalQuestions++;
+      });
+    });
+    // Progress is (currentIndex+1)/totalQuestions*100
+    return totalQuestions > 0 ? Math.round(((currentIndex + 1) / totalQuestions) * 100) : 0;
+  };
 
   const shuffleArray = <T,>(array: T[]): T[] => {
     const newArray = [...array]
@@ -771,60 +851,54 @@ export default function TestPreviewPage() {
   // Handle visibility changes for tab switching detection
   useEffect(() => {
     const handleVisibilityChange = () => {
-      const now = Date.now()
-
-      if (document.hidden) {
-        console.log("📱 Page hidden")
-        if (activeTab === "test" && !permissionDialogActive && !testTerminated && now - lastTabSwitchTime > 2000) {
-          setLastTabSwitchTime(now)
+      const now = Date.now();
+      if (document.hidden || document.visibilityState === 'hidden') {
+        if (activeTab === 'test' && !permissionDialogActive && !testTerminated && now - lastTabSwitchTime > 2000) {
+          setLastTabSwitchTime(now);
           setTabSwitchCount((prev) => {
-            const newCount = prev + 1
+            const newCount = prev + 1;
             if (test?.settings.preventTabSwitching) {
-              setShowTabWarning(true)
+              setShowTabWarning(true);
               if (newCount >= 4) {
-                handleTestTermination()
+                handleTestTermination();
               }
             }
-            return newCount
-          })
+            return newCount;
+          });
         }
       }
-    }
-
+    };
     const handleBlur = () => {
-      const now = Date.now()
-      if (activeTab === "test" && !permissionDialogActive && !testTerminated && now - lastTabSwitchTime > 2000) {
-        setLastTabSwitchTime(now)
+      const now = Date.now();
+      if (activeTab === 'test' && !permissionDialogActive && !testTerminated && now - lastTabSwitchTime > 2000) {
+        setLastTabSwitchTime(now);
         setTabSwitchCount((prev) => {
-          const newCount = prev + 1
+          const newCount = prev + 1;
           if (test?.settings.preventTabSwitching) {
-            setShowTabWarning(true)
+            setShowTabWarning(true);
             if (newCount >= 4) {
-              handleTestTermination()
+              handleTestTermination();
             }
           }
-          return newCount
-        })
+          return newCount;
+        });
       }
-    }
-
+    };
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (activeTab === "test" && !testTerminated) {
-        e.preventDefault()
-        e.returnValue = "Are you sure you want to leave? Your test progress will be lost."
+      if (activeTab === 'test' && !testTerminated) {
+        e.preventDefault();
+        e.returnValue = 'Are you sure you want to leave? Your test progress will be lost.';
       }
-    }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-    window.addEventListener("blur", handleBlur)
-    window.addEventListener("beforeunload", handleBeforeUnload)
-
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
-      window.removeEventListener("blur", handleBlur)
-      window.removeEventListener("beforeunload", handleBeforeUnload)
-    }
-  }, [activeTab, permissionDialogActive, testTerminated, lastTabSwitchTime, test?.settings.preventTabSwitching])
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [activeTab, permissionDialogActive, testTerminated, lastTabSwitchTime, test?.settings.preventTabSwitching]);
 
   useEffect(() => {
     if (test) {
@@ -856,6 +930,46 @@ export default function TestPreviewPage() {
       handleSubmitTest()
     }
   }, [timeLeft, activeTab, test?.settings.autoSubmit, testTerminated])
+
+  // Add this helper to compute code stats for the current coding question
+  const getCurrentCodeStats = () => {
+    const currentQuestionData = test?.sections[currentSection]?.questions[currentQuestion];
+    if (!currentQuestionData || currentQuestionData.type !== "Coding") return { total: 0, executed: 0, passed: 0, failed: 0 };
+    const codeSubmissions = codingResults[currentQuestionData.id] || [];
+    let results: any[] = [];
+    if (Array.isArray(codeSubmissions) && codeSubmissions.length > 0 && codeSubmissions[codeSubmissions.length - 1]?.results) {
+      results = codeSubmissions[codeSubmissions.length - 1].results;
+    } else if (Array.isArray(currentQuestionData.testCases)) {
+      results = currentQuestionData.testCases.map(() => ({}));
+    }
+    const total = Array.isArray(currentQuestionData.testCases) ? currentQuestionData.testCases.length : 0;
+    const hasRun = !!hasRunTestCases[currentQuestionData.id];
+    const executed = hasRun ? total : 0;
+    const passed = hasRun ? results.filter((r) => r.passed).length : 0;
+    const failed = hasRun ? results.filter((r) => r.passed === false).length : 0;
+    return { total, executed, passed, failed };
+  };
+
+  // Robust code execution handler for preview (matches production)
+  const handleRunCode = async (code: string, language: string, input?: string) => {
+    // Map language to pistonLang and version if needed (use same logic as production)
+    // For now, assume language is correct for API
+    const response = await fetch("/api/code/execute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code,
+        language,
+        version: undefined, // Add version if needed
+        input: input || "",
+      }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+      return { success: false, output: "", error: errorData.error || `HTTP ${response.status}` };
+    }
+    return await response.json();
+  };
 
   // Render loading state
   if (isLoading) {
@@ -1168,73 +1282,66 @@ export default function TestPreviewPage() {
                       {test.sections[currentSection]?.questions[currentQuestion] ? (
                         <div className="space-y-6">
                           {/* Coding Questions */}
-                          {test.sections[currentSection].questions[currentQuestion].type === "Coding" && (
+                                                        {test.sections[currentSection]?.questions[currentQuestion]?.type === "Coding" && (
                             <div className="space-y-6">
-                              {/* Problem Description */}
-                              <div className="p-4 border rounded-lg bg-muted/50">
-                                <h3 className="text-lg font-medium mb-4">
-                                  Problem {currentQuestion + 1}:{" "}
-                                  {test.sections[currentSection].questions[currentQuestion].text}
-                                </h3>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                  <div className="space-y-3">
-                                    <div>
-                                      <h4 className="font-medium text-sm">Description</h4>
-                                      <p className="text-sm text-muted-foreground mt-1">
-                                        Solve the given problem using{" "}
-                                        {test.sections[currentSection].questions[currentQuestion].codeLanguage}.
-                                      </p>
+                              {/* Coding Question Instructions (Markdown) */}
+                              {test.sections[currentSection]?.questions[currentQuestion]?.instructions && (
+                                <div className="mb-4 p-3 bg-muted/50 border rounded">
+                                  <span className="text-lg font-bold mb-2 block">Instructions</span>
+                                  <Separator className="mb-2" />
+                                  <ReactMarkdown rehypePlugins={[rehypeRaw]}>{test.sections[currentSection]?.questions[currentQuestion]?.instructions}</ReactMarkdown>
+                                </div>
+                              )}
+                              {/* Problem Description (Markdown) */}
+                              <div className="p-4 border rounded-lg bg-muted/50 mb-4">
+                                <h3 className="text-lg font-medium mb-2">Problem {currentQuestion + 1}:</h3>
+                                <ReactMarkdown rehypePlugins={[rehypeRaw]}>{test?.sections[currentSection]?.questions[currentQuestion]?.text}</ReactMarkdown>
+                              </div>
+                              {/* Test Case Feedback */}
+                              {(() => {
+                                const section = test?.sections?.[currentSection];
+                                const question = section?.questions?.[currentQuestion];
+                                const testCases = question?.testCases;
+                                return testCases && testCases.length > 0;
+                              })() && (
+                                <div className="mt-4">
+                                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="text-sm font-medium">Test Cases:</span>
+                                      <span className="inline-block px-2 py-1 rounded bg-red-600 text-white text-xs font-mono border border-red-600">
+                                        {getCurrentCodeStats().executed}/{getCurrentCodeStats().total}
+                                      </span>
                                     </div>
-
-                                    <div>
-                                      <h4 className="font-medium text-sm">Points</h4>
-                                      <p className="text-sm text-muted-foreground mt-1">
-                                        {test.sections[currentSection].questions[currentQuestion].points} points
-                                      </p>
-                                    </div>
-
-                                    <div>
-                                      <h4 className="font-medium text-sm">Constraints</h4>
-                                      <ul className="text-xs text-muted-foreground mt-1 space-y-1">
-                                        <li>• Time limit: 5 seconds</li>
-                                        <li>• Memory limit: 512 MB</li>
-                                        <li>• Use standard input/output</li>
-                                      </ul>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="inline-block px-2 py-1 rounded bg-green-600 text-white text-xs font-mono border border-green-600">✓ {getCurrentCodeStats().passed}</span>
+                                      <span className="inline-block px-2 py-1 rounded bg-red-600 text-white text-xs font-mono border border-red-600">✗ {getCurrentCodeStats().failed}</span>
                                     </div>
                                   </div>
-
-                                  {test.sections[currentSection].questions[currentQuestion].testCases &&
-                                    test.sections[currentSection].questions[currentQuestion].testCases!.length > 0 && (
-                                      <div>
-                                        <h4 className="font-medium text-sm mb-2">Example Test Cases</h4>
-                                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                                          {test.sections[currentSection].questions[currentQuestion]
-                                            .testCases!.filter((tc: any) => !tc.isHidden)
-                                            .slice(0, 2)
-                                            .map((testCase: any, index: number) => (
-                                              <div key={index} className="p-2 bg-background rounded border text-xs">
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                  <div>
-                                                    <span className="font-medium">Input:</span>
-                                                    <pre className="mt-1 text-muted-foreground whitespace-pre-wrap break-words">
-                                                      {testCase.input || "No input"}
-                                                    </pre>
-                                                  </div>
-                                                  <div>
-                                                    <span className="font-medium">Output:</span>
-                                                    <pre className="mt-1 text-muted-foreground whitespace-pre-wrap break-words">
-                                                      {testCase.expectedOutput}
-                                                    </pre>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            ))}
+                                  <h4 className="font-medium text-sm mb-3">Example Test Cases</h4>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {test.sections[currentSection].questions[currentQuestion]?.testCases
+                                      ?.filter((tc: any) => !tc.isHidden)
+                                      .map((testCase: any, index: number) => (
+                                        <div key={index} className="p-3 bg-background rounded border">
+                                          <div className="space-y-2">
+                                            <div>
+                                              <span className="font-medium text-xs">Input:</span>
+                                              <pre className="mt-1 text-xs text-muted-foreground bg-muted p-2 rounded overflow-x-auto max-h-20">
+                                                {testCase.input || "No input"}
+                                              </pre>
+                                            </div>
+                                            <div>
+                                              <span className="font-medium text-xs">Expected Output:</span>
+                                              <pre className="mt-1 text-xs text-muted-foreground bg-muted p-2 rounded overflow-x-auto max-h-20">
+                                                {testCase.expectedOutput}
+                                              </pre>
+                                            </div>
+                                          </div>
                                         </div>
-                                      </div>
-                                    )}
+                                      ))}
+                                  </div>
                                 </div>
-                              </div>
-
+                              )}
                               {/* Enhanced Code Editor with better responsive design */}
                               <div className="space-y-4">
                                 {test.settings.allowCodeEditor ? (
@@ -1243,19 +1350,22 @@ export default function TestPreviewPage() {
                                       <AdvancedCodeEditor
                                         value={
                                           (getCurrentAnswer() as string) ||
-                                          test.sections[currentSection].questions[currentQuestion].codeTemplate ||
+                                          test.sections[currentSection].questions[currentQuestion]?.codeTemplate ||
                                           ""
                                         }
                                         onChange={(value) => handleAnswer(getCurrentQuestionKey(), value)}
                                         language={
-                                          test.sections[currentSection].questions[currentQuestion].codeLanguage ||
+                                          test.sections[currentSection].questions[currentQuestion]?.codeLanguage ||
                                           "javascript"
                                         }
                                         showConsole={true}
                                         testCases={
-                                          test.sections[currentSection].questions[currentQuestion].testCases || []
+                                          test.sections[currentSection].questions[currentQuestion]?.testCases || []
                                         }
                                         className="h-full w-full"
+                                        questionId={test.sections[currentSection].questions[currentQuestion]?.id}
+                                        onTestCaseResults={handleCodingTestCaseResults}
+                                        onRunCode={handleRunCode}
                                       />
                                     </div>
                                   </div>
@@ -1270,7 +1380,7 @@ export default function TestPreviewPage() {
                                       className="w-full p-4 font-mono text-sm bg-slate-900 text-white resize-none border-none outline-none min-h-[400px]"
                                       value={
                                         (getCurrentAnswer() as string) ||
-                                        test.sections[currentSection].questions[currentQuestion].codeTemplate ||
+                                        test.sections[currentSection].questions[currentQuestion]?.codeTemplate ||
                                         ""
                                       }
                                       onChange={(e) => handleAnswer(getCurrentQuestionKey(), e.target.value)}
@@ -1282,21 +1392,27 @@ export default function TestPreviewPage() {
                           )}
 
                           {/* Non-Coding Questions */}
-                          {test.sections[currentSection].questions[currentQuestion].type !== "Coding" && (
+                          {test.sections[currentSection].questions[currentQuestion]?.type !== "Coding" && (
                             <div>
-                              <h3 className="text-lg font-medium mb-4">
-                                {currentQuestion + 1}. {test.sections[currentSection].questions[currentQuestion].text}
-                              </h3>
+                              <div className="mb-2">
+                                <span className="text-lg font-medium">{currentQuestion + 1}.</span>
+                                <div className="mt-2">
+                                  <ReactMarkdown rehypePlugins={[rehypeRaw]}>{test.sections[currentSection].questions[currentQuestion]?.text}</ReactMarkdown>
+                                </div>
+                              </div>
                               <p className="text-sm text-muted-foreground mb-4">
-                                {test.sections[currentSection].questions[currentQuestion].points} points
+                                {test.sections[currentSection].questions[currentQuestion]?.points} points
                               </p>
 
-                              {test.sections[currentSection].questions[currentQuestion].type === "Multiple Choice" && (
+                              {test.sections[currentSection].questions[currentQuestion]?.type === "Multiple Choice" && (
                                 <div className="space-y-3">
-                                  {test.sections[currentSection].questions[currentQuestion].options
+                                  {test.sections[currentSection].questions[currentQuestion]?.options
                                     ?.filter((option) => option.trim() !== "")
                                     .map((option, index) => (
-                                      <div key={index} className="flex items-center space-x-2">
+                                      <div
+                                        key={index}
+                                        className={`flex items-start space-x-3 p-3 border rounded-md hover:bg-muted/50 transition-colors ${getCurrentAnswer() === option ? 'bg-green-100 border-green-400' : ''}`}
+                                      >
                                         <input
                                           type="radio"
                                           id={`option-${index}`}
@@ -1304,9 +1420,12 @@ export default function TestPreviewPage() {
                                           value={option}
                                           checked={getCurrentAnswer() === option}
                                           onChange={() => handleAnswer(getCurrentQuestionKey(), option)}
-                                          className="h-4 w-4 text-primary focus:ring-primary border-input"
+                                          className="h-4 w-4 mt-0.5 text-primary focus:ring-primary border-input"
                                         />
-                                        <label htmlFor={`option-${index}`} className="text-sm font-medium">
+                                        <label
+                                          htmlFor={`option-${index}`}
+                                          className="text-sm font-medium flex-1 cursor-pointer"
+                                        >
                                           {option}
                                         </label>
                                       </div>
@@ -1314,7 +1433,7 @@ export default function TestPreviewPage() {
                                 </div>
                               )}
 
-                              {test.sections[currentSection].questions[currentQuestion].type === "Written Answer" && (
+                              {test.sections[currentSection].questions[currentQuestion]?.type === "Written Answer" && (
                                 <textarea
                                   rows={5}
                                   placeholder="Type your answer here..."
@@ -1487,8 +1606,12 @@ export default function TestPreviewPage() {
 
                     <Card>
                       <CardContent className="pt-6">
-                        <Button className="w-full" variant="destructive" onClick={handleSubmitTest}>
-                          Submit Test
+                        <Button className="w-full" variant="destructive" onClick={handleSubmitTest} disabled={isSubmitting}>
+                          {isSubmitting ? (
+                            <span className="flex items-center justify-center"><svg className="animate-spin h-4 w-4 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>Submitting...</span>
+                          ) : (
+                            "Submit Test"
+                          )}
                         </Button>
                         <p className="text-xs text-muted-foreground text-center mt-2">
                           You won&apos;t be able to change your answers after submission.
@@ -2112,3 +2235,5 @@ export default function TestPreviewPage() {
     </div>
   )
 }
+
+

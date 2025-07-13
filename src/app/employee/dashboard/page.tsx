@@ -2632,15 +2632,15 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                             }}
                             className="mr-2"
                           />
-                          <Label htmlFor="select-all" className="cursor-pointer text-white font-bold">
+                          <Label htmlFor="select-all" className="cursor-pointer font-bold">
                             Select All
                           </Label>
                         </div>
-                        <div className="col-span-2 text-white font-bold">Candidate</div>
-                        <div className="text-white font-bold">Position</div>
-                        <div className="text-white font-bold">Status</div>
-                        <div className="text-white font-bold">Applied Date</div>
-                        <div className="text-right col-span-2 text-white font-bold">Actions</div>
+                        <div className="col-span-2 font-bold">Candidate</div>
+                        <div className="font-bold">Position</div>
+                        <div className="font-bold">Status</div>
+                        <div className="font-bold">Applied Date</div>
+                        <div className="text-right col-span-2 font-bold">Actions</div>
                       </div>
 
                       {paginateItems(filteredCandidates, currentCandidatesPage).map((candidate, index) => (

@@ -332,6 +332,41 @@
   }
 }
 
+/* Global link style for all anchor tags except footer */
+a {
+  color: #1158f3; /* Tailwind blue-600 */
+  text-decoration: underline;
+  font-weight: 500;
+  transition: color 0.2s;
+  text-decoration: none;
+}
+a:hover {
+  color: #1d4ed8; /* Tailwind blue-700 */
+}
+
+/* Highlight styles for markdown/HTML content */
+code {
+  background: #f3f4f6;
+  color: #d97706;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.95em;
+}
+blockquote {
+  border-left: 4px solid #2563eb;
+  background: #f1f5f9;
+  color: #334155;
+  padding: 8px 16px;
+  margin: 8px 0;
+  font-style: italic;
+}
+mark {
+  background: #fef08a;
+  color: #92400e;
+  padding: 0 4px;
+  border-radius: 2px;
+}
+
 /* Additional utility classes */
 @layer utilities {
   .text-balance {
