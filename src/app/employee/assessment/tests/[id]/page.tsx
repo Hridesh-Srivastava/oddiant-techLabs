@@ -25,6 +25,7 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
+  FileText,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -63,6 +64,7 @@ interface TestData {
     allowCalculator: boolean
     allowCodeEditor: boolean
     autoSubmit: boolean
+    notepadEnabled: boolean
   }
   sections: SectionData[]
   status: string
@@ -1112,6 +1114,20 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
                       </div>
                       <Badge variant={test.settings.autoSubmit ? "default" : "secondary"}>
                         {test.settings.autoSubmit ? "Enabled" : "Disabled"}
+                      </Badge>
+                    </div>
+
+                    {/* Notepad status row */}
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <h3 className="font-medium text-sm">Notepad</h3>
+                          <p className="text-xs text-muted-foreground">Provide a notepad for rough work</p>
+                        </div>
+                      </div>
+                      <Badge variant={test.settings.notepadEnabled ? "default" : "secondary"}>
+                        {test.settings.notepadEnabled ? "Enabled" : "Disabled"}
                       </Badge>
                     </div>
                   </div>

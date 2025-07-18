@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { toast, Toaster } from "sonner"
-import { ArrowLeft, Clock, CheckCircle, AlertCircle, Calculator, X, Upload, Camera, AlertTriangle } from "lucide-react"
+import { ArrowLeft, Clock, CheckCircle, AlertCircle, Calculator, X, Upload, Camera, AlertTriangle, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -34,6 +34,7 @@ interface TestData {
     allowCalculator: boolean
     allowCodeEditor: boolean
     autoSubmit: boolean
+    notepadEnabled: boolean
   }
   sections: SectionData[]
 }
@@ -116,6 +117,8 @@ export default function TestPreviewPage() {
   const [showCalculator, setShowCalculator] = useState(false)
   const [showTabWarning, setShowTabWarning] = useState(false)
   const [showCameraModal, setShowCameraModal] = useState(false)
+  const [showNotepad, setShowNotepad] = useState(false)
+  const [notepadContent, setNotepadContent] = useState("")
 
   // System check states
   const [systemChecks, setSystemChecks] = useState({
@@ -1604,6 +1607,21 @@ export default function TestPreviewPage() {
                       </Card>
                     )}
 
+                    {/* Notepad Button */}
+                    {test.settings.notepadEnabled && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg">Notepad</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <Button variant="outline" className="w-full" onClick={() => setShowNotepad(true)}>
+                            <FileText className="h-4 w-4 mr-2" />
+                            Open Notepad
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )}
+
                     <Card>
                       <CardContent className="pt-6">
                         <Button className="w-full" variant="destructive" onClick={handleSubmitTest} disabled={isSubmitting}>
@@ -2227,6 +2245,29 @@ export default function TestPreviewPage() {
                     Capture
                   </Button>
                 </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Notepad Dialog */}
+          <Dialog open={showNotepad} onOpenChange={setShowNotepad}>
+            <DialogContent className="sm:max-w-[400px]">
+              <DialogHeader>
+                <DialogTitle>Rough Work Notepad</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <textarea
+                  className="w-full h-48 p-2 border rounded-md font-mono text-base resize-none focus:outline-none focus:ring-2 focus:ring-black"
+                  placeholder="Type your rough work here..."
+                  value={notepadContent}
+                  onChange={e => setNotepadContent(e.target.value)}
+                  spellCheck={false}
+                />
+              </div>
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setShowNotepad(false)}>
+                  Close
+                </Button>
               </div>
             </DialogContent>
           </Dialog>

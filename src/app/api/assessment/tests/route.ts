@@ -84,6 +84,15 @@ export async function POST(request: NextRequest) {
     // Create new test
     const newTest = {
       ...testData,
+      // Ensure notepadEnabled is always present in settings
+      settings: {
+        shuffleQuestions: Boolean(testData.settings?.shuffleQuestions),
+        preventTabSwitching: Boolean(testData.settings?.preventTabSwitching),
+        allowCalculator: Boolean(testData.settings?.allowCalculator),
+        allowCodeEditor: Boolean(testData.settings?.allowCodeEditor),
+        autoSubmit: Boolean(testData.settings?.autoSubmit),
+        notepadEnabled: Boolean(testData.settings?.notepadEnabled),
+      },
       createdBy: new ObjectId(userId),
       createdAt: new Date(),
       updatedAt: new Date(),

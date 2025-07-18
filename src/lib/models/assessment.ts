@@ -12,6 +12,7 @@ export interface AssessmentTest {
     preventTabSwitching: boolean
     allowCalculator: boolean
     autoSubmit: boolean
+    notepadEnabled: boolean
   }
   sections: AssessmentSection[]
   status: "Active" | "Draft" | "Archived"

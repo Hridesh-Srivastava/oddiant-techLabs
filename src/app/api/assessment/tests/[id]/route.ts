@@ -95,8 +95,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         shuffleQuestions: Boolean(testData.settings?.shuffleQuestions || false),
         preventTabSwitching: Boolean(testData.settings?.preventTabSwitching || false),
         allowCalculator: Boolean(testData.settings?.allowCalculator || false),
-        allowCodeEditor: Boolean(testData.settings?.allowCodeEditor || false), // ✅ FIXED: This was missing!
+        allowCodeEditor: Boolean(testData.settings?.allowCodeEditor || false),
         autoSubmit: Boolean(testData.settings?.autoSubmit || false),
+        notepadEnabled: Boolean(testData.settings?.notepadEnabled),
       },
       sections: testData.sections,
       updatedAt: new Date(),

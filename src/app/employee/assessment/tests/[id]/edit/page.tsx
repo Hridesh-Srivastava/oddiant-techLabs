@@ -36,6 +36,7 @@ interface TestData {
     allowCalculator: boolean
     allowCodeEditor: boolean
     autoSubmit: boolean
+    notepadEnabled: boolean // Added notepad toggle
   }
   sections: SectionData[]
   status: string
@@ -131,6 +132,7 @@ export default function EditTestPage() {
             allowCalculator: Boolean(data.test.settings?.allowCalculator),
             allowCodeEditor: Boolean(data.test.settings?.allowCodeEditor),
             autoSubmit: Boolean(data.test.settings?.autoSubmit),
+            notepadEnabled: Boolean(data.test.settings?.notepadEnabled), // Ensure notepadEnabled is handled
           },
         }
         setTest(testData)
@@ -547,6 +549,7 @@ function solution() {
           allowCalculator: Boolean(test.settings.allowCalculator),
           allowCodeEditor: Boolean(test.settings.allowCodeEditor),
           autoSubmit: Boolean(test.settings.autoSubmit),
+          notepadEnabled: Boolean(test.settings.notepadEnabled), // Ensure notepadEnabled is included
         },
       }
 
@@ -1362,6 +1365,25 @@ function solution() {
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
                   </label>
                 </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <label htmlFor="notepad-enabled" className="block text-sm font-medium text-gray-700">
+                      Enable Notepad
+                    </label>
+                    <p className="text-xs text-gray-500">Provide a notepad for rough work during the test</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      id="notepad-enabled"
+                      checked={Boolean(test.settings.notepadEnabled)}
+                      onChange={(e) => handleTestSettingsChange("notepadEnabled", e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                  </label>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1408,6 +1430,10 @@ function solution() {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Auto Submit:</span>
                   <span className="font-medium">{test.settings.autoSubmit ? "Yes" : "No"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Notepad:</span>
+                  <span className="font-medium">{test.settings.notepadEnabled ? "Enabled" : "Disabled"}</span>
                 </div>
               </div>
             </CardContent>

@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { toast, Toaster } from "sonner"
-import { Clock, CheckCircle, AlertCircle, Calculator, AlertTriangle, X, Camera } from "lucide-react"
+import { Clock, CheckCircle, AlertCircle, Calculator, AlertTriangle, X, Camera, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -46,6 +46,7 @@ interface TestData {
     allowCalculator: boolean
     allowCodeEditor: boolean
     autoSubmit: boolean
+    notepadEnabled: boolean
   }
   sections: SectionData[]
 }
@@ -190,6 +191,10 @@ export default function TakeTestPage() {
 
   // Add state for current code test case results
   const [currentCodeStats, setCurrentCodeStats] = useState({ passed: 0, failed: 0, total: 0 })
+
+  // Notepad modal state and content
+  const [showNotepad, setShowNotepad] = useState(false)
+  const [notepadContent, setNotepadContent] = useState("")
 
   // Cleanup function to stop all webcam streams
   const cleanupWebcam = useCallback(() => {
@@ -2522,6 +2527,21 @@ export default function TakeTestPage() {
                         </div>
                       )}
 
+                      {/* Notepad */}
+                      {test.settings.notepadEnabled && (
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium">Notepad</h4>
+                          <Button
+                            variant="outline"
+                            className="w-full bg-transparent"
+                            onClick={() => setShowNotepad(true)}
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Open Notepad
+                          </Button>
+                        </div>
+                      )}
+
                       {/* Submit Button */}
                       <div className="pt-4 border-t">
                         {/* FIXED: Updated validation warning for coding questions */}
@@ -3125,6 +3145,29 @@ export default function TakeTestPage() {
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Notepad Dialog */}
+        <Dialog open={showNotepad} onOpenChange={setShowNotepad}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Rough Work Notepad</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <textarea
+                className="w-full h-48 p-2 border rounded-md font-mono text-base resize-none focus:outline-none focus:ring-2 focus:ring-black"
+                placeholder="Type your rough work here..."
+                value={notepadContent}
+                onChange={e => setNotepadContent(e.target.value)}
+                spellCheck={false}
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setShowNotepad(false)}>
+                Close
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )
