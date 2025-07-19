@@ -71,12 +71,19 @@ export default function ResultsPage() {
     fetchResults()
   }, [searchParams])
 
+  useEffect(() => {
+    fetchResults()
+  }, [searchQuery, testFilter, statusFilter, scoreFilter, dateFilter, sortBy, sortDirection])
+
   const fetchResults = async () => {
     try {
       setIsLoading(true)
 
       // Build query parameters
       const params = new URLSearchParams()
+      if (searchQuery) {
+        params.append("search", searchQuery)
+      }
       if (testFilter) params.append("test", testFilter)
       if (statusFilter) params.append("status", statusFilter)
       if (scoreFilter) params.append("score", scoreFilter)
@@ -159,11 +166,6 @@ export default function ResultsPage() {
       console.error("Error exporting results:", error)
       toast.error("Failed to export results. Please try again.")
     }
-  }
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    fetchResults()
   }
 
   const handleSort = (column: string) => {
@@ -312,27 +314,16 @@ export default function ResultsPage() {
     }
   }
 
-  const filteredResults = results.filter((result) => {
-    if (!searchQuery) return true
-
-    const query = searchQuery.toLowerCase()
-    return (
-      result.candidateName.toLowerCase().includes(query) ||
-      result.candidateEmail.toLowerCase().includes(query) ||
-      result.testName.toLowerCase().includes(query)
-    )
-  })
-
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const resultsPerPage = 10;
-  const totalPages = Math.ceil(filteredResults.length / resultsPerPage);
-  const paginatedResults = filteredResults.slice((currentPage - 1) * resultsPerPage, currentPage * resultsPerPage);
+  const totalPages = Math.ceil(results.length / resultsPerPage);
+  const paginatedResults = results.slice((currentPage - 1) * resultsPerPage, currentPage * resultsPerPage);
 
-  // Reset to first page when filters/search change
+  // Reset to first page when results change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filteredResults.length]);
+  }, [results.length]);
 
   return (
     <AssessmentLayout>
@@ -387,15 +378,15 @@ export default function ResultsPage() {
 
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="flex-1">
-          <form onSubmit={handleSearch} className="relative">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search results..."
+              placeholder="Search results by ID, name, email, or test..."
               className="pl-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-          </form>
+          </div>
         </div>
         <div className="flex gap-2">
           <DropdownMenu>
@@ -551,16 +542,26 @@ export default function ResultsPage() {
                     </td>
                   </tr>
                 ))
-              ) : filteredResults.length > 0 ? (
+              ) : results.length > 0 ? (
                 paginatedResults.map((result) => (
                   <tr key={result._id} className="border-t hover:bg-muted/30">
                     <td className="py-3 px-4">
                       <div>
                         <div className="font-medium">{result.candidateName}</div>
                         <div className="text-sm text-muted-foreground">{result.candidateEmail}</div>
+                        <div className="text-xs text-muted-foreground font-mono bg-gray-100 px-2 py-1 rounded mt-1 inline-block">
+                          Result ID: {result._id}
+                        </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4">{result.testName}</td>
+                    <td className="py-3 px-4">
+                      <div>
+                        <div className="font-medium">{result.testName}</div>
+                        <div className="text-xs text-muted-foreground font-mono bg-gray-100 px-2 py-1 rounded mt-1 inline-block">
+                          Test ID: {result.testId}
+                        </div>
+                      </div>
+                    </td>
                     <td className="py-3 px-4">{result.score}%</td>
                     <td className="py-3 px-4">
                       <Badge variant="outline" className={getStatusColor(result.status)}>

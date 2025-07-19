@@ -30,7 +30,6 @@ export default function TestsPage() {
 
   const [isLoading, setIsLoading] = useState(true)
   const [tests, setTests] = useState<TestData[]>([])
-  const [filteredTests, setFilteredTests] = useState<TestData[]>([])
   const [searchTerm, setSearchTerm] = useState("")
 
   // Filter states
@@ -45,7 +44,12 @@ export default function TestsPage() {
     { label: "Full Stack", value: "Full Stack" },
     { label: "QA", value: "QA" },
     { label: "DevOps", value: "DevOps" },
-    { label: "Data", value: "Data" },
+    { label: "Problem Solving", value: "Problem_Solving" },
+    { label: "Data Science", value: "Data_Science" },
+    { label: "Data Analysis", value: "Data_Analysis" },
+    { label: "Math/Aptitude", value: "Math/Aptitude" },
+    { label: "Verbal Ability", value: "Verbal_Ability" },
+    { label: "Programming Logic", value: "Programming_Logic" },
   ]
 
   // Duration filter options
@@ -70,7 +74,7 @@ export default function TestsPage() {
   }, [searchTerm, durationFilters, typeFilters, activeTab]);
 
   useEffect(() => {
-    fetchTests(currentPage)
+    fetchTests()
 
     // Get initial filters from URL if any
     const initialDurationFilters = searchParams.getAll("duration")
@@ -90,8 +94,8 @@ export default function TestsPage() {
   }, [searchParams, currentPage])
 
   useEffect(() => {
-    applyFilters()
-  }, [searchTerm, activeTab, durationFilters, typeFilters, tests])
+    fetchTests()
+  }, [searchTerm, activeTab, durationFilters, typeFilters])
 
   const fetchTests = async (page = 1) => {
     try {
@@ -102,6 +106,11 @@ export default function TestsPage() {
       params.append("status", activeTab)
       params.append("page", String(page))
       params.append("limit", String(testsPerPage))
+
+      // Add search term to API call
+      if (searchTerm) {
+        params.append("search", searchTerm)
+      }
 
       durationFilters.forEach((filter) => {
         params.append("duration", filter)
@@ -144,40 +153,8 @@ export default function TestsPage() {
   }
 
   const applyFilters = () => {
-    let filtered = [...tests]
-
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter((test) => test.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    }
-
-    // Apply duration filters
-    if (durationFilters.length > 0) {
-      filtered = filtered.filter((test) => {
-        return durationFilters.some((filter) => {
-          if (filter === "< 60" && test.duration < 60) return true
-          if (filter === "60-120" && test.duration >= 60 && test.duration <= 120) return true
-          if (filter === "> 120" && test.duration > 120) return true
-          return false
-        })
-      })
-    }
-
-    // Apply type filters
-    if (typeFilters.length > 0) {
-      filtered = filtered.filter((test) => typeFilters.includes(test.type))
-    }
-
-    setFilteredTests(filtered)
-
-    // Update URL with filters
-    const params = new URLSearchParams()
-    params.set("tab", activeTab)
-    durationFilters.forEach((filter) => params.append("duration", filter))
-    typeFilters.forEach((filter) => params.append("type", filter))
-
-    // Replace URL without refreshing the page
-    window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`)
+    // Fetch tests with current filters (including search)
+    fetchTests(1)
   }
 
   const handleDurationFilterChange = (value: string) => {
@@ -274,7 +251,7 @@ export default function TestsPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search tests..."
+            placeholder="Search tests by name or ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -422,7 +399,7 @@ export default function TestsPage() {
             </div>
           ))}
         </div>
-      ) : filteredTests.length > 0 ? (
+      ) : tests.length > 0 ? (
         <div className="space-y-4">
           {tests.map((test) => (
             <div key={test._id} className="border rounded-lg p-4 bg-background hover:bg-muted/50 transition-colors">
@@ -434,6 +411,10 @@ export default function TestsPage() {
                     </Link>
                   </h3>
                   <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                    <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+                      ID: {test._id}
+                    </span>
+                    <span>•</span>
                     <span>{test.type}</span>
                     <span>•</span>
                     <span>{test.duration} min</span>

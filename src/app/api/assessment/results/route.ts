@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
 
     // Get query parameters
     const url = new URL(request.url)
+    const search = url.searchParams.get("search") || ""
     const test = url.searchParams.get("test")
     const status = url.searchParams.get("status")
     const score = url.searchParams.get("score")
@@ -71,6 +72,23 @@ export async function GET(request: NextRequest) {
 
     // Build query
     const query: any = { createdBy: new ObjectId(userId) }
+
+    if (search) {
+      // Check if search term looks like an ObjectId (24 character hex string)
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(search)
+      
+      if (isObjectId) {
+        // If it's an ObjectId, search by _id (result ID)
+        query._id = new ObjectId(search)
+      } else {
+        // Otherwise search by candidate name, email, and test name
+        query.$or = [
+          { candidateName: { $regex: search, $options: "i" } },
+          { candidateEmail: { $regex: search, $options: "i" } },
+          { testName: { $regex: search, $options: "i" } }
+        ]
+      }
+    }
 
     if (test) {
       query.testId = new ObjectId(test)

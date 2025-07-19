@@ -2272,7 +2272,10 @@ export default function TakeTestPage() {
                           <div className="space-y-6">
                             <div>
                               <h3 className="text-lg sm:text-xl font-medium mb-4">
-                                {currentQuestion + 1}. {test.sections[currentSection].questions[currentQuestion].text}
+                                {currentQuestion + 1}.{" "}
+                                <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                                  {test.sections[currentSection].questions[currentQuestion].text}
+                                </ReactMarkdown>
                               </h3>
                               <p className="text-sm text-muted-foreground mb-6">
                                 {test.sections[currentSection].questions[currentQuestion].points} points

@@ -151,6 +151,8 @@ export async function GET(request: NextRequest) {
     const limit = Number.parseInt(searchParams.get("limit") || "10")
     const search = searchParams.get("search") || ""
     const status = searchParams.get("status") || ""
+    const durationFilters = searchParams.getAll("duration")
+    const typeFilters = searchParams.getAll("type")
 
     // Build query
     const query: any = {
@@ -158,11 +160,40 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      query.$or = [{ name: { $regex: search, $options: "i" } }, { description: { $regex: search, $options: "i" } }]
+      // Check if search term looks like an ObjectId (24 character hex string)
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(search)
+      
+      if (isObjectId) {
+        // If it's an ObjectId, search by _id
+        query._id = new ObjectId(search)
+      } else {
+        // Otherwise search by name and description
+        query.$or = [{ name: { $regex: search, $options: "i" } }, { description: { $regex: search, $options: "i" } }]
+      }
     }
 
     if (status) {
       query.status = status
+    }
+
+    // Apply duration filters
+    if (durationFilters.length > 0) {
+      const durationConditions = durationFilters.map((filter) => {
+        if (filter === "< 60") return { duration: { $lt: 60 } }
+        if (filter === "60-120") return { duration: { $gte: 60, $lte: 120 } }
+        if (filter === "> 120") return { duration: { $gt: 120 } }
+        return {}
+      }).filter(condition => Object.keys(condition).length > 0)
+      
+      if (durationConditions.length > 0) {
+        query.$and = query.$and || []
+        query.$and.push({ $or: durationConditions })
+      }
+    }
+
+    // Apply type filters
+    if (typeFilters.length > 0) {
+      query.type = { $in: typeFilters }
     }
 
     // Get total count

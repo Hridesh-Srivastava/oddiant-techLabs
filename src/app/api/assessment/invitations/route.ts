@@ -16,10 +16,35 @@ export async function GET(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Get invitations from database
+    // Get query parameters
+    const { searchParams } = new URL(request.url)
+    const search = searchParams.get("search") || ""
+
+    // Build query
+    const query: any = {
+      createdBy: new ObjectId(userId),
+    }
+
+    if (search) {
+      // Check if search term looks like an ObjectId (24 character hex string)
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(search)
+      
+      if (isObjectId) {
+        // If it's an ObjectId, search by _id
+        query._id = new ObjectId(search)
+      } else {
+        // Otherwise search by email and test name
+        query.$or = [
+          { email: { $regex: search, $options: "i" } },
+          { testName: { $regex: search, $options: "i" } }
+        ]
+      }
+    }
+
+    // Get invitations from database with search filter
     const invitations = await db
       .collection("assessment_invitations")
-      .find({ createdBy: new ObjectId(userId) })
+      .find(query)
       .sort({ createdAt: -1 })
       .toArray()
 

@@ -33,7 +33,6 @@ export default function InvitationsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [invitations, setInvitations] = useState<InvitationData[]>([])
-  const [filteredInvitations, setFilteredInvitations] = useState<InvitationData[]>([])
   const [searchTerm, setSearchTerm] = useState("")
 
   // Pagination state
@@ -67,8 +66,8 @@ export default function InvitationsPage() {
   }, [])
 
   useEffect(() => {
-    applyFilters()
-  }, [searchTerm, invitations])
+    fetchInvitations()
+  }, [searchTerm])
 
   // Reset to first page when search term changes
   useEffect(() => {
@@ -78,7 +77,14 @@ export default function InvitationsPage() {
   const fetchInvitations = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch("/api/assessment/invitations", {
+
+      // Build query parameters
+      const params = new URLSearchParams()
+      if (searchTerm) {
+        params.append("search", searchTerm)
+      }
+
+      const response = await fetch(`/api/assessment/invitations?${params.toString()}`, {
         method: "GET",
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -92,6 +98,7 @@ export default function InvitationsPage() {
       }
 
       const data = await response.json()
+
       if (data.success) {
         setInvitations(data.invitations || [])
       } else {
@@ -134,26 +141,11 @@ export default function InvitationsPage() {
     }
   }
 
-  const applyFilters = () => {
-    let filtered = [...invitations]
-
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (invitation) =>
-          invitation.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          invitation.testName.toLowerCase().includes(searchTerm.toLowerCase()),
-      )
-    }
-
-    setFilteredInvitations(filtered)
-  }
-
   // Pagination calculations
-  const totalPages = Math.ceil(filteredInvitations.length / itemsPerPage)
+  const totalPages = Math.ceil(invitations.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
-  const currentInvitations = filteredInvitations.slice(startIndex, endIndex)
+  const currentInvitations = invitations.slice(startIndex, endIndex)
 
   const handlePreviousPage = () => {
     setCurrentPage((prev) => Math.max(prev - 1, 1))
@@ -421,7 +413,10 @@ export default function InvitationsPage() {
 
   // Filtered tests for dropdown
   const filteredTests = testSearch
-    ? availableTests.filter((test) => test.name.toLowerCase().includes(testSearch.toLowerCase()))
+    ? availableTests.filter((test) => 
+        test.name.toLowerCase().includes(testSearch.toLowerCase()) ||
+        test._id.toLowerCase().includes(testSearch.toLowerCase())
+      )
     : availableTests;
 
   return (
@@ -449,8 +444,7 @@ export default function InvitationsPage() {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      type="search"
-                      placeholder="Search invitations..."
+                      placeholder="Search invitations by email, test name, or ID..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10"
@@ -471,7 +465,7 @@ export default function InvitationsPage() {
                       </div>
                     ))}
                   </div>
-                ) : filteredInvitations.length > 0 ? (
+                ) : invitations.length > 0 ? (
                   <>
                     <div className="overflow-x-auto">
                       <table className="w-full">
@@ -488,7 +482,14 @@ export default function InvitationsPage() {
                         <tbody>
                           {currentInvitations.map((invitation) => (
                             <tr key={invitation._id} className="border-b hover:bg-muted/50">
-                              <td className="py-3 px-4">{invitation.email}</td>
+                              <td className="py-3 px-4">
+                                <div>
+                                  <div className="font-medium">{invitation.email}</div>
+                                  <div className="text-xs text-muted-foreground font-mono bg-gray-100 px-2 py-1 rounded mt-1 inline-block">
+                                    ID: {invitation._id}
+                                  </div>
+                                </div>
+                              </td>
                               <td className="py-3 px-4">{invitation.testName}</td>
                               <td className="py-3 px-4">{formatDate(invitation.createdAt)}</td>
                               <td className="py-3 px-4">
@@ -533,8 +534,8 @@ export default function InvitationsPage() {
                     {totalPages > 1 && (
                       <div className="flex items-center justify-between mt-6 pt-4 border-t">
                         <div className="text-sm text-muted-foreground">
-                          Showing {startIndex + 1} to {Math.min(endIndex, filteredInvitations.length)} of{" "}
-                          {filteredInvitations.length} invitations
+                          Showing {startIndex + 1} to {Math.min(endIndex, invitations.length)} of{" "}
+                          {invitations.length} invitations
                         </div>
                         <div className="flex items-center space-x-2">
                           <Button
@@ -594,13 +595,14 @@ export default function InvitationsPage() {
                     <Input
                       id="test-search"
                       type="text"
-                      placeholder="Search tests..."
+                      placeholder="Search tests by name or ID..."
                       value={testSearch}
-                      onChange={e => {
+                      onChange={(e) => {
                         setTestSearch(e.target.value);
                         setShowSuggestions(true);
                       }}
                       onFocus={() => setShowSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                       autoComplete="off"
                       className="w-full px-3 py-2 border border-input rounded-md mb-2"
                     />
@@ -621,16 +623,18 @@ export default function InvitationsPage() {
                          <li
                            key={test._id}
                            style={{
-                             padding: '0.5rem 1rem',
+                             padding: '8px 12px',
                              cursor: 'pointer',
-                             background: selectedTest === test._id ? '#f3f4f6' : 'white'
+                             borderBottom: '1px solid #f3f4f6',
+                             fontSize: '14px'
                            }}
-                           onMouseDown={e => {
-                             e.preventDefault();
-                             handleSuggestionClick(test);
-                           }}
+                           onMouseDown={() => handleSuggestionClick(test)}
+                           className="hover:bg-gray-50"
                          >
-                           {test.name}
+                           <div className="font-medium">{test.name}</div>
+                           <div className="text-xs text-muted-foreground font-mono bg-gray-100 px-2 py-1 rounded mt-1 inline-block">
+                             ID: {test._id}
+                           </div>
                          </li>
                        ))}
                      </ul>
@@ -651,7 +655,7 @@ export default function InvitationsPage() {
                       <option value="">Choose a test</option>
                       {filteredTests.map((test) => (
                         <option key={test._id} value={test._id}>
-                          {test.name}
+                          {test.name} (ID: {test._id})
                         </option>
                       ))}
                     </select>

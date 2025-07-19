@@ -852,6 +852,11 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
               </Badge>
               <span className="text-sm text-muted-foreground ml-2">Last updated: {formatDate(test.updatedAt)}</span>
             </div>
+            <div className="mt-2">
+              <div className="text-xs text-muted-foreground font-mono bg-gray-100 px-2 py-1 rounded inline-block">
+                Test ID: {test._id}
+              </div>
+            </div>
           </div>
         </div>
         <div className="flex gap-2">
@@ -954,6 +959,14 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
                       <div>
                         <h3 className="text-sm font-medium text-muted-foreground">Created</h3>
                         <p className="mt-1">{formatDate(test.createdAt)}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Test ID Display */}
+                    <div className="pt-4 border-t">
+                      <h3 className="text-sm font-medium text-muted-foreground mb-2">Test ID</h3>
+                      <div className="text-xs text-muted-foreground font-mono bg-gray-100 px-3 py-2 rounded">
+                        {test._id}
                       </div>
                     </div>
                   </div>

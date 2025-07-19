@@ -358,6 +358,9 @@ export default function AssessmentDashboard() {
                               >
                                 {test.name}
                               </Link>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                ID: {test._id}
+                              </div>
                             </td>
                             <td className="py-3 px-4">
                               <span

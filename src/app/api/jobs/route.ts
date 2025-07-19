@@ -65,14 +65,32 @@ export async function GET(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
+    // Get query parameters
+    const { searchParams } = new URL(request.url)
+    const search = searchParams.get("search") || ""
+    const location = searchParams.get("location") || ""
+    const jobType = searchParams.get("jobType") || ""
+
     // Check if user is an employee
     const employee = await db.collection("employees").findOne({ _id: new ObjectId(userId) })
 
     if (employee) {
       // If employee, return jobs created by this employee
+      const query: any = { employerId: new ObjectId(userId) }
+
+      // Add search filter
+      if (search) {
+        query.$or = [
+          { jobTitle: { $regex: search, $options: "i" } },
+          { companyName: { $regex: search, $options: "i" } },
+          { jobLocation: { $regex: search, $options: "i" } },
+          { skills: { $in: [new RegExp(search, "i")] } }
+        ]
+      }
+
       const jobs = await db
         .collection("jobs")
-        .find({ employerId: new ObjectId(userId) })
+        .find(query)
         .sort({ createdAt: -1 })
         .toArray()
 
@@ -104,13 +122,35 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
     }
 
+    // Build query for students/candidates
+    const query: any = {
+      status: { $in: ["open", "active"] },
+    }
+
+    // Add search filter
+    if (search) {
+      query.$or = [
+        { jobTitle: { $regex: search, $options: "i" } },
+        { companyName: { $regex: search, $options: "i" } },
+        { jobLocation: { $regex: search, $options: "i" } },
+        { skills: { $in: [new RegExp(search, "i")] } }
+      ]
+    }
+
+    // Add location filter
+    if (location) {
+      query.jobLocation = { $regex: location, $options: "i" }
+    }
+
+    // Add job type filter
+    if (jobType) {
+      query.jobType = { $regex: jobType, $options: "i" }
+    }
+
     // Fetch all active jobs for students/candidates
     const jobs = await db
       .collection("jobs")
-      .find({
-        status: { $in: ["open", "active"] },
-        // Add any other filters if needed
-      })
+      .find(query)
       .sort({ createdAt: -1 })
       .toArray()
 

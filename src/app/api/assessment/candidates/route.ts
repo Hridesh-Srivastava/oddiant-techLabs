@@ -15,10 +15,37 @@ export async function GET(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Get all candidates for this user
+    // Get query parameters
+    const { searchParams } = new URL(request.url)
+    const search = searchParams.get("search") || ""
+    const status = searchParams.get("status") || ""
+    const score = searchParams.get("score") || ""
+
+    // Build query
+    const query: any = {
+      createdBy: new ObjectId(userId),
+    }
+
+    if (search) {
+      // Check if search term looks like an ObjectId (24 character hex string)
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(search)
+      
+      if (isObjectId) {
+        // If it's an ObjectId, search by _id
+        query._id = new ObjectId(search)
+      } else {
+        // Otherwise search by name and email
+        query.$or = [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } }
+        ]
+      }
+    }
+
+    // Get all candidates for this user with search filter
     const candidates = await db
       .collection("assessment_candidates")
-      .find({ createdBy: new ObjectId(userId) })
+      .find(query)
       .sort({ createdAt: -1 })
       .toArray()
 

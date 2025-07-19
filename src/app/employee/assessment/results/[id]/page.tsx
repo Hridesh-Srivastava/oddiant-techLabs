@@ -26,6 +26,8 @@ interface ResultData {
   _id: string
   candidateName: string
   candidateEmail: string
+  candidateId?: string
+  testId: string
   testName: string
   score: number
   status: string
@@ -420,6 +422,24 @@ export default function ResultDetailsPage() {
                   </p>
                 </div>
               </div>
+              
+              {/* ID Information */}
+              <div className="mt-4 pt-4 border-t">
+                <Label className="text-sm font-medium text-muted-foreground mb-2 block">IDs</Label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <div className="text-xs text-muted-foreground font-mono bg-gray-100 px-2 py-1 rounded">
+                    Result ID: {result._id}
+                  </div>
+                  {result.candidateId && (
+                    <div className="text-xs text-muted-foreground font-mono bg-gray-100 px-2 py-1 rounded">
+                      Candidate ID: {result.candidateId}
+                    </div>
+                  )}
+                  <div className="text-xs text-muted-foreground font-mono bg-gray-100 px-2 py-1 rounded">
+                    Test ID: {result.testId}
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -551,6 +571,22 @@ export default function ResultDetailsPage() {
               <Badge className={getStatusColor(result.status)} variant="secondary">
                 {result.status}
               </Badge>
+              
+              {/* Test Information */}
+              <div className="mt-4 pt-4 border-t">
+                <div className="text-sm text-muted-foreground mb-2">Test Information</div>
+                <div className="space-y-1 text-xs">
+                  <div className="text-xs text-muted-foreground font-mono bg-gray-100 px-2 py-1 rounded">
+                    Test ID: {result.testId}
+                  </div>
+                  {test && (
+                    <div className="text-xs text-muted-foreground font-mono bg-gray-100 px-2 py-1 rounded">
+                      Test Name: {test.name}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
               <div className="mt-4 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span>Correct Answers:</span>

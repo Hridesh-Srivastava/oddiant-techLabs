@@ -37,8 +37,21 @@ export default function BrowseJobsPage() {
   const fetchJobs = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch("/api/jobs/available", {
-        cache: "no-store",
+
+      // Build query parameters
+      const params = new URLSearchParams()
+      if (searchTerm) {
+        params.append("search", searchTerm)
+      }
+      if (filterLocation) {
+        params.append("location", filterLocation)
+      }
+      if (filterJobType) {
+        params.append("jobType", filterJobType)
+      }
+
+      const response = await fetch(`/api/jobs?${params.toString()}`, {
+        method: "GET",
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
           Pragma: "no-cache",
@@ -46,21 +59,21 @@ export default function BrowseJobsPage() {
         },
       })
 
-      if (response.status === 401) {
-        router.push("/auth/login")
-        return
-      }
-
       if (!response.ok) {
         throw new Error("Failed to fetch jobs")
       }
 
       const data = await response.json()
-      console.log("Fetched jobs:", data.jobs)
-      setJobs(data.jobs || [])
+
+      if (data.success) {
+        setJobs(data.jobs || [])
+      } else {
+        throw new Error(data.message || "Failed to fetch jobs")
+      }
     } catch (error) {
       console.error("Error fetching jobs:", error)
-      setError("Failed to load job listings. Please try again later.")
+      toast.error("Failed to load jobs. Please try again.")
+      setJobs([])
     } finally {
       setIsLoading(false)
     }
@@ -68,7 +81,7 @@ export default function BrowseJobsPage() {
 
   useEffect(() => {
     fetchJobs()
-  }, [router])
+  }, [searchTerm, filterLocation, filterJobType])
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -112,18 +125,6 @@ export default function BrowseJobsPage() {
       toast.error("An error occurred while applying for the job")
     }
   }
-
-  const filteredJobs = jobs.filter((job) => {
-    const matchesSearch =
-      job.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.skills.some((skill) => skill.toLowerCase().includes(searchTerm.toLowerCase()))
-
-    const matchesLocation = filterLocation ? job.jobLocation.toLowerCase().includes(filterLocation.toLowerCase()) : true
-    const matchesJobType = filterJobType ? job.jobType.toLowerCase() === filterJobType.toLowerCase() : true
-
-    return matchesSearch && matchesLocation && matchesJobType
-  })
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -203,7 +204,7 @@ export default function BrowseJobsPage() {
                 <p className="text-gray-500 mb-4">{error}</p>
                 <Button onClick={handleRefresh}>Try Again</Button>
               </div>
-            ) : filteredJobs.length === 0 ? (
+            ) : jobs.length === 0 ? (
               <div className="text-center py-12 border rounded-lg">
                 <Briefcase className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-1">No job openings found</h3>
@@ -215,7 +216,7 @@ export default function BrowseJobsPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {filteredJobs.map((job) => (
+                {jobs.map((job) => (
                   <Card key={job._id} className="overflow-hidden hover:shadow-md transition-shadow">
                     <CardContent className="p-0">
                       <div className="p-6">

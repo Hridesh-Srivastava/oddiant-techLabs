@@ -31,7 +31,6 @@ export default function CandidatesPage() {
 
   const [isLoading, setIsLoading] = useState(true)
   const [candidates, setCandidates] = useState<CandidateData[]>([])
-  const [filteredCandidates, setFilteredCandidates] = useState<CandidateData[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isExporting, setIsExporting] = useState<string | false>(false)
 
@@ -42,13 +41,13 @@ export default function CandidatesPage() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const candidatesPerPage = 8;
-  const totalPages = Math.ceil(filteredCandidates.length / candidatesPerPage);
-  const paginatedCandidates = filteredCandidates.slice((currentPage - 1) * candidatesPerPage, currentPage * candidatesPerPage);
+  const totalPages = Math.ceil(candidates.length / candidatesPerPage);
+  const paginatedCandidates = candidates.slice((currentPage - 1) * candidatesPerPage, currentPage * candidatesPerPage);
 
   // Reset to first page when filters/search change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filteredCandidates.length]);
+  }, [candidates.length]);
 
   // Status filter options
   const statusOptions = [
@@ -64,36 +63,22 @@ export default function CandidatesPage() {
     { label: "< 70%", value: "< 70%" },
   ]
 
-  useEffect(() => {
-    fetchCandidates()
-
-    // Get initial filters from URL if any
-    const initialStatusFilters = searchParams.getAll("status")
-    if (initialStatusFilters.length > 0) {
-      setStatusFilters(initialStatusFilters)
-    }
-
-    const initialScoreFilters = searchParams.getAll("score")
-    if (initialScoreFilters.length > 0) {
-      setScoreFilters(initialScoreFilters)
-    }
-  }, [searchParams])
-
-  useEffect(() => {
-    applyFilters()
-  }, [searchTerm, statusFilters, scoreFilters, candidates])
-
   const fetchCandidates = async () => {
     try {
       setIsLoading(true)
 
       // Build query parameters
       const params = new URLSearchParams()
+      if (searchTerm) {
+        params.append("search", searchTerm)
+      }
+      statusFilters.forEach((filter) => {
+        params.append("status", filter)
+      })
+      scoreFilters.forEach((filter) => {
+        params.append("score", filter)
+      })
 
-      statusFilters.forEach((filter) => params.append("status", filter))
-      scoreFilters.forEach((filter) => params.append("score", filter))
-
-      // Fetch candidates from API
       const response = await fetch(`/api/assessment/candidates?${params.toString()}`, {
         method: "GET",
         headers: {
@@ -117,53 +102,30 @@ export default function CandidatesPage() {
     } catch (error) {
       console.error("Error fetching candidates:", error)
       toast.error("Failed to load candidates. Please try again.")
+      setCandidates([])
     } finally {
       setIsLoading(false)
     }
   }
 
-  const applyFilters = () => {
-    let filtered = [...candidates]
+  useEffect(() => {
+    fetchCandidates()
 
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (candidate) =>
-          candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          candidate.email.toLowerCase().includes(searchTerm.toLowerCase()),
-      )
+    // Get initial filters from URL if any
+    const initialStatusFilters = searchParams.getAll("status")
+    if (initialStatusFilters.length > 0) {
+      setStatusFilters(initialStatusFilters)
     }
 
-    // Apply status filters
-    if (statusFilters.length > 0) {
-      filtered = filtered.filter((candidate) => statusFilters.includes(candidate.status))
+    const initialScoreFilters = searchParams.getAll("score")
+    if (initialScoreFilters.length > 0) {
+      setScoreFilters(initialScoreFilters)
     }
+  }, [searchParams])
 
-    // Apply score filters
-    if (scoreFilters.length > 0) {
-      filtered = filtered.filter((candidate) => {
-        const score = candidate.averageScore
-
-        return scoreFilters.some((filter) => {
-          if (filter === "> 90%" && score > 90) return true
-          if (filter === "80-90%" && score >= 80 && score <= 90) return true
-          if (filter === "70-80%" && score >= 70 && score < 80) return true
-          if (filter === "< 70%" && score < 70) return true
-          return false
-        })
-      })
-    }
-
-    setFilteredCandidates(filtered)
-
-    // Update URL with filters
-    const params = new URLSearchParams()
-    statusFilters.forEach((filter) => params.append("status", filter))
-    scoreFilters.forEach((filter) => params.append("score", filter))
-
-    // Replace URL without refreshing the page
-    window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`)
-  }
+  useEffect(() => {
+    fetchCandidates()
+  }, [searchTerm, statusFilters, scoreFilters])
 
   const handleStatusFilterChange = (value: string) => {
     setStatusFilters((prev) => {
@@ -206,8 +168,8 @@ export default function CandidatesPage() {
 
       // Build query parameters for export
       const params = new URLSearchParams()
-      if (filteredCandidates.length > 0) {
-        filteredCandidates.forEach((candidate) => {
+      if (candidates.length > 0) {
+        candidates.forEach((candidate) => {
           params.append("candidateEmail", candidate.email)
         })
       }
@@ -315,7 +277,7 @@ export default function CandidatesPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search candidates..."
+              placeholder="Search candidates by name, email, or ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -465,7 +427,7 @@ export default function CandidatesPage() {
                 </div>
               ))}
             </div>
-          ) : filteredCandidates.length > 0 ? (
+          ) : candidates.length > 0 ? (
             <div>
               {paginatedCandidates.map((candidate) => (
                 <div key={candidate._id} className="p-4 grid grid-cols-7 border-t hover:bg-muted/30 transition-colors">
@@ -476,6 +438,9 @@ export default function CandidatesPage() {
                     <div>
                       <div className="font-medium">{candidate.name}</div>
                       <div className="text-sm text-muted-foreground">{candidate.email}</div>
+                      <div className="text-xs text-muted-foreground font-mono bg-gray-100 px-2 py-1 rounded mt-1 inline-block">
+                        ID: {candidate._id}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center ml-6">{candidate.testsAssigned}</div>

@@ -233,6 +233,8 @@ export default function StudentAssessmentDashboard() {
     { value: "Data_Science", label: "Data Science" },
     { value: "Data_Analysis", label: "Data Analysis" },
     { value: "Math/Aptitude", label: "Math/Aptitude" },
+    { value: "Verbal_Ability", label: "Verbal Ability" },
+    { value: "Programming_Logic", label: "Programming Logic" },
   ];
 
   const handleLogout = async () => {
@@ -611,7 +613,7 @@ export default function StudentAssessmentDashboard() {
                                 <span>{test.questions} questions</span>
                               </div>
                               {/* Test Type */}
-                              {['Frontend','Backend','Full Stack','QA','DevOps','Problem_Solving','Data_Science','Data_Analysis','Math/Aptitude'].includes(test.type || "") && (
+                              {['Frontend','Backend','Full Stack','QA','DevOps','Problem_Solving','Data_Science','Data_Analysis','Math/Aptitude','Verbal_Ability','Programming_Logic'].includes(test.type || "") && (
                                 <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-semibold">{test.type}</span>
                               )}
                               {/* Created At */}
@@ -731,7 +733,7 @@ export default function StudentAssessmentDashboard() {
                               <span>{invitation.questions} questions</span>
                             </div>
                             {/* Test Type */}
-                            {['Frontend','Backend','Full Stack','QA','DevOps','Problem_Solving','Data_Science','Data_Analysis','Math/Aptitude'].includes(invitation.type || "") && (
+                            {['Frontend','Backend','Full Stack','QA','DevOps','Problem_Solving','Data_Science','Data_Analysis','Math/Aptitude','Verbal_Ability','Programming_Logic'].includes(invitation.type || "") && (
                               <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-semibold">{invitation.type}</span>
                             )}
                             <div className="flex items-center gap-1">
@@ -837,7 +839,7 @@ export default function StudentAssessmentDashboard() {
                               <CardTitle className="text-lg">{test.testTitle}</CardTitle>
                               <CardDescription className="mt-2">{test.description}</CardDescription>
                               {/* Test Type/Category Badge */}
-                              {['Frontend','Backend','Full Stack','QA','DevOps','Problem_Solving','Data_Science','Data_Analysis','Math/Aptitude'].includes(test.type || "") && (
+                              {['Frontend','Backend','Full Stack','QA','DevOps','Problem_Solving','Data_Science','Data_Analysis','Math/Aptitude','Verbal_Ability','Programming_Logic'].includes(test.type || "") && (
                                 <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-semibold mt-2 inline-block">{test.type}</span>
                               )}
                               {/* Given Date */}
@@ -981,7 +983,7 @@ export default function StudentAssessmentDashboard() {
                               <CardTitle className="text-lg">{result.testTitle}</CardTitle>
                               <CardDescription className="mt-2">{result.description}</CardDescription>
                               {/* Test Type/Category Badge */}
-                              {['Frontend','Backend','Full Stack','QA','DevOps','Problem_Solving','Data_Science','Data_Analysis','Math/Aptitude'].includes(result.type || "") && (
+                              {['Frontend','Backend','Full Stack','QA','DevOps','Problem_Solving','Data_Science','Data_Analysis','Math/Aptitude','Verbal_Ability','Programming_Logic'].includes(result.type || "") && (
                                 <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-semibold mt-2 inline-block">{result.type}</span>
                               )}
                             </div>

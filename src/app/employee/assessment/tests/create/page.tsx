@@ -481,7 +481,8 @@ function solution() {
                   <option value="Problem_Solving">Problem Solving</option>
                   <option value="Data_Science">Data Science</option>
                   <option value="Data_Analysis">Data Analysis</option>
-                  <option value="Math/Aptitude">Math/Aptitude</option>
+                  <option value="Verbal_Ability">Verbal Ability</option>
+                  <option value="Programming_Logic">Programming Logic</option>
                 </select>
               </div>
 
@@ -677,8 +678,13 @@ function solution() {
                               onChange={(e) => handleQuestionChange("text", e.target.value)}
                               rows={2}
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                              placeholder="Enter your question here"
+                              placeholder="Enter your question here (supports Markdown & HTML)"
                             />
+                            {/* Markdown Preview for Question Text */}
+                            <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-md">
+                              <span className="text-xs text-muted-foreground mb-1 block">Preview:</span>
+                              <ReactMarkdown rehypePlugins={[rehypeRaw]}>{newQuestion.text || ""}</ReactMarkdown>
+                            </div>
                           </div>
 
                           <div className="space-y-2">

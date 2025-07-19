@@ -684,6 +684,9 @@ export default function CandidateDetailsPage() {
           <div>
             <h1 className="text-3xl font-bold text-foreground">{candidate.name || candidate.email}</h1>
             <p className="text-muted-foreground">{candidate.email}</p>
+            <div className="text-xs text-muted-foreground font-mono bg-gray-100 px-2 py-1 rounded mt-1 inline-block">
+              ID: {candidate._id}
+            </div>
           </div>
         </div>
         <Button onClick={() => setShowInviteDialog(true)}>

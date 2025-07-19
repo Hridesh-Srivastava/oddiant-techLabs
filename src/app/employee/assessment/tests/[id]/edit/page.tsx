@@ -598,9 +598,14 @@ function solution() {
               id="question-text"
               value={questionForm.text}
               onChange={(e) => setQuestionForm({ ...questionForm, text: e.target.value })}
-              placeholder="Enter your question"
+              placeholder="Enter your question (supports Markdown & HTML)"
               rows={3}
             />
+            {/* Markdown Preview for MCQ Question Text */}
+            <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-md">
+              <span className="text-xs text-muted-foreground mb-1 block">Preview:</span>
+              <ReactMarkdown rehypePlugins={[rehypeRaw]}>{questionForm.text || ""}</ReactMarkdown>
+            </div>
           </div>
           <div>
             <Label>Options *</Label>
@@ -926,9 +931,14 @@ function solution() {
               id="question-text"
               value={questionForm.text}
               onChange={(e) => setQuestionForm({ ...questionForm, text: e.target.value })}
-              placeholder="Enter your question"
+              placeholder="Enter your question (supports Markdown & HTML)"
               rows={3}
             />
+            {/* Markdown Preview for Written Answer Question Text */}
+            <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-md">
+              <span className="text-xs text-muted-foreground mb-1 block">Preview:</span>
+              <ReactMarkdown rehypePlugins={[rehypeRaw]}>{questionForm.text || ""}</ReactMarkdown>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -1101,6 +1111,8 @@ function solution() {
                       <option value="Data_Science">Data Science</option>
                       <option value="Data_Analysis">Data Analysis</option>
                       <option value="Math/Aptitude">Math/Aptitude</option>
+                      <option value="Verbal_Ability">Verbal Ability</option>
+                      <option value="Programming_Logic">Programming Logic</option>
                     </select>
                   </div>
                   <div>
