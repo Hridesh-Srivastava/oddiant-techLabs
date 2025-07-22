@@ -74,28 +74,28 @@ export default function TestsPage() {
   }, [searchTerm, durationFilters, typeFilters, activeTab]);
 
   useEffect(() => {
-    fetchTests()
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    setCurrentPage(page);
 
-    // Get initial filters from URL if any
-    const initialDurationFilters = searchParams.getAll("duration")
+    const initialDurationFilters = searchParams.getAll("duration");
     if (initialDurationFilters.length > 0) {
-      setDurationFilters(initialDurationFilters)
+      setDurationFilters(initialDurationFilters);
     }
 
-    const initialTypeFilters = searchParams.getAll("type")
+    const initialTypeFilters = searchParams.getAll("type");
     if (initialTypeFilters.length > 0) {
-      setTypeFilters(initialTypeFilters)
+      setTypeFilters(initialTypeFilters);
     }
 
-    const tab = searchParams.get("tab")
+    const tab = searchParams.get("tab");
     if (tab && ["Active", "Draft", "Archived"].includes(tab)) {
-      setActiveTab(tab)
+      setActiveTab(tab);
     }
-  }, [searchParams, currentPage])
+  }, []); // Only on initial mount
 
   useEffect(() => {
-    fetchTests()
-  }, [searchTerm, activeTab, durationFilters, typeFilters])
+    fetchTests(currentPage);
+  }, [currentPage, searchTerm, activeTab, durationFilters, typeFilters]);
 
   const fetchTests = async (page = 1) => {
     try {
@@ -221,6 +221,15 @@ export default function TestsPage() {
       toast.error("Failed to delete test. Please try again.")
     }
   }
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+      const params = new URLSearchParams(window.location.search);
+      params.set("page", newPage.toString());
+      router.push(`?${params.toString()}`);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -466,7 +475,7 @@ export default function TestsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
                 className="flex items-center"
               >
@@ -477,7 +486,7 @@ export default function TestsPage() {
                   key={idx + 1}
                   variant={currentPage === idx + 1 ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setCurrentPage(idx + 1)}
+                  onClick={() => handlePageChange(idx + 1)}
                   className={currentPage === idx + 1 ? "bg-blue-600 text-white hover:bg-blue-700" : ""}
                 >
                   {idx + 1}
@@ -486,7 +495,7 @@ export default function TestsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
                 className="flex items-center"
               >

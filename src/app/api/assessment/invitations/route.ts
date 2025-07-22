@@ -19,6 +19,9 @@ export async function GET(request: NextRequest) {
     // Get query parameters
     const { searchParams } = new URL(request.url)
     const search = searchParams.get("search") || ""
+    const page = parseInt(searchParams.get("page") || "1", 10)
+    const limit = parseInt(searchParams.get("limit") || "10", 10)
+    const skip = (page - 1) * limit
 
     // Build query
     const query: any = {
@@ -41,11 +44,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Get total count for pagination
+    const total = await db.collection("assessment_invitations").countDocuments(query)
+
     // Get invitations from database with search filter
     const invitations = await db
       .collection("assessment_invitations")
       .find(query)
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .toArray()
 
     // Add cache control headers to prevent caching
@@ -55,7 +63,7 @@ export async function GET(request: NextRequest) {
     headers.append("Expires", "0")
 
     return NextResponse.json(
-      { success: true, invitations },
+      { success: true, invitations, total, page, limit },
       {
         status: 200,
         headers: headers,

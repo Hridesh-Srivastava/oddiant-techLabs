@@ -420,42 +420,6 @@ export default function AssessmentDashboard() {
                       </tbody>
                     </table>
                   </div>
-                  {/* Pagination Controls */}
-                  <div className="flex justify-center items-center gap-2 mt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setRecentTestsPage((p) => Math.max(1, p - 1))}
-                      disabled={recentTestsPage === 1}
-                      className="flex items-center"
-                    >
-                      <ChevronLeft className="w-4 h-4 mr-1" /> Previous
-                    </Button>
-                    {Array.from({ length: totalTestsPages }, (_, i) => (
-                      <Button
-                        key={i}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setRecentTestsPage(i + 1)}
-                        className={
-                          recentTestsPage === i + 1
-                            ? "bg-blue-600 text-white hover:bg-blue-700"
-                            : "hover:bg-gray-100"
-                        }
-                      >
-                        {i + 1}
-                      </Button>
-                    ))}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setRecentTestsPage((p) => Math.min(totalTestsPages, p + 1))}
-                      disabled={recentTestsPage === totalTestsPages}
-                      className="flex items-center"
-                    >
-                      Next <ChevronRight className="w-4 h-4 ml-1" />
-                    </Button>
-                  </div>
                   </>
                 ) : (
                   <div className="text-center py-8">
@@ -520,42 +484,6 @@ export default function AssessmentDashboard() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
-                  {/* Pagination Controls */}
-                  <div className="flex justify-center items-center gap-2 mt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setRecentResultsPage((p) => Math.max(1, p - 1))}
-                      disabled={recentResultsPage === 1}
-                      className="flex items-center"
-                    >
-                      <ChevronLeft className="w-4 h-4 mr-1" /> Previous
-                    </Button>
-                    {Array.from({ length: totalResultsPages }, (_, i) => (
-                      <Button
-                        key={i}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setRecentResultsPage(i + 1)}
-                        className={
-                          recentResultsPage === i + 1
-                            ? "bg-blue-600 text-white hover:bg-blue-700"
-                            : "hover:bg-gray-100"
-                        }
-                      >
-                        {i + 1}
-                      </Button>
-                    ))}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setRecentResultsPage((p) => Math.min(totalResultsPages, p + 1))}
-                      disabled={recentResultsPage === totalResultsPages}
-                      className="flex items-center"
-                    >
-                      Next <ChevronRight className="w-4 h-4 ml-1" />
-                    </Button>
                   </div>
                   </>
                 ) : (

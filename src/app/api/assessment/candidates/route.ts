@@ -20,6 +20,9 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || ""
     const status = searchParams.get("status") || ""
     const score = searchParams.get("score") || ""
+    const page = parseInt(searchParams.get("page") || "1", 10)
+    const limit = parseInt(searchParams.get("limit") || "10", 10)
+    const skip = (page - 1) * limit
 
     // Build query
     const query: any = {
@@ -42,11 +45,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Get total count of candidates matching the query
+    const total = await db.collection("assessment_candidates").countDocuments(query)
+
     // Get all candidates for this user with search filter
     const candidates = await db
       .collection("assessment_candidates")
       .find(query)
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .toArray()
 
     console.log(`Found ${candidates.length} candidates for user ${userId}`)
@@ -154,6 +162,9 @@ export async function GET(request: NextRequest) {
       {
         success: true,
         candidates: candidatesWithStats,
+        total,
+        page,
+        limit,
       },
       {
         status: 200,

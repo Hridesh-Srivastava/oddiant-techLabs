@@ -67,8 +67,10 @@ export async function GET(request: NextRequest) {
     const status = url.searchParams.get("status")
     const score = url.searchParams.get("score")
     const date = url.searchParams.get("date")
-    const limit = url.searchParams.get("limit") ? Number.parseInt(url.searchParams.get("limit") as string) : undefined
     const sort = url.searchParams.get("sort") || "completionDate"
+    const page = parseInt(url.searchParams.get("page") || "1", 10)
+    const limit = parseInt(url.searchParams.get("limit") || "10", 10)
+    const skip = (page - 1) * limit
 
     // Build query
     const query: any = { createdBy: new ObjectId(userId) }
@@ -136,17 +138,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Get total count for pagination
+    const total = await db.collection("assessment_results").countDocuments(query)
+
     // Get results from database
-    let resultsQuery = db.collection("assessment_results").find(query)
-
-    // Apply sorting
-    resultsQuery = resultsQuery.sort({ [sort]: -1 })
-
-       // Apply limit if specified
-       if (limit) {
-        resultsQuery = resultsQuery.limit(limit)
-      }
-  
+    let resultsQuery = db
+      .collection("assessment_results")
+      .find(query)
+      .sort({ [sort]: -1 })
+      .skip(skip)
+      .limit(limit)
 
     const results = await resultsQuery.toArray()
 
@@ -246,6 +247,9 @@ export async function GET(request: NextRequest) {
       {
         success: true,
         results: mappedResults,
+        total,
+        page,
+        limit,
         stats: {
           averageScore,
           passRate,

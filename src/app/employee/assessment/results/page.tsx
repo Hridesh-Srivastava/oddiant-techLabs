@@ -42,6 +42,7 @@ export default function ResultsPage() {
 
   const [isLoading, setIsLoading] = useState(true)
   const [results, setResults] = useState<ResultData[]>([])
+  const [totalResults, setTotalResults] = useState(0)
   const [stats, setStats] = useState({
     averageScore: 0,
     passRate: 0,
@@ -55,6 +56,11 @@ export default function ResultsPage() {
   const [sortBy, setSortBy] = useState<string>("completionDate")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const resultsPerPage = 10
+  const totalPages = Math.ceil(totalResults / resultsPerPage)
+
   // Declare results dialog
   const [showDeclareResultsDialog, setShowDeclareResultsDialog] = useState(false)
   const [selectedResult, setSelectedResult] = useState<string | null>(null)
@@ -64,18 +70,30 @@ export default function ResultsPage() {
   const [pendingResultsCount, setPendingResultsCount] = useState(0)
 
   useEffect(() => {
-    // Get filters from URL if present
+    // Get filters and page from URL if present
     const test = searchParams.get("test")
     if (test) setTestFilter(test)
+    const page = parseInt(searchParams.get("page") || "1", 10)
+    setCurrentPage(page)
 
-    fetchResults()
-  }, [searchParams])
+    fetchResults(page)
+  }, []) // fetch only on mount
 
   useEffect(() => {
-    fetchResults()
+    const handler = setTimeout(() => {
+      setCurrentPage(1)
+    }, 500) // Debounce search and filter changes
+
+    return () => {
+      clearTimeout(handler)
+    }
   }, [searchQuery, testFilter, statusFilter, scoreFilter, dateFilter, sortBy, sortDirection])
 
-  const fetchResults = async () => {
+  useEffect(() => {
+    fetchResults(currentPage);
+  }, [currentPage, searchQuery, testFilter, statusFilter, scoreFilter, dateFilter, sortBy, sortDirection]);
+
+  const fetchResults = async (page = 1) => {
     try {
       setIsLoading(true)
 
@@ -89,6 +107,8 @@ export default function ResultsPage() {
       if (scoreFilter) params.append("score", scoreFilter)
       if (dateFilter) params.append("date", dateFilter)
       params.append("sort", sortBy)
+      params.append("page", page.toString())
+      params.append("limit", resultsPerPage.toString())
 
       const response = await fetch(`/api/assessment/results?${params.toString()}`, {
         method: "GET",
@@ -107,6 +127,8 @@ export default function ResultsPage() {
 
       if (data.success) {
         setResults(data.results || [])
+        setTotalResults(data.total || 0)
+        setCurrentPage(data.page || 1)
         setStats(data.stats || { averageScore: 0, passRate: 0, completionRate: 0 })
 
         // Count pending results
@@ -120,6 +142,15 @@ export default function ResultsPage() {
       toast.error("Failed to load results. Please try again.")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage)
+      const params = new URLSearchParams(window.location.search)
+      params.set("page", newPage.toString())
+      router.replace(`${window.location.pathname}?${params.toString()}`)
     }
   }
 
@@ -175,10 +206,7 @@ export default function ResultsPage() {
       setSortBy(column)
       setSortDirection("desc")
     }
-
-    setTimeout(() => {
-      fetchResults()
-    }, 0)
+    // The useEffect will handle re-fetching
   }
 
   const applyFilter = (type: string, value: string | null) => {
@@ -196,10 +224,7 @@ export default function ResultsPage() {
         setDateFilter(value)
         break
     }
-
-    setTimeout(() => {
-      fetchResults()
-    }, 0)
+    // The useEffect will handle re-fetching
   }
 
   const clearFilters = () => {
@@ -207,10 +232,7 @@ export default function ResultsPage() {
     setStatusFilter(null)
     setScoreFilter(null)
     setDateFilter(null)
-
-    setTimeout(() => {
-      fetchResults()
-    }, 0)
+    // The useEffect will handle re-fetching
   }
 
   const handleDeclareResult = async () => {
@@ -313,17 +335,6 @@ export default function ResultsPage() {
         return "bg-gray-100 text-gray-800 hover:bg-gray-100"
     }
   }
-
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const resultsPerPage = 10;
-  const totalPages = Math.ceil(results.length / resultsPerPage);
-  const paginatedResults = results.slice((currentPage - 1) * resultsPerPage, currentPage * resultsPerPage);
-
-  // Reset to first page when results change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [results.length]);
 
   return (
     <AssessmentLayout>
@@ -543,7 +554,7 @@ export default function ResultsPage() {
                   </tr>
                 ))
               ) : results.length > 0 ? (
-                paginatedResults.map((result) => (
+                results.map((result) => (
                   <tr key={result._id} className="border-t hover:bg-muted/30">
                     <td className="py-3 px-4">
                       <div>
@@ -619,26 +630,21 @@ export default function ResultsPage() {
         </div>
         {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-center space-x-2 mt-6">
+          <div className="flex items-center justify-center space-x-2 p-4 border-t">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
             >
-              <span className="flex items-center"><svg className="h-4 w-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>Previous</span>
+              <span className="flex items-center"><svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>Previous</span>
             </Button>
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
               <Button
                 key={pageNum}
-                variant="outline"
+                variant={pageNum === currentPage ? "default" : "outline"}
                 size="sm"
-                onClick={() => setCurrentPage(pageNum)}
-                className={
-                  pageNum === currentPage
-                    ? "bg-blue-500 text-white hover:bg-blue-600"
-                    : "hover:bg-gray-100"
-                }
+                onClick={() => handlePageChange(pageNum)}
               >
                 {pageNum}
               </Button>
@@ -646,7 +652,7 @@ export default function ResultsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
             >
               <span className="flex items-center">Next<svg className="h-4 w-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>

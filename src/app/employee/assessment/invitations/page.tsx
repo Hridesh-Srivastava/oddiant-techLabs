@@ -33,11 +33,13 @@ export default function InvitationsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [invitations, setInvitations] = useState<InvitationData[]>([])
+  const [totalInvitations, setTotalInvitations] = useState(0)
   const [searchTerm, setSearchTerm] = useState("")
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 8
+  const totalPages = Math.ceil(totalInvitations / itemsPerPage)
 
   // Available tests
   const [availableTests, setAvailableTests] = useState<TestData[]>([])
@@ -61,20 +63,27 @@ export default function InvitationsPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
-    fetchInvitations()
+    const page = parseInt(new URLSearchParams(window.location.search).get("page") || "1", 10)
+    setCurrentPage(page)
+    fetchInvitations(page)
     fetchAvailableTests()
   }, [])
 
   useEffect(() => {
-    fetchInvitations()
+    const handler = setTimeout(() => {
+      setCurrentPage(1)
+    }, 500) // Debounce search term changes
+
+    return () => {
+      clearTimeout(handler)
+    }
   }, [searchTerm])
 
-  // Reset to first page when search term changes
   useEffect(() => {
-    setCurrentPage(1)
-  }, [searchTerm])
+    fetchInvitations(currentPage);
+  }, [currentPage, searchTerm]);
 
-  const fetchInvitations = async () => {
+  const fetchInvitations = async (page = 1) => {
     try {
       setIsLoading(true)
 
@@ -83,6 +92,8 @@ export default function InvitationsPage() {
       if (searchTerm) {
         params.append("search", searchTerm)
       }
+      params.append("page", page.toString())
+      params.append("limit", itemsPerPage.toString())
 
       const response = await fetch(`/api/assessment/invitations?${params.toString()}`, {
         method: "GET",
@@ -101,6 +112,8 @@ export default function InvitationsPage() {
 
       if (data.success) {
         setInvitations(data.invitations || [])
+        setTotalInvitations(data.total || 0)
+        setCurrentPage(data.page || 1)
       } else {
         throw new Error(data.message || "Failed to fetch invitations")
       }
@@ -141,18 +154,21 @@ export default function InvitationsPage() {
     }
   }
 
-  // Pagination calculations
-  const totalPages = Math.ceil(invitations.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const currentInvitations = invitations.slice(startIndex, endIndex)
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage)
+      const params = new URLSearchParams(window.location.search)
+      params.set("page", newPage.toString())
+      router.replace(`${window.location.pathname}?${params.toString()}`)
+    }
+  }
 
   const handlePreviousPage = () => {
-    setCurrentPage((prev) => Math.max(prev - 1, 1))
+    handlePageChange(currentPage - 1)
   }
 
   const handleNextPage = () => {
-    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+    handlePageChange(currentPage + 1)
   }
 
   const handleSendInvitations = async () => {
@@ -480,7 +496,7 @@ export default function InvitationsPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {currentInvitations.map((invitation) => (
+                          {invitations.map((invitation) => (
                             <tr key={invitation._id} className="border-b hover:bg-muted/50">
                               <td className="py-3 px-4">
                                 <div>
@@ -534,8 +550,7 @@ export default function InvitationsPage() {
                     {totalPages > 1 && (
                       <div className="flex items-center justify-between mt-6 pt-4 border-t">
                         <div className="text-sm text-muted-foreground">
-                          Showing {startIndex + 1} to {Math.min(endIndex, invitations.length)} of{" "}
-                          {invitations.length} invitations
+                          Showing page {currentPage} of {totalPages} ({totalInvitations} total invitations)
                         </div>
                         <div className="flex items-center space-x-2">
                           <Button

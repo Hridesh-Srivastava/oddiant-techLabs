@@ -31,6 +31,7 @@ export default function CandidatesPage() {
 
   const [isLoading, setIsLoading] = useState(true)
   const [candidates, setCandidates] = useState<CandidateData[]>([])
+  const [totalCandidates, setTotalCandidates] = useState(0)
   const [searchTerm, setSearchTerm] = useState("")
   const [isExporting, setIsExporting] = useState<string | false>(false)
 
@@ -39,15 +40,9 @@ export default function CandidatesPage() {
   const [scoreFilters, setScoreFilters] = useState<string[]>([])
 
   // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const candidatesPerPage = 8;
-  const totalPages = Math.ceil(candidates.length / candidatesPerPage);
-  const paginatedCandidates = candidates.slice((currentPage - 1) * candidatesPerPage, currentPage * candidatesPerPage);
-
-  // Reset to first page when filters/search change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [candidates.length]);
+  const [currentPage, setCurrentPage] = useState(1)
+  const candidatesPerPage = 8
+  const totalPages = Math.ceil(totalCandidates / candidatesPerPage)
 
   // Status filter options
   const statusOptions = [
@@ -63,7 +58,7 @@ export default function CandidatesPage() {
     { label: "< 70%", value: "< 70%" },
   ]
 
-  const fetchCandidates = async () => {
+  const fetchCandidates = async (page = 1) => {
     try {
       setIsLoading(true)
 
@@ -78,6 +73,8 @@ export default function CandidatesPage() {
       scoreFilters.forEach((filter) => {
         params.append("score", filter)
       })
+      params.append("page", page.toString())
+      params.append("limit", candidatesPerPage.toString())
 
       const response = await fetch(`/api/assessment/candidates?${params.toString()}`, {
         method: "GET",
@@ -96,6 +93,8 @@ export default function CandidatesPage() {
 
       if (data.success) {
         setCandidates(data.candidates || [])
+        setTotalCandidates(data.total || 0)
+        setCurrentPage(data.page || 1)
       } else {
         throw new Error(data.message || "Failed to fetch candidates")
       }
@@ -109,8 +108,8 @@ export default function CandidatesPage() {
   }
 
   useEffect(() => {
-    fetchCandidates()
-
+    const page = parseInt(searchParams.get("page") || "1", 10)
+    setCurrentPage(page)
     // Get initial filters from URL if any
     const initialStatusFilters = searchParams.getAll("status")
     if (initialStatusFilters.length > 0) {
@@ -121,11 +120,31 @@ export default function CandidatesPage() {
     if (initialScoreFilters.length > 0) {
       setScoreFilters(initialScoreFilters)
     }
-  }, [searchParams])
+  }, []); // Remove searchParams from dependency array to prevent re-fetching on every URL change
 
   useEffect(() => {
-    fetchCandidates()
-  }, [searchTerm, statusFilters, scoreFilters])
+    const handler = setTimeout(() => {
+      setCurrentPage(1);
+    }, 500); // Debounce search term changes
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [searchTerm, statusFilters, scoreFilters]);
+
+  useEffect(() => {
+    fetchCandidates(currentPage);
+  }, [currentPage, searchTerm, statusFilters, scoreFilters]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage)
+      // Update URL without reloading page
+      const params = new URLSearchParams(window.location.search)
+      params.set("page", newPage.toString())
+      router.replace(`${window.location.pathname}?${params.toString()}`)
+    }
+  }
 
   const handleStatusFilterChange = (value: string) => {
     setStatusFilters((prev) => {
@@ -429,7 +448,7 @@ export default function CandidatesPage() {
             </div>
           ) : candidates.length > 0 ? (
             <div>
-              {paginatedCandidates.map((candidate) => (
+              {candidates.map((candidate) => (
                 <div key={candidate._id} className="p-4 grid grid-cols-7 border-t hover:bg-muted/30 transition-colors">
                   <div className="col-span-2 flex items-center">
                     <Avatar className="h-8 w-8 mr-2">
@@ -480,39 +499,36 @@ export default function CandidatesPage() {
                 </div>
               ))}
               {/* Pagination Controls */}
-              <div className="flex items-center justify-center space-x-2 mt-6">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <span className="flex items-center"><svg className="h-4 w-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>Previous</span>
-                </Button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center space-x-2 mt-6 p-4 border-t">
                   <Button
-                    key={pageNum}
                     variant="outline"
                     size="sm"
-                    onClick={() => setCurrentPage(pageNum)}
-                    className={
-                      pageNum === currentPage
-                        ? "bg-blue-500 text-white hover:bg-blue-600"
-                        : "hover:bg-gray-100"
-                    }
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
                   >
-                    {pageNum}
+                    <span className="flex items-center"><svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>Previous</span>
                   </Button>
-                ))}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  <span className="flex items-center">Next<svg className="h-4 w-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
-                </Button>
-              </div>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                    <Button
+                      key={pageNum}
+                      variant={pageNum === currentPage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePageChange(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    <span className="flex items-center">Next<svg className="h-4 w-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-12">
