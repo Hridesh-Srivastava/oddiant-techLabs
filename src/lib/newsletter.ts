@@ -16,7 +16,6 @@ const EXCEL_FILE_NAME = "newsletter_subscribers.xlsx"
 const TEMP_DIR = os.tmpdir()
 const EXCEL_FILE_PATH = path.join(TEMP_DIR, EXCEL_FILE_NAME)
 
-// Collection name for Excel file metadata
 const EXCEL_FILES_COLLECTION = "excelFiles"
 const MASTER_FILE_ID = "newsletter_subscribers_master_file"
 
