@@ -53,6 +53,11 @@ export default function SignIn({ jobId, onCancel }: SignInProps) {
         throw new Error(data.message || "Failed to sign in")
       }
 
+      if (data.exists && data.message && data.message.toLowerCase().includes("already applied")) {
+        toast.error("You have already applied for this job.")
+        return
+      }
+
       if (data.exists) {
         // User exists, redirect to success page
         toast.success("Application submitted successfully!")

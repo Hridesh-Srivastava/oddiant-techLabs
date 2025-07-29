@@ -138,6 +138,21 @@ export async function POST(request: NextRequest) {
         }
       }
 
+       // Duplicate application check
+       if (userId) {
+        const existingApplication = await db.collection("job_applications").findOne({
+          jobId: new ObjectId(jobId),
+          $or: [
+            { candidateId: userId },
+            { studentId: userId },
+            { applicantId: userId },
+          ],
+        })
+        if (existingApplication) {
+          await session.abortTransaction()
+          return NextResponse.json({ success: false, message: "You have already applied for this job" }, { status: 400 })
+        }
+      }
       // Create candidate record with all fields
       const candidate = {
         // Personal Information

@@ -2226,7 +2226,15 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
       }, 2000)
     } catch (error) {
       console.error("Error submitting application:", error)
-      toast.error(`Failed to submit application: ${error instanceof Error ? error.message : "Unknown error"}`)
+      if (
+        error instanceof Error &&
+        error.message &&
+        error.message.toLowerCase().includes("already applied")
+      ) {
+        toast.error("You have already applied for this job.")
+      } else {
+        toast.error(`Failed to submit application: ${error instanceof Error ? error.message : "Unknown error"}`)
+      }
     } finally {
       setIsSubmitting(false)
     }
