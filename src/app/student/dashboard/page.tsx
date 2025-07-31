@@ -514,12 +514,32 @@ export default function StudentDashboardPage() {
   // Store all jobs for filtering
   const [allJobs, setAllJobs] = useState<JobPosting[]>([]);
 
+  // Add pagination info state
+  const [paginationInfo, setPaginationInfo] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalJobs: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+    limit: 6,
+  });
+
   // Add pagination state for applications
   const [currentApplicationPage, setCurrentApplicationPage] = useState(1);
   const applicationsPerPage = 6;
 
   // Store all applications for filtering
   const [allApplications, setAllApplications] = useState<Application[]>([]);
+
+  // Add pagination info state for applications
+  const [applicationPaginationInfo, setApplicationPaginationInfo] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalApplications: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+    limit: 6,
+  });
 
   const [isAssessmentsLoading, setIsAssessmentsLoading] = useState(false);
 
@@ -613,10 +633,30 @@ export default function StudentDashboardPage() {
     }
   };
 
-  const fetchJobs = async () => {
+  const fetchJobs = async (page = currentPage, search = searchTerm, location = filterLocation, jobType = filterJobType, recentOnly = jobFilters.recentOnly) => {
     try {
       setIsLoadingJobs(true);
-      const response = await fetch("/api/jobs/available", {
+      
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: jobsPerPage.toString(),
+      });
+
+      if (search) {
+        params.append("search", search);
+      }
+      if (location) {
+        params.append("location", location);
+      }
+      if (jobType) {
+        params.append("jobType", jobType);
+      }
+      if (recentOnly) {
+        params.append("recentOnly", "true");
+      }
+
+      const response = await fetch(`/api/jobs/available?${params.toString()}`, {
         cache: "no-store",
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -658,13 +698,28 @@ export default function StudentDashboardPage() {
         ];
         setJobs(mockJobs);
         setAllJobs(mockJobs); // Store all jobs for filtering
+        setPaginationInfo({
+          currentPage: 1,
+          totalPages: 1,
+          totalJobs: 2,
+          hasNextPage: false,
+          hasPrevPage: false,
+          limit: jobsPerPage,
+        });
         return;
       }
 
       const data = await response.json();
       console.log("Fetched jobs:", data.jobs);
+      console.log("Pagination info:", data.pagination);
+      
       setJobs(data.jobs || []);
       setAllJobs(data.jobs || []); // Store all jobs for filtering
+      
+      // Update pagination info
+      if (data.pagination) {
+        setPaginationInfo(data.pagination);
+      }
     } catch (error) {
       console.error("Error fetching jobs:", error);
       // Use mock data if API fails
@@ -698,14 +753,56 @@ export default function StudentDashboardPage() {
       ];
       setJobs(mockJobs);
       setAllJobs(mockJobs); // Store all jobs for filtering
+      setPaginationInfo({
+        currentPage: 1,
+        totalPages: 1,
+        totalJobs: 2,
+        hasNextPage: false,
+        hasPrevPage: false,
+        limit: jobsPerPage,
+      });
     } finally {
       setIsLoadingJobs(false);
     }
   };
-  const fetchApplications = async () => {
+  const fetchApplications = async (page = currentApplicationPage, search = applicationSearchTerm, location = applicationFilterLocation, status = applicationFilterStatus, jobTitle = applicationFilterJobTitle, company = applicationFilterCompany, jobId = applicationFilterJobId, dateFrom = applicationDateFrom, dateTo = applicationDateTo, recentOnly = showRecentApplicationsOnly) => {
     try {
       setIsLoadingApplications(true);
-      const response = await fetch("/api/student/applications", {
+      
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: applicationsPerPage.toString(),
+      });
+
+      if (search) {
+        params.append("search", search);
+      }
+      if (location) {
+        params.append("location", location);
+      }
+      if (status) {
+        params.append("status", status);
+      }
+      if (jobTitle) {
+        params.append("jobTitle", jobTitle);
+      }
+      if (company) {
+        params.append("company", company);
+      }
+      if (jobId) {
+        params.append("jobId", jobId);
+      }
+      if (dateFrom) {
+        params.append("dateFrom", dateFrom);
+      }
+      if (dateTo) {
+        params.append("dateTo", dateTo);
+      }
+      if (recentOnly) {
+        params.append("recentOnly", "true");
+      }
+
+      const response = await fetch(`/api/student/applications?${params.toString()}`, {
         cache: "no-store",
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -723,6 +820,11 @@ export default function StudentDashboardPage() {
       const data = await response.json();
       console.log("Fetched applications:", data.applications);
       setApplications(data.applications || []);
+      setAllApplications(data.applications || []);
+      
+      if (data.pagination) {
+        setApplicationPaginationInfo(data.pagination);
+      }
     } catch (error) {
       console.error("Error fetching applications:", error);
       setApplications([]);
@@ -733,10 +835,19 @@ export default function StudentDashboardPage() {
 
   useEffect(() => {
     if (!isLoading && student) {
-      fetchJobs();
-      fetchApplications();
+      fetchJobs(currentPage, searchTerm, filterLocation, filterJobType, jobFilters.recentOnly);
+      fetchApplications(currentApplicationPage, applicationSearchTerm, applicationFilterLocation, applicationFilterStatus, applicationFilterJobTitle, applicationFilterCompany, applicationFilterJobId, applicationDateFrom, applicationDateTo, showRecentApplicationsOnly);
     }
-  }, [isLoading, student]);
+  }, [isLoading, student, currentPage, searchTerm, filterLocation, filterJobType, jobFilters.recentOnly, currentApplicationPage, applicationSearchTerm, applicationFilterLocation, applicationFilterStatus, applicationFilterJobTitle, applicationFilterCompany, applicationFilterJobId, applicationDateFrom, applicationDateTo, showRecentApplicationsOnly]);
+
+  // Cleanup debounced search on unmount
+  useEffect(() => {
+    return () => {
+      if (debouncedSearch.current) {
+        clearTimeout(debouncedSearch.current);
+      }
+    };
+  }, []);
 
   // This effect ensures the tab content is updated when the URL parameter changes
   useEffect(() => {
@@ -746,7 +857,10 @@ export default function StudentDashboardPage() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await Promise.all([fetchJobs(), fetchApplications()]);
+    await Promise.all([
+      fetchJobs(currentPage, searchTerm, filterLocation, filterJobType, jobFilters.recentOnly), 
+      fetchApplications(currentApplicationPage, applicationSearchTerm, applicationFilterLocation, applicationFilterStatus, applicationFilterJobTitle, applicationFilterCompany, applicationFilterJobId, applicationDateFrom, applicationDateTo, showRecentApplicationsOnly)
+    ]);
     setIsRefreshing(false);
     toast.success("Data refreshed successfully");
   };
@@ -852,19 +966,49 @@ export default function StudentDashboardPage() {
     });
   };
 
-  // Update this function to work with your data structure
+  // New function to handle job search (for backend pagination)
+  const handleJobSearch = (term: string) => {
+    setSearchTerm(term);
+    setCurrentPage(1); // Reset to first page when searching
+    // The useEffect will automatically fetch with new search term
+  };
+
+  // Debounced search function to avoid too many API calls
+  const debouncedSearch = useRef<NodeJS.Timeout | null>(null);
+  
+  const handleDebouncedJobSearch = (term: string) => {
+    // Immediately update searchTerm for visual feedback
+    setSearchTerm(term);
+    
+    if (debouncedSearch.current) {
+      clearTimeout(debouncedSearch.current);
+    }
+    
+    debouncedSearch.current = setTimeout(() => {
+      handleJobSearch(term);
+    }, 500); // 500ms delay
+  };
+
+
+  // New function to handle location filter
+  const handleLocationFilter = (location: string) => {
+    setFilterLocation(location);
+    setCurrentPage(1); // Reset to first page when filtering
+    // The useEffect will automatically fetch with new filter
+  };
+
+  // New function to handle job type filter
+  const handleJobTypeFilter = (jobType: string) => {
+    setFilterJobType(jobType);
+    setCurrentPage(1); // Reset to first page when filtering
+    // The useEffect will automatically fetch with new filter
+  };
+
+  // Update this function to work with backend pagination
   const filterRecentJobs = (days = 7) => {
-    const today = new Date();
-    const cutoffDate = new Date();
-    cutoffDate.setDate(today.getDate() - days);
-
-    const recentJobs = allJobs.filter((job) => {
-      const postedDate = new Date(job.createdAt);
-      return postedDate >= cutoffDate;
-    });
-
-    setJobs(recentJobs);
     setJobFilters({ ...jobFilters, recentOnly: true });
+    setCurrentPage(1); // Reset to first page when filtering
+    // The useEffect will automatically fetch with recentOnly filter
 
     toast.success(`Showing newly available jobs`);
   };
@@ -875,9 +1019,60 @@ export default function StudentDashboardPage() {
     setFilterLocation("");
     setFilterJobType("");
     setJobFilters({ ...jobFilters, recentOnly: false });
-    setJobs(allJobs);
+    setCurrentPage(1); // Reset to first page when resetting filters
+    // The useEffect will automatically fetch with reset filters
 
     toast.success("All job filters have been reset");
+  };
+
+  // Application search and filter handlers
+  const handleApplicationSearch = (term: string) => {
+    setApplicationSearchTerm(term);
+    setCurrentApplicationPage(1);
+  };
+
+  const handleApplicationLocationFilter = (location: string) => {
+    setApplicationFilterLocation(location);
+    setCurrentApplicationPage(1);
+  };
+
+  const handleApplicationStatusFilter = (status: string) => {
+    setApplicationFilterStatus(status);
+    setCurrentApplicationPage(1);
+  };
+
+  const handleApplicationJobTitleFilter = (jobTitle: string) => {
+    setApplicationFilterJobTitle(jobTitle);
+    setCurrentApplicationPage(1);
+  };
+
+  const handleApplicationCompanyFilter = (company: string) => {
+    setApplicationFilterCompany(company);
+    setCurrentApplicationPage(1);
+  };
+
+  const handleApplicationJobIdFilter = (jobId: string) => {
+    setApplicationFilterJobId(jobId);
+    setCurrentApplicationPage(1);
+  };
+
+  const handleApplicationDateFromFilter = (dateFrom: string) => {
+    setApplicationDateFrom(dateFrom);
+    setCurrentApplicationPage(1);
+  };
+
+  const handleApplicationDateToFilter = (dateTo: string) => {
+    setApplicationDateTo(dateTo);
+    setCurrentApplicationPage(1);
+  };
+
+  const handleApplicationRecentFilter = () => {
+    setShowRecentApplicationsOnly(!showRecentApplicationsOnly);
+    setCurrentApplicationPage(1);
+  };
+
+  const paginateApplications = (pageNumber: number) => {
+    setCurrentApplicationPage(pageNumber);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1761,32 +1956,15 @@ export default function StudentDashboardPage() {
     }
   };
 
-  const filteredJobs = jobs.filter((job) => {
-    const matchesSearch =
-      job.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.skills.some((skill) =>
-        skill.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-
-    const matchesLocation = filterLocation
-      ? job.jobLocation.toLowerCase().includes(filterLocation.toLowerCase())
-      : true;
-    const matchesJobType = filterJobType
-      ? job.jobType.toLowerCase() === filterJobType.toLowerCase()
-      : true;
-
-    return matchesSearch && matchesLocation && matchesJobType;
-  });
-
-  // Get current jobs for pagination
-  const indexOfLastJob = currentPage * jobsPerPage;
-  const indexOfFirstJob = indexOfLastJob - jobsPerPage;
-  const currentJobs = filteredJobs.slice(indexOfFirstJob, indexOfLastJob);
-  const totalPages = Math.ceil(filteredJobs.length / jobsPerPage);
+  // Since we're now doing backend pagination, we don't need client-side filtering
+  // The backend handles all filtering and pagination
+  const currentJobs = jobs;
 
   // Change page
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  const paginate = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+    // The useEffect will automatically fetch the new page
+  };
 
   // Filter applications based on all filter criteria
   const filteredApplications = applications.filter((application) => {
@@ -2420,10 +2598,10 @@ export default function StudentDashboardPage() {
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                       <Input
-                        placeholder="Search jobs by title, company, or skills..."
+                        placeholder="Search jobs by title, company, skills, or job ID..."
                         className="pl-10"
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => handleDebouncedJobSearch(e.target.value)}
                       />
                     </div>
                     <div className="flex gap-4">
@@ -2433,7 +2611,7 @@ export default function StudentDashboardPage() {
                           placeholder="Location"
                           className="pl-10"
                           value={filterLocation}
-                          onChange={(e) => setFilterLocation(e.target.value)}
+                          onChange={(e) => handleLocationFilter(e.target.value)}
                         />
                       </div>
                       <div className="relative w-full md:w-40">
@@ -2441,7 +2619,7 @@ export default function StudentDashboardPage() {
                         <select
                           className="w-full h-10 pl-10 pr-4 rounded-md border border-input bg-background text-sm"
                           value={filterJobType}
-                          onChange={(e) => setFilterJobType(e.target.value)}
+                          onChange={(e) => handleJobTypeFilter(e.target.value)}
                         >
                           <option value="">Job Type</option>
                           <option value="Full-time">Full-time</option>
@@ -2477,7 +2655,7 @@ export default function StudentDashboardPage() {
                   <div className="flex justify-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                   </div>
-                ) : filteredJobs.length === 0 ? (
+                ) : jobs.length === 0 ? (
                   <div className="text-center py-12 border rounded-lg">
                     <Briefcase className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-1">
@@ -2500,9 +2678,14 @@ export default function StudentDashboardPage() {
                           <div className="p-6">
                             <div className="flex justify-between items-start">
                               <div>
-                                <h3 className="text-lg font-semibold mb-1">
-                                  {job.jobTitle}
-                                </h3>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="text-lg font-semibold">
+                                    {job.jobTitle}
+                                  </h3>
+                                  <Badge variant="outline" className="text-xs bg-gray-50">
+                                    ID: {job._id}
+                                  </Badge>
+                                </div>
                                 <p className="text-gray-600 mb-2">
                                   {job.companyName}
                                 </p>
@@ -2584,20 +2767,20 @@ export default function StudentDashboardPage() {
                     ))}
 
                     {/* Pagination UI */}
-                    {filteredJobs.length > jobsPerPage && (
+                    {paginationInfo.totalPages > 1 && (
                       <div className="flex justify-center items-center space-x-2 mt-6">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => paginate(currentPage - 1)}
-                          disabled={currentPage === 1}
+                          disabled={!paginationInfo.hasPrevPage}
                         >
                           <ChevronLeft className="h-4 w-4" />
                           Previous
                         </Button>
 
                         {Array.from(
-                          { length: totalPages },
+                          { length: paginationInfo.totalPages },
                           (_, i) => i + 1
                         ).map((number) => (
                           <Button
@@ -2621,7 +2804,7 @@ export default function StudentDashboardPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => paginate(currentPage + 1)}
-                          disabled={currentPage === totalPages}
+                          disabled={!paginationInfo.hasNextPage}
                         >
                           Next
                           <ChevronRight className="h-4 w-4" />
@@ -2652,11 +2835,11 @@ export default function StudentDashboardPage() {
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                       <Input
-                        placeholder="Search by job title, company, or job ID..."
+                        placeholder="Search by job title, company, job ID, or application ID..."
                         className="pl-10"
                         value={applicationSearchTerm}
                         onChange={(e) =>
-                          setApplicationSearchTerm(e.target.value)
+                          handleApplicationSearch(e.target.value)
                         }
                       />
                     </div>
@@ -2664,11 +2847,7 @@ export default function StudentDashboardPage() {
                       variant={
                         showRecentApplicationsOnly ? "default" : "outline"
                       }
-                      onClick={() =>
-                        setShowRecentApplicationsOnly(
-                          !showRecentApplicationsOnly
-                        )
-                      }
+                      onClick={handleApplicationRecentFilter}
                       className="whitespace-nowrap"
                     >
                       <Clock className="h-4 w-4 mr-2" />
@@ -2684,7 +2863,7 @@ export default function StudentDashboardPage() {
                           className="pl-10"
                           value={applicationFilterLocation}
                           onChange={(e) =>
-                            setApplicationFilterLocation(e.target.value)
+                            handleApplicationLocationFilter(e.target.value)
                           }
                         />
                       </div>
@@ -2694,7 +2873,7 @@ export default function StudentDashboardPage() {
                           className="w-full h-10 pl-10 pr-4 rounded-md border border-input bg-background text-sm"
                           value={applicationFilterStatus}
                           onChange={(e) =>
-                            setApplicationFilterStatus(e.target.value)
+                            handleApplicationStatusFilter(e.target.value)
                           }
                         >
                           <option value="">Status</option>
@@ -2760,7 +2939,7 @@ export default function StudentDashboardPage() {
                             className="pl-10"
                             value={applicationFilterJobTitle}
                             onChange={(e) =>
-                              setApplicationFilterJobTitle(e.target.value)
+                              handleApplicationJobTitleFilter(e.target.value)
                             }
                           />
                         </div>
@@ -2781,7 +2960,7 @@ export default function StudentDashboardPage() {
                             className="pl-10"
                             value={applicationFilterCompany}
                             onChange={(e) =>
-                              setApplicationFilterCompany(e.target.value)
+                              handleApplicationCompanyFilter(e.target.value)
                             }
                           />
                         </div>
@@ -2802,7 +2981,7 @@ export default function StudentDashboardPage() {
                             className="pl-10"
                             value={applicationFilterJobId}
                             onChange={(e) =>
-                              setApplicationFilterJobId(e.target.value)
+                              handleApplicationJobIdFilter(e.target.value)
                             }
                           />
                         </div>
@@ -2823,7 +3002,7 @@ export default function StudentDashboardPage() {
                             className="pl-10"
                             value={applicationDateFrom}
                             onChange={(e) =>
-                              setApplicationDateFrom(e.target.value)
+                              handleApplicationDateFromFilter(e.target.value)
                             }
                           />
                         </div>
@@ -2844,7 +3023,7 @@ export default function StudentDashboardPage() {
                             className="pl-10"
                             value={applicationDateTo}
                             onChange={(e) =>
-                              setApplicationDateTo(e.target.value)
+                              handleApplicationDateToFilter(e.target.value)
                             }
                           />
                         </div>
@@ -2870,27 +3049,9 @@ export default function StudentDashboardPage() {
                       Browse Jobs
                     </Button>
                   </div>
-                ) : filteredApplications.length === 0 ? (
-                  <div className="text-center py-12 border rounded-lg">
-                    <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-1">
-                      No matching applications
-                    </h3>
-                    <p className="text-gray-500 mb-4">
-                      No applications match your current filters
-                    </p>
-                    <Button variant="outline" onClick={resetApplicationFilters}>
-                      Clear Filters
-                    </Button>
-                  </div>
                 ) : (
                   <div className="space-y-4">
-                    {filterRecentApplications(filteredApplications)
-                      .slice(
-                        (currentApplicationPage - 1) * applicationsPerPage,
-                        currentApplicationPage * applicationsPerPage
-                      )
-                      .map((application) => (
+                    {applications.map((application) => (
                         <Card
                           key={application._id}
                           className="overflow-hidden hover:shadow-md transition-shadow"
@@ -2898,9 +3059,14 @@ export default function StudentDashboardPage() {
                           <CardContent className="p-6">
                             <div className="flex justify-between items-start">
                               <div>
-                                <h3 className="text-lg font-semibold mb-1">
-                                  {application.job?.jobTitle || "Unknown Job"}
-                                </h3>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="text-lg font-semibold">
+                                    {application.job?.jobTitle || "Unknown Job"}
+                                  </h3>
+                                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                                    App ID: {application._id}
+                                  </Badge>
+                                </div>
                                 <p className="text-gray-600 mb-2">
                                   {application.job?.companyName ||
                                     "Unknown Company"}
@@ -2942,41 +3108,33 @@ export default function StudentDashboardPage() {
                       ))}
 
                     {/* Applications Pagination UI */}
-                    {filteredApplications.length > applicationsPerPage && (
+                    {applicationPaginationInfo.totalPages > 1 && (
                       <div className="flex justify-center items-center space-x-2 mt-6">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() =>
-                            setCurrentApplicationPage(
-                              currentApplicationPage - 1
-                            )
+                            paginateApplications(applicationPaginationInfo.currentPage - 1)
                           }
-                          disabled={currentApplicationPage === 1}
+                          disabled={!applicationPaginationInfo.hasPrevPage}
                         >
                           <ChevronLeft className="h-4 w-4" />
                           Previous
                         </Button>
 
                         {Array.from(
-                          {
-                            length: Math.ceil(
-                              filteredApplications.length / applicationsPerPage
-                            ),
-                          },
+                          { length: applicationPaginationInfo.totalPages },
                           (_, i) => i + 1
                         ).map((number) => (
                           <Button
                             key={number}
                             variant={
-                              currentApplicationPage === number
-                                ? "default"
-                                : "outline"
+                              applicationPaginationInfo.currentPage === number ? "default" : "outline"
                             }
                             size="sm"
-                            onClick={() => setCurrentApplicationPage(number)}
+                            onClick={() => paginateApplications(number)}
                             className={`w-8 ${
-                              currentApplicationPage === number
+                              applicationPaginationInfo.currentPage === number
                                 ? "bg-blue-600 text-white"
                                 : "hover:bg-gray-100"
                             }`}
@@ -2989,16 +3147,9 @@ export default function StudentDashboardPage() {
                           variant="outline"
                           size="sm"
                           onClick={() =>
-                            setCurrentApplicationPage(
-                              currentApplicationPage + 1
-                            )
+                            paginateApplications(applicationPaginationInfo.currentPage + 1)
                           }
-                          disabled={
-                            currentApplicationPage ===
-                            Math.ceil(
-                              filteredApplications.length / applicationsPerPage
-                            )
-                          }
+                          disabled={!applicationPaginationInfo.hasNextPage}
                         >
                           Next
                           <ChevronRight className="h-4 w-4" />

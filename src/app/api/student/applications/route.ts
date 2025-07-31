@@ -12,6 +12,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
     }
 
+    // Get pagination parameters from query string
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get("page") || "1")
+    const limit = parseInt(searchParams.get("limit") || "6")
+    const search = searchParams.get("search") || ""
+    const location = searchParams.get("location") || ""
+    const status = searchParams.get("status") || ""
+    const jobTitle = searchParams.get("jobTitle") || ""
+    const company = searchParams.get("company") || ""
+    const jobId = searchParams.get("jobId") || ""
+    const dateFrom = searchParams.get("dateFrom") || ""
+    const dateTo = searchParams.get("dateTo") || ""
+    const recentOnly = searchParams.get("recentOnly") === "true"
+
+    // Validate pagination parameters
+    const validPage = Math.max(1, page)
+    const validLimit = Math.min(100, Math.max(1, limit)) // Max 100 items per page
+    const skip = (validPage - 1) * validLimit
+
     // Connect to database
     const { db } = await connectToDatabase()
 
@@ -28,22 +47,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
     }
 
-    // Find all job applications for this user (check multiple field names)
-    const applications = await db
+    // Build base filter query for user's applications
+    const baseFilterQuery = {
+      $or: [
+        { candidateId: new ObjectId(userId) },
+        { studentId: new ObjectId(userId) },
+        { applicantId: new ObjectId(userId) },
+      ],
+    }
+
+    // Get all applications for this user first (we'll filter by job details later)
+    const allUserApplications = await db
       .collection("job_applications")
-      .find({
-        $or: [
-          { candidateId: new ObjectId(userId) },
-          { studentId: new ObjectId(userId) },
-          { applicantId: new ObjectId(userId) },
-        ],
-      })
+      .find(baseFilterQuery)
       .sort({ appliedDate: -1 })
       .toArray()
 
-    // Get job details for each application
+    // Get job details for each application and apply filters
     const applicationsWithJobDetails = await Promise.all(
-      applications.map(async (application) => {
+      allUserApplications.map(async (application) => {
         try {
           const job = await db.collection("jobs").findOne({ _id: new ObjectId(application.jobId) })
 
@@ -51,24 +73,27 @@ export async function GET(request: NextRequest) {
             ...application,
             job: job
               ? {
+                  _id: job._id,
                   jobTitle: job.jobTitle || "Unknown Job",
                   companyName: job.companyName || "Unknown Company",
                   jobLocation: job.jobLocation || "Unknown Location",
                   jobType: job.jobType || "Unknown Type",
                 }
               : {
+                  _id: null,
                   jobTitle: "Unknown Job",
                   companyName: "Unknown Company",
                   jobLocation: "Unknown Location",
                   jobType: "Unknown Type",
                 },
-            userCollection, // Include for debugging
+            userCollection,
           }
         } catch (error) {
           console.error(`Error fetching job details for application ${application._id}:`, error)
           return {
             ...application,
             job: {
+              _id: null,
               jobTitle: "Unknown Job",
               companyName: "Unknown Company",
               jobLocation: "Unknown Location",
@@ -80,8 +105,98 @@ export async function GET(request: NextRequest) {
       }),
     )
 
+    // Apply filters to the applications with job details
+    let filteredApplications = applicationsWithJobDetails
+
+    // Apply search filter
+    if (search) {
+      const searchLower = search.toLowerCase()
+      filteredApplications = filteredApplications.filter((app: any) => {
+        return (
+          app.job.jobTitle.toLowerCase().includes(searchLower) ||
+          app.job.companyName.toLowerCase().includes(searchLower) ||
+          app.jobId.toString().toLowerCase().includes(searchLower) ||
+          app._id.toString().toLowerCase().includes(searchLower)
+        )
+      })
+    }
+
+    // Apply location filter
+    if (location) {
+      filteredApplications = filteredApplications.filter((app: any) =>
+        app.job.jobLocation.toLowerCase().includes(location.toLowerCase())
+      )
+    }
+
+    // Apply status filter
+    if (status) {
+      filteredApplications = filteredApplications.filter((app: any) =>
+        app.status.toLowerCase() === status.toLowerCase()
+      )
+    }
+
+    // Apply job title filter
+    if (jobTitle) {
+      filteredApplications = filteredApplications.filter((app: any) =>
+        app.job.jobTitle.toLowerCase().includes(jobTitle.toLowerCase())
+      )
+    }
+
+    // Apply company filter
+    if (company) {
+      filteredApplications = filteredApplications.filter((app: any) =>
+        app.job.companyName.toLowerCase().includes(company.toLowerCase())
+      )
+    }
+
+    // Apply job ID filter
+    if (jobId) {
+      filteredApplications = filteredApplications.filter((app: any) =>
+        app.jobId.toString().toLowerCase().includes(jobId.toLowerCase())
+      )
+    }
+
+    // Apply date range filters
+    if (dateFrom) {
+      const fromDate = new Date(dateFrom)
+      filteredApplications = filteredApplications.filter((app: any) => {
+        const appliedDate = new Date(app.appliedDate)
+        return appliedDate >= fromDate
+      })
+    }
+
+    if (dateTo) {
+      const toDate = new Date(dateTo)
+      toDate.setHours(23, 59, 59, 999) // End of day
+      filteredApplications = filteredApplications.filter((app: any) => {
+        const appliedDate = new Date(app.appliedDate)
+        return appliedDate <= toDate
+      })
+    }
+
+    // Apply recent applications filter (last 7 days)
+    if (recentOnly) {
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+      filteredApplications = filteredApplications.filter((app: any) => {
+        const appliedDate = new Date(app.appliedDate)
+        return appliedDate >= sevenDaysAgo
+      })
+    }
+
+    // Get total count for pagination
+    const totalApplications = filteredApplications.length
+
+    // Apply pagination
+    const paginatedApplications = filteredApplications.slice(skip, skip + validLimit)
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(totalApplications / validLimit)
+    const hasNextPage = validPage < totalPages
+    const hasPrevPage = validPage > 1
+
     // Log the applications data for debugging
-    console.log(`Found ${applicationsWithJobDetails.length} applications for user ${userId} from ${userCollection}`)
+    console.log(`Found ${paginatedApplications.length} applications for user ${userId} from ${userCollection} (${totalApplications} total, page ${validPage}/${totalPages})`)
 
     // Add cache control headers to prevent caching
     const headers = new Headers()
@@ -90,7 +205,19 @@ export async function GET(request: NextRequest) {
     headers.append("Expires", "0")
 
     return NextResponse.json(
-      { success: true, applications: applicationsWithJobDetails, userCollection },
+      { 
+        success: true, 
+        applications: paginatedApplications, 
+        pagination: {
+          currentPage: validPage,
+          totalPages,
+          totalApplications,
+          hasNextPage,
+          hasPrevPage,
+          limit: validLimit,
+        },
+        userCollection 
+      },
       {
         status: 200,
         headers: headers,
