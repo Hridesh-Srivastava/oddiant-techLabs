@@ -12,7 +12,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-4xl bg-white rounded-xl shadow-xl overflow-hidden">
         <div className="md:flex">
           <div className="hidden md:block md:w-1/3 bg-gradient-to-br from-blue-900 to-purple-900 p-8 text-white">
-            <h2 className="text-2xl font-bold mb-6">Join Our Community</h2>
+            <h2 className="text-2xl font-bold mb-6 text-white">Join Our Community</h2>
             <p className="mb-4">Create an account to access exclusive resources and opportunities.</p>
             <ul className="space-y-2">
               <li className="flex items-center">

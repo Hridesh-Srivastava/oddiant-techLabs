@@ -65,7 +65,7 @@ export default function EmployeeLoginPage() {
               <LogIn className="h-8 w-8 text-purple-600" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-center">Employee Login</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">Employer Login</CardTitle>
           <CardDescription className="text-center">
             Enter your credentials to access the employee portal
           </CardDescription>

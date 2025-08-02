@@ -26,12 +26,12 @@ export default function JoinNowPage() {
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Link href="/auth/register" className="w-full">
-              <Button size="lg" className="w-full bg-blue-700 text-white hover:bg-green-600 hover:text-black">
+              <Button size="lg" className="w-full bg-black text-white hover:bg-green-600 hover:text-black">
                 Register
               </Button>
             </Link>
             <Link href="/auth/login" className="w-full">
-              <Button size="lg" variant="outline" className="w-full hover:bg-green-600 hover:text-black">
+              <Button size="lg" variant="outline" className="w-full hover:bg-green-600 hover:text-black text-black">
                 Sign In
               </Button>
             </Link>
@@ -55,12 +55,12 @@ export default function JoinNowPage() {
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Link href="/auth/employee/register" className="w-full">
-              <Button size="lg" className="w-full bg-blue-700 text-white hover:bg-green-600 hover:text-black">
+              <Button size="lg" className="w-full bg-black text-white hover:bg-green-600 hover:text-black">
                 Register
               </Button>
             </Link>
             <Link href="/auth/employee/login" className="w-full">
-              <Button size="lg" variant="outline" className="w-full hover:bg-green-600 hover:text-black">
+              <Button size="lg" variant="outline" className="w-full hover:bg-green-600 hover:text-black text-black">
                 Sign In
               </Button>
             </Link>

@@ -159,7 +159,7 @@ export default function EmployeeDocuments({ formData, updateFormData }: Document
         <h4 className="text-sm font-medium text-yellow-800 mb-2">Important Note</h4>
         <p className="text-sm text-yellow-700">
           By submitting this form, you confirm that all information provided is accurate and that you are authorized to
-          register as an employee of Oddiant Techlabs. Your account will be verified by our Legal department before
+          register as an employer of Oddiant Techlabs. Your account will be verified by our Legal department before
           activation.
         </p>
       </div>

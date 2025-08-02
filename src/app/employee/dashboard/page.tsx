@@ -723,7 +723,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
         return candidate.employerId === employee._id || candidate.companyId === employee._id
       })
 
-      console.log(`🎯 Filtered to employee's candidates: ${employeeCandidates.length}`)
+      console.log(`Filtered to employee's candidates: ${employeeCandidates.length}`)
 
       // Format for ATS display while preserving original nomenclature
       const formattedResumes = employeeCandidates.map((candidate: any) => {

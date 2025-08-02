@@ -166,7 +166,7 @@ export default function EmployeeRegisterPage() {
         {/* Purple gradient card on the left */}
         <div className="w-full md:w-2/5 bg-gradient-to-br from-purple-700 to-purple-900 text-white p-8 flex flex-col justify-center">
           <div className="space-y-6">
-            <h2 className="text-3xl font-bold">Join Our Community</h2>
+            <h2 className="text-3xl font-bold text-white">Join Our Community</h2>
             <p className="text-purple-100">Create an account to access exclusive resources and opportunities.</p>
 
             <div className="space-y-4 mt-8">
@@ -240,7 +240,7 @@ export default function EmployeeRegisterPage() {
                   type="button"
                   onClick={handleNext}
                   disabled={isSubmitting}
-                  className="bg-purple-600 hover:bg-purple-700"
+                  className="bg-black hover:bg-green-600 hover:text-black"
                 >
                   Next
                 </Button>
@@ -249,7 +249,7 @@ export default function EmployeeRegisterPage() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className="bg-purple-600 hover:bg-purple-700"
+                  className="bg-black hover:bg-green-600 hover:text-black"
                 >
                   {isSubmitting ? "Submitting..." : "Submit"}
                 </Button>

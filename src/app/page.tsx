@@ -267,7 +267,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.7, duration: 0.8 }}
             >
-              <Link href="/auth/register">
+              <Link href="/join-now">
                 <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-full px-8 py-6 text-lg font-medium shadow-lg shadow-purple-900/30 transition-all duration-300 hover:shadow-xl hover:shadow-purple-900/40 hover:scale-105">
                   Get Started
                 </Button>
