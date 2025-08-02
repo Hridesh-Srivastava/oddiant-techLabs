@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { toast, Toaster } from "sonner"
 import {
   LogOut,
   Clock,
@@ -24,6 +26,7 @@ import {
   Award,
   ChevronLeft,
   ChevronRight,
+  RefreshCw,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -100,6 +103,16 @@ interface Result {
   type?: string // Add this line
 }
 
+interface StudentData {
+  _id: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  email: string;
+  avatar?: string;
+  [key: string]: any;
+}
+
 export default function StudentAssessmentDashboard() {
   const router = useRouter()
   const [tests, setTests] = useState<Test[]>([])
@@ -108,6 +121,10 @@ export default function StudentAssessmentDashboard() {
   const [results, setResults] = useState<Result[]>([])
   const [loading, setLoading] = useState(true)
   const [globalSearch, setGlobalSearch] = useState("")
+  
+  // Student data state
+  const [student, setStudent] = useState<StudentData | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState("all")
@@ -151,6 +168,70 @@ export default function StudentAssessmentDashboard() {
 
   // Add state for recent results filter
   const [showRecentResults, setShowRecentResults] = useState(false);
+
+  // Helper function to get full name
+  const getFullName = (student: StudentData): string => {
+    if (!student) return ""
+    const firstName = student.firstName || ""
+    const middleName = student.middleName || ""
+    const lastName = student.lastName || ""
+    return `${firstName} ${middleName} ${lastName}`.trim()
+  }
+
+  // Fetch student data
+  const fetchStudentData = async () => {
+    try {
+      const response = await fetch("/api/student/profile", {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      })
+
+      if (response.status === 401) {
+        router.push("/auth/login")
+        return
+      }
+
+      if (!response.ok) {
+        console.error("Failed to load profile data")
+        return
+      }
+
+      const data = await response.json()
+
+      if (!data.success) {
+        console.error("Failed to load profile data")
+        return
+      }
+
+      setStudent(data.student)
+    } catch (error) {
+      console.error("Error loading profile data:", error)
+    }
+  }
+
+  // Fetch all data function
+  const fetchAllData = async () => {
+    setLoading(true)
+    await Promise.all([fetchStudentData(), fetchTests(), fetchInvitations(), fetchYourTests(), fetchResults()])
+    setLoading(false)
+  }
+
+  // Handle refresh
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      await fetchAllData()
+      toast.success("Data refreshed successfully")
+    } catch (error) {
+      toast.error("Failed to refresh data")
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
 
   // Filtered tests by category
   const filteredByCategory = categoryFilter === "all"
@@ -323,11 +404,6 @@ export default function StudentAssessmentDashboard() {
   }
 
   useEffect(() => {
-    const fetchAllData = async () => {
-      setLoading(true)
-      await Promise.all([fetchTests(), fetchInvitations(), fetchYourTests(), fetchResults()])
-      setLoading(false)
-    }
     fetchAllData()
   }, [])
 
@@ -433,45 +509,105 @@ export default function StudentAssessmentDashboard() {
   const publishedResults = results.filter((result) => result.resultStatus === "published")
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-50">
+      <Toaster position="top-center" />
+
+      <header className="bg-white">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-semibold text-black">
+              Candidate Dashboard
+            </h1>
+
+            {/* Search Bar - RIGHT NEXT TO Candidate Dashboard text */}
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Input
+                placeholder="Search Dashboard..."
+                className="pl-10 h-9 bg-gray-100 text-black w-full"
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Avatar className="h-6 w-6">
+                <AvatarImage src={student?.avatar} alt={student ? getFullName(student) : "User"} />
+                <AvatarFallback className="text-xs">
+                  {student ? getFullName(student).split(' ').map(n => n[0]).join('').toUpperCase() : "U"}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-sm text-black">
+                Welcome, {student ? getFullName(student) : "User"}
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="bg-black text-white border-black hover:bg-green-600 hover:text-black group"
+            >
+              <LogOut className="h-4 w-4 mr-2 text-white group-hover:text-black" />
+              Logout
+            </Button>
+          </div>
+        </div>
+      </header>
+
       {/* Main Content */}
-      <main className="pt-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Main Navigation Tabs - Same as main dashboard */}
         <div className="mb-8">
-          <div className="flex space-x-2 border-b justify-center">
-            <button
-              onClick={() => handleTabChange("jobs")}
-              className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"
+          <div className="flex items-center border-b">
+            <Button
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="mb-2"
             >
-              <Briefcase className="h-4 w-4 inline mr-2" />
-              Job Openings
-            </button>
-            <button
-              onClick={() => handleTabChange("applications")}
-              className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"
-            >
-              <FileText className="h-4 w-4 inline mr-2" />
-              My Applications
-            </button>
-            <button
-              onClick={() => handleTabChange("profile")}
-              className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"
-            >
-              <User className="h-4 w-4 inline mr-2" />
-              My Profile
-            </button>
-            {/* Active Assessments Tab */}
-            <button className="px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600">
-              <Award className="h-4 w-4 inline mr-2" />
-              Assessments
-            </button>
-            <button
-              onClick={() => handleTabChange("settings")}
-              className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"
-            >
-              <Settings className="h-4 w-4 inline mr-2" />
-              Settings
-            </button>
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+              />
+              {isRefreshing ? "Refreshing..." : "Refresh Data"}
+            </Button>
+            
+            <div className="flex space-x-2 justify-center flex-1 -ml-24">
+              <button
+                onClick={() => handleTabChange("jobs")}
+                className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"
+              >
+                <Briefcase className="h-4 w-4 inline mr-2" />
+                Job Openings
+              </button>
+              <button
+                onClick={() => handleTabChange("applications")}
+                className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"
+              >
+                <FileText className="h-4 w-4 inline mr-2" />
+                My Applications
+              </button>
+              <button
+                onClick={() => handleTabChange("profile")}
+                className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"
+              >
+                <User className="h-4 w-4 inline mr-2" />
+                My Profile
+              </button>
+              {/* Active Assessments Tab */}
+              <button className="px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600">
+                <Award className="h-4 w-4 inline mr-2" />
+                Assessments
+              </button>
+              <button
+                onClick={() => handleTabChange("settings")}
+                className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"
+              >
+                <Settings className="h-4 w-4 inline mr-2" />
+                Settings
+              </button>
+            </div>
           </div>
         </div>
 

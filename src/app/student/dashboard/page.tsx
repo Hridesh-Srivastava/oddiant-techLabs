@@ -2293,10 +2293,10 @@ export default function StudentDashboardPage() {
     <div className="min-h-screen bg-gray-50">
       <Toaster position="top-center" />
 
-      <header className="bg-black shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+      <header className="bg-white">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <h1 className="text-xl font-semibold text-white">
+            <h1 className="text-xl font-semibold text-black">
               Candidate Dashboard
             </h1>
 
@@ -2305,7 +2305,7 @@ export default function StudentDashboardPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
               <Input
                 placeholder="Search Dashboard..."
-                className="pl-10 h-9 bg-white text-black w-full"
+                className="pl-10 h-9 bg-gray-100 text-black w-full"
                 value={globalSearch}
                 onChange={(e) => handleSearchInput(e.target.value)}
               />
@@ -2424,16 +2424,24 @@ export default function StudentDashboardPage() {
           </div>
 
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-white">
-              Welcome, {getFullName(student)}
-            </span>
+            <div className="flex items-center space-x-2">
+              <Avatar className="h-6 w-6">
+                <AvatarImage src={student.avatar} alt={getFullName(student)} />
+                <AvatarFallback className="text-xs">
+                  {getFullName(student).split(' ').map(n => n[0]).join('').toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-sm text-black">
+                Welcome, {getFullName(student)}
+              </span>
+            </div>
             <Button
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="bg-transparent text-white border-white hover:bg-white hover:text-black"
+              className="bg-black text-white border-black hover:bg-green-600 hover:text-black group"
             >
-              <LogOut className="h-4 w-4 mr-2" />
+              <LogOut className="h-4 w-4 mr-2 text-white group-hover:text-black" />
               Logout
             </Button>
           </div>
@@ -2476,23 +2484,22 @@ export default function StudentDashboardPage() {
           </Card>
         )}
 
-        <div className="flex justify-between items-center mb-6">
-
-          <Button
-            variant="outline"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-          >
-            <RefreshCw
-              className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
-            />
-            {isRefreshing ? "Refreshing..." : "Refresh Data"}
-          </Button>
-        </div>
-
         {/* Main Navigation Tabs */}
         <div className="mb-8">
-          <div className="flex space-x-2 border-b justify-center">
+          <div className="flex items-center border-b">
+            <Button
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="mb-2"
+            >
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+              />
+              {isRefreshing ? "Refreshing..." : "Refresh Data"}
+            </Button>
+            
+            <div className="flex space-x-2 justify-center flex-1 -ml-24">
             <button
               onClick={() => handleTabChange("jobs")}
               className={`px-4 py-2 font-medium ${
@@ -2549,6 +2556,7 @@ export default function StudentDashboardPage() {
               <Settings className="h-4 w-4 inline mr-2" />
               Settings
             </button>
+            </div>
           </div>
         </div>
 
