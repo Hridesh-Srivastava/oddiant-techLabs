@@ -438,7 +438,7 @@ export default function StudentAssessmentDashboard() {
       <main className="pt-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Main Navigation Tabs - Same as main dashboard */}
         <div className="mb-8">
-          <div className="flex space-x-2 border-b">
+          <div className="flex space-x-2 border-b justify-center">
             <button
               onClick={() => handleTabChange("jobs")}
               className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"

@@ -2521,7 +2521,7 @@ export default function StudentDashboardPage() {
 
         {/* Main Navigation Tabs */}
         <div className="mb-8">
-          <div className="flex space-x-2 border-b">
+          <div className="flex space-x-2 border-b justify-center">
             <button
               onClick={() => handleTabChange("jobs")}
               className={`px-4 py-2 font-medium ${

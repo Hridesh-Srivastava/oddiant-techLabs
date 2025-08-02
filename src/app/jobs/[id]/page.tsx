@@ -167,9 +167,9 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
     <div className="min-h-screen bg-gray-50 py-8">
       <Toaster position="top-center" />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Button variant="ghost" className="mb-6" onClick={() => router.push("/")}>
+        <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Home
+          Back
         </Button>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
