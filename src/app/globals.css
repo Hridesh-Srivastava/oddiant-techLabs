@@ -402,6 +402,21 @@ mark {
   }
 
   .card-component {
-    @apply rounded-lg border bg-card text-card-foreground shadow-sm;
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6;
+  }
+
+  /* Custom refresh button hover effect */
+  .refresh-button-hover {
+    @apply transition-all duration-200 ease-in-out;
+  }
+  
+  .refresh-button-hover:hover {
+    @apply bg-gray-100 border-gray-300 !important;
+    transform: scale(1.02);
+  }
+  
+  .refresh-button-hover:active {
+    @apply bg-gray-200 border-gray-400 !important;
+    transform: scale(0.98);
   }
 }

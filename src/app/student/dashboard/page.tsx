@@ -2487,17 +2487,16 @@ export default function StudentDashboardPage() {
         {/* Main Navigation Tabs */}
         <div className="mb-8">
           <div className="flex items-center border-b">
-            <Button
-              variant="outline"
+            <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="mb-2"
+              className="mb-2 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 border border-input bg-background shadow-sm refresh-button-hover"
             >
               <RefreshCw
                 className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
               />
               {isRefreshing ? "Refreshing..." : "Refresh Data"}
-            </Button>
+            </button>
             
             <div className="flex space-x-2 justify-center flex-1 -ml-24">
             <button

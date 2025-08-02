@@ -561,17 +561,16 @@ export default function StudentAssessmentDashboard() {
         {/* Main Navigation Tabs - Same as main dashboard */}
         <div className="mb-8">
           <div className="flex items-center border-b">
-            <Button
-              variant="outline"
+            <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="mb-2"
+              className="mb-2 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 border border-input bg-background shadow-sm refresh-button-hover"
             >
               <RefreshCw
                 className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
               />
               {isRefreshing ? "Refreshing..." : "Refresh Data"}
-            </Button>
+            </button>
             
             <div className="flex space-x-2 justify-center flex-1 -ml-24">
               <button
@@ -1157,7 +1156,7 @@ export default function StudentAssessmentDashboard() {
                             <p className="text-xs text-gray-500 mt-1">Completed on {formatDate(result.completedAt!)}</p>
                           </div>
 
-                          <Button onClick={() => handleViewResult(result.id)} className="w-full">
+                          <Button onClick={() => handleViewResult(result.id)} className="w-full hover:bg-green-600 hover:text-black">
                             <Eye className="h-4 w-4 mr-2" />
                             View Detailed Results
                           </Button>
