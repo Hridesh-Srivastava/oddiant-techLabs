@@ -384,6 +384,7 @@ const COURSES = [
   "BSc Radiography",
   "BSc Radiotherapy",
   "BSW LLB",
+  "BTech",
   "BTech Cyber Security",
   "BV. Sc. in Animal Production & Management",
   "Cardiology",

@@ -354,38 +354,44 @@ const getDocuments = (student: StudentData) => {
 
 // Helper function to get available assets
 const getAvailableAssets = (student: StudentData): string[] => {
+  const assets: string[] = [];
+  
+  // First check availableAssets array (candidates collection)
   if (student.availableAssets && student.availableAssets.length > 0) {
-    return student.availableAssets;
+    assets.push(...student.availableAssets);
   }
 
+  // Then check assets object (students collection)
   if (student.assets) {
-    const assets: string[] = [];
     if (student.assets.bike) assets.push("Bike / Car");
     if (student.assets.wifi) assets.push("WiFi");
     if (student.assets.laptop) assets.push("Laptop");
-    return assets;
+    if (student.assets.bankAccount) assets.push("Bank Account");
   }
 
-  return [];
+  // Remove duplicates and return
+  return [...new Set(assets)];
 };
 
 // Helper function to get identity documents
 const getIdentityDocuments = (student: StudentData): string[] => {
+  const documents: string[] = [];
+  
+  // First check identityDocuments array (candidates collection)
   if (student.identityDocuments && student.identityDocuments.length > 0) {
-    return student.identityDocuments;
+    documents.push(...student.identityDocuments);
   }
 
+  // Then check assets object (students collection)
   if (student.assets) {
-    const documents: string[] = [];
     if (student.assets.panCard) documents.push("PAN Card");
     if (student.assets.aadhar) documents.push("Aadhar");
-    if (student.assets.bankAccount) documents.push("Bank Account");
     if (student.assets.idProof)
       documents.push("Voter ID / Passport / DL (Any)");
-    return documents;
   }
 
-  return [];
+  // Remove duplicates and return
+  return [...new Set(documents)];
 };
 
 // Helper function to safely get preferred cities from either collection
@@ -1079,9 +1085,11 @@ export default function StudentDashboardPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    let loadingToast: string | number | undefined;
+
     try {
       setIsUploadingAvatar(true);
-      toast.loading("Uploading avatar...");
+      loadingToast = toast.loading("Uploading avatar...");
 
       // Create form data
       const formData = new FormData();
@@ -1116,11 +1124,15 @@ export default function StudentDashboardPage() {
         };
       });
 
-      toast.dismiss();
+      if (loadingToast) {
+        toast.dismiss(loadingToast);
+      }
       toast.success("Avatar updated successfully");
     } catch (error) {
       console.error("Error uploading avatar:", error);
-      toast.dismiss();
+      if (loadingToast) {
+        toast.dismiss(loadingToast);
+      }
       toast.error("Failed to upload avatar");
     } finally {
       setIsUploadingAvatar(false);
@@ -1133,744 +1145,703 @@ export default function StudentDashboardPage() {
   };
 
   const handleExportToPDF = async () => {
-    if (!student) return;
+    if (!student) {
+      toast.error("No student data available");
+      return;
+    }
 
+    let loadingToast: string | number | undefined;
+    
+    // Add a timeout to force dismiss the toast after 30 seconds
+    let timeoutId: NodeJS.Timeout | undefined;
+    
     try {
       setIsGeneratingPDF(true);
-      toast.loading("Generating PDF resume...");
-
-      // Create a hidden div to render the PDF content
-      const pdfContainer = document.createElement("div");
-      pdfContainer.style.position = "absolute";
-      pdfContainer.style.left = "-9999px";
-      pdfContainer.style.top = "-9999px";
-      document.body.appendChild(pdfContainer);
+      
+      // Try a different approach for the loading toast
+      loadingToast = toast.loading("Generating PDF resume...", {
+        duration: Infinity, // Keep it until manually dismissed
+      });
+      
+      // Set a timeout to force dismiss the toast after 30 seconds
+      timeoutId = setTimeout(() => {
+        console.log("Timeout reached, dismissing toast");
+        if (loadingToast) {
+          toast.dismiss(loadingToast);
+        } else {
+          toast.dismiss();
+        }
+        toast.error("PDF generation timed out. Please try again.");
+        setIsGeneratingPDF(false);
+      }, 30000);
 
       // Get experience array safely
       const experienceArray = getExperienceArray(student);
       const preferredCities = getPreferredCities(student);
 
-      // Create the PDF content with proper styling
-      pdfContainer.innerHTML = `
-        <div id="pdf-content" style="width: 210mm; padding: 20mm; font-family: Arial, sans-serif; color: #333;">
-          <div style="text-align: center; margin-bottom: 20px;">
-          <h1 style="font-size: 24px; color: #000; margin-bottom: 5px;">${getFullName(
-            student
-          )} - Resume</h1>
-            <p style="color: #666; font-size: 14px;">Generated on ${new Date().toLocaleDateString()}</p>
-          </div>
-
-          <!-- Personal Information Section -->
-          <div style="margin-bottom: 20px;">
-            <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">Personal Information</h2>
-            <div style="display: flex; flex-wrap: wrap;">
-              <div style="width: 50%; margin-bottom: 10px;">
-                <p style="font-size: 14px; color: #666; margin-bottom: 2px;">Full Name</p>
-              <p style="font-size: 16px; margin-top: 0;">${getFullName(
-                student
-              )}</p>
-              </div>
-              <div style="width: 50%; margin-bottom: 10px;">
-                <p style="font-size: 14px; color: #666; margin-bottom: 2px;">Gender</p>
-                <p style="font-size: 16px; margin-top: 0;">${
-                  student.gender || "Not specified"
-                }</p>
-              </div>
-              <div style="width: 50%; margin-bottom: 10px;">
-                <p style="font-size: 14px; color: #666; margin-bottom: 2px;">Date of Birth</p>
-                <p style="font-size: 16px; margin-top: 0;">${formatDate(
-                  student.dob
-                )}</p>
-              </div>
-              ${
-                student.pincode
-                  ? `
-              <div style="width: 50%; margin-bottom: 10px;">
-                <p style="font-size: 14px; color: #666; margin-bottom: 2px;">Pincode</p>
-                <p style="font-size: 16px; margin-top: 0;">${student.pincode}</p>
-              </div>
-              `
-                  : ""
-              }
-            </div>
-          </div>
-
-          <!-- Contact Information Section -->
-          <div style="margin-bottom: 20px;">
-            <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">Contact Information</h2>
-            <div style="display: flex; flex-wrap: wrap;">
-              <div style="width: 50%; margin-bottom: 10px;">
-                <p style="font-size: 14px; color: #666; margin-bottom: 2px;">Email</p>
-                <p style="font-size: 16px; margin-top: 0;">${student.email}</p>
-              </div>
-              <div style="width: 50%; margin-bottom: 10px;">
-                <p style="font-size: 14px; color: #666; margin-bottom: 2px;">Phone</p>
-                <p style="font-size: 16px; margin-top: 0;">${
-                  student.phone || "Not provided"
-                }</p>
-              </div>
-              ${
-                student.alternativePhone
-                  ? `
-              <div style="width: 50%; margin-bottom: 10px;">
-                <p style="font-size: 14px; color: #666; margin-bottom: 2px;">Alternative Phone</p>
-                <p style="font-size: 16px; margin-top: 0;">${student.alternativePhone}</p>
-              </div>
-              `
-                  : ""
-              }
-              <div style="width: 50%; margin-bottom: 10px;">
-                <p style="font-size: 14px; color: #666; margin-bottom: 2px;">Current Location</p>
-                <p style="font-size: 16px; margin-top: 0;">${
-                  student.currentCity && student.currentState
-                    ? `${student.currentCity}, ${student.currentState}`
-                    : "Not provided"
-                }</p>
-              </div>
-              ${
-                student.permanentAddress
-                  ? `
-              <div style="width: 100%; margin-bottom: 10px;">
-                <p style="font-size: 14px; color: #666; margin-bottom: 2px;">Permanent Address</p>
-                <p style="font-size: 16px; margin-top: 0;">${student.permanentAddress}</p>
-              </div>
-              `
-                  : ""
-              }
-            </div>
-
-            <!-- Online Presence -->
-            ${
-              student.onlinePresence?.linkedin ||
-              student.linkedIn ||
-              student.onlinePresence?.portfolio ||
-              student.portfolioLink ||
-              student.onlinePresence?.github ||
-              student.onlinePresence?.socialMedia ||
-              student.socialMediaLink
-                ? `
-            <div style="margin-top: 10px;">
-              <h3 style="font-size: 16px; color: #4b5563; margin-bottom: 8px;">Online Presence</h3>
-              <div style="display: flex; flex-wrap: wrap;">
-                ${
-                  student.onlinePresence?.linkedin || student.linkedIn
-                    ? `
-                <div style="width: 50%; margin-bottom: 10px;">
-                  <p style="font-size: 14px; color: #666; margin-bottom: 2px;">LinkedIn</p>
-                  <p style="font-size: 16px; margin-top: 0; color: #2563eb;">${
-                    student.onlinePresence?.linkedin || student.linkedIn
-                  }</p>
-                </div>
-                `
-                    : ""
-                }
-                ${
-                  student.onlinePresence?.portfolio || student.portfolioLink
-                    ? `
-                <div style="width: 50%; margin-bottom: 10px;">
-                  <p style="font-size: 14px; color: #666; margin-bottom: 2px;">Portfolio</p>
-                  <p style="font-size: 16px; margin-top: 0; color: #2563eb;">${
-                    student.onlinePresence?.portfolio || student.portfolioLink
-                  }</p>
-                </div>
-                `
-                    : ""
-                }
-                ${
-                  student.onlinePresence?.github
-                    ? `
-                <div style="width: 50%; margin-bottom: 10px;">
-                  <p style="font-size: 14px; color: #666; margin-bottom: 2px;">GitHub</p>
-                  <p style="font-size: 16px; margin-top: 0; color: #2563eb;">${student.onlinePresence.github}</p>
-                </div>
-                `
-                    : ""
-                }
-                ${
-                  student.onlinePresence?.socialMedia || student.socialMediaLink
-                    ? `
-                <div style="width: 50%; margin-bottom: 10px;">
-                  <p style="font-size: 14px; color: #666; margin-bottom: 2px;">Social Media</p>
-                  <p style="font-size: 16px; margin-top: 0; color: #2563eb;">${
-                    student.onlinePresence?.socialMedia ||
-                    student.socialMediaLink
-                  }</p>
-                </div>
-                `
-                    : ""
-                }
-              </div>
-            </div>
-            `
-                : ""
-            }
-          </div>
-
-          <!-- Profile Summary Section -->
-          ${
-            student.profileOutline
-              ? `
-          <div style="margin-bottom: 20px;">
-            <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">Profile Summary</h2>
-            <p style="font-size: 16px; line-height: 1.5; white-space: pre-line;">${student.profileOutline}</p>
-          </div>
-          `
-              : ""
-          }
-
-          <!-- Skills Section -->
-          ${
-            student.skills && student.skills.length > 0
-              ? `
-          <div style="margin-bottom: 20px;">
-            <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">Skills</h2>
-            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-              ${student.skills
-                .map(
-                  (skill) =>
-                    `<span style="display: inline-block; background-color: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 4px; padding: 4px 8px; font-size: 14px;">${skill}</span>`
-                )
-                .join("")}
-            </div>
-          </div>
-          `
-              : ""
-          }
-
-          <!-- Professional Experience Summary Section -->
-          <div style="margin-bottom: 20px;">
-            <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">Professional Experience Summary</h2>
-            <div style="display: flex; flex-wrap: wrap; gap: 15px;">
-              <div style="background-color: #eff6ff; border-radius: 6px; padding: 15px; text-align: center; flex: 1;">
-                <p style="font-size: 14px; color: #666; margin-bottom: 5px;">Total Experience</p>
-                <p style="font-size: 18px; font-weight: bold; color: #2563eb; margin: 0;">${getTotalExperience(
-                  student
-                )}</p>
-              </div>
-              ${
-                student.currentSalary ||
-                (experienceArray.length > 0 &&
-                  experienceArray[0]?.currentSalary)
-                  ? `
-              <div style="background-color: #ecfdf5; border-radius: 6px; padding: 15px; text-align: center; flex: 1;">
-                <p style="font-size: 14px; color: #666; margin-bottom: 5px;">Current Salary</p>
-                <p style="font-size: 18px; font-weight: bold; color: #059669; margin: 0;">${
-                  student.currentSalary ||
-                  experienceArray[0]?.currentSalary ||
-                  "Not specified"
-                }</p>
-              </div>
-              `
-                  : ""
-              }
-              ${
-                student.expectedSalary ||
-                (experienceArray.length > 0 &&
-                  experienceArray[0]?.expectedSalary)
-                  ? `
-              <div style="background-color: #f5f3ff; border-radius: 6px; padding: 15px; text-align: center; flex: 1;">
-                <p style="font-size: 14px; color: #666; margin-bottom: 5px;">Expected Salary</p>
-                <p style="font-size: 18px; font-weight: bold; color: #7c3aed; margin: 0;">${
-                  student.expectedSalary ||
-                  experienceArray[0]?.expectedSalary ||
-                  "Not specified"
-                }</p>
-              </div>
-              `
-                  : ""
-              }
-              ${
-                student.noticePeriod ||
-                (experienceArray.length > 0 && experienceArray[0]?.noticePeriod)
-                  ? `
-              <div style="background-color: #fffbeb; border-radius: 6px; padding: 15px; text-align: center; flex: 1;">
-                <p style="font-size: 14px; color: #666; margin-bottom: 5px;">Notice Period</p>
-                <p style="font-size: 18px; font-weight: bold; color: #d97706; margin: 0;">${
-                  student.noticePeriod ||
-                  experienceArray[0]?.noticePeriod ||
-                  "Not specified"
-                }</p>
-              </div>
-              `
-                  : ""
-              }
-            </div>
-          </div>
-
-          <!-- Shift Preference Section -->
-          ${
-            student.shiftPreference ||
-            (student.settings?.shiftPreference &&
-              student.settings.shiftPreference !== "flexible")
-              ? `
-          <div style="margin-bottom: 20px;">
-            <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">Shift Preference</h2>
-            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-              ${
-                Array.isArray(student.shiftPreference)
-                  ? student.shiftPreference
-                      .map(
-                        (shift) =>
-                          `<span style="display: inline-block; background-color: #dbeafe; border: 1px solid #bfdbfe; border-radius: 4px; padding: 4px 8px; font-size: 14px; color: #1e40af;">${shift}</span>`
-                      )
-                      .join("")
-                  : `<span style="display: inline-block; background-color: #dbeafe; border: 1px solid #bfdbfe; border-radius: 4px; padding: 4px 8px; font-size: 14px; color: #1e40af;">${
-                      student.shiftPreference ||
-                      student.settings?.shiftPreference ||
-                      "Flexible"
-                    }</span>`
-              }
-            </div>
-          </div>
-          `
-              : ""
-          }
-
-          <!-- Preferred Cities Section -->
-          ${
-            preferredCities.length > 0
-              ? `
-          <div style="margin-bottom: 20px;">
-            <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">Preferred Cities</h2>
-            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-              ${preferredCities
-                .slice(0, 5)
-                .map(
-                  (city) =>
-                    `<span style="display: inline-block; background-color: #d1fae5; border: 1px solid #a7f3d0; border-radius: 4px; padding: 4px 8px; font-size: 14px; color: #065f46;">${city}</span>`
-                )
-                .join("")}
-            </div>
-          </div>
-          `
-              : ""
-          }
-
-          <!-- Education Section -->
-          ${
-            student.education && student.education.length > 0
-              ? `
-          <div style="margin-bottom: 20px;">
-            <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">Education</h2>
-            <div style="display: flex; flex-direction: column; gap: 15px;">
-              ${student.education
-                .map(
-                  (edu) => `
-                <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px;">
-                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <h3 style="font-size: 16px; margin: 0;">Degree/Course: ${
-                      edu.degree || "Not specified"
-                    }</h3>
-                    <span style="background-color: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-size: 14px;">%age/CGPA: ${
-                      edu.percentage || edu.grade || "Not specified"
-                    }</span>
-                  </div>
-                  <p style="font-size: 15px; color: #4b5563; margin: 5px 0;">School/College/Univ.: ${
-                    edu.institution || edu.school || "Not specified"
-                  }</p>
-                  ${
-                    edu.field
-                      ? `<p style="font-size: 15px; color: #4b5563; margin: 5px 0;">Field of Study: ${edu.field}</p>`
-                      : ""
-                  }
-                  <p style="font-size: 14px; color: #6b7280; margin: 5px 0;">
-                    <span style="margin-right: 5px;">📅</span>
-                    ${edu.startingYear || "Not provided"} - ${
-                    edu.endingYear || "Present"
-                  }
-                  </p>
-                  ${
-                    edu.level || edu.mode
-                      ? `
-                  <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 14px;">
-                    ${
-                      edu.level
-                        ? `
-                    <div>
-                      <span style="color: #6b7280;">Level: </span>
-                      <span>${edu.level}</span>
-                    </div>
-                    `
-                        : ""
-                    }
-                    ${
-                      edu.mode
-                        ? `
-                    <div>
-                      <span style="color: #6b7280;">Mode: </span>
-                      <span>${edu.mode}</span>
-                    </div>
-                    `
-                        : ""
-                    }
-                  </div>
-                  `
-                      : ""
-                  }
-                </div>
-              `
-                )
-                .join("")}
-            </div>
-          </div>
-          `
-              : ""
-          }
-
-          <!-- Work Experience Section -->
-          ${
-            experienceArray.length > 0
-              ? `
-          <div style="margin-bottom: 20px;">
-            <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">
-              Work Experience
-              <span style="display: inline-block; background-color: #dbeafe; border: 1px solid #bfdbfe; border-radius: 4px; padding: 2px 6px; font-size: 14px; color: #1e40af; margin-left: 10px;">Total: ${getTotalExperience(
-                student
-              )}</span>
-            </h2>
-            <div style="display: flex; flex-direction: column; gap: 15px;">
-              ${experienceArray
-                .map(
-                  (exp) => `
-                <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px;">
-                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <h3 style="font-size: 16px; margin: 0;">Title: ${
-                      exp.title || "Not specified"
-                    }</h3>
-                    ${
-                      exp.currentlyWorking
-                        ? `<span style="background-color: #d1fae5; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-size: 14px; color: #065f46;">Current</span>`
-                        : ""
-                    }
-                  </div>
-                  <p style="font-size: 15px; color: #4b5563; margin: 5px 0;">Company: ${
-                    exp.companyName || "Not specified"
-                  }</p>
-                  ${
-                    exp.department
-                      ? `<p style="font-size: 15px; margin: 5px 0;">Department: ${exp.department}</p>`
-                      : ""
-                  }
-                  ${
-                    exp.location
-                      ? `<p style="font-size: 14px; color: #6b7280; margin: 5px 0;">${exp.location}</p>`
-                      : ""
-                  }
-                  ${
-                    exp.tenure
-                      ? `
-                  <p style="font-size: 14px; color: #6b7280; margin: 5px 0;">
-                    <span style="margin-right: 5px;">⏱️</span>
-                    Tenure: ${exp.tenure}
-                  </p>
-                  `
-                      : ""
-                  }
-                  ${
-                    exp.professionalSummary || exp.summary
-                      ? `
-                  <p style="font-size: 14px; margin: 10px 0; white-space: pre-line;">
-                    <strong>Professional Summary:</strong> ${
-                      exp.professionalSummary || exp.summary
-                    }
-                  </p>
-                  `
-                      : ""
-                  }
-                  <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 10px; font-size: 14px;">
-                    ${
-                      exp.currentSalary
-                        ? `
-                    <div style="display: flex; align-items: center;">
-                      <span style="color: #6b7280; margin-right: 5px;">💰 Current:</span>
-                      <span>${exp.currentSalary}</span>
-                    </div>
-                    `
-                        : ""
-                    }
-                    ${
-                      exp.expectedSalary
-                        ? `
-                    <div style="display: flex; align-items: center;">
-                      <span style="color: #6b7280; margin-right: 5px;">💰 Expected:</span>
-                      <span>${exp.expectedSalary}</span>
-                    </div>
-                    `
-                        : ""
-                    }
-                    ${
-                      exp.noticePeriod
-                        ? `
-                    <div style="display: flex; align-items: center;">
-                      <span style="color: #6b7280; margin-right: 5px;">⏱️ Notice Period:</span>
-                      <span>${exp.noticePeriod}</span>
-                    </div>
-                    `
-                        : ""
-                    }
-                  </div>
-                </div>
-              `
-                )
-                .join("")}
-            </div>
-          </div>
-          `
-              : ""
-          }
-
-          <!-- Certifications Section -->
-          ${
-            student.certifications &&
-            Array.isArray(student.certifications) &&
-            student.certifications.length > 0
-              ? `
-          <div style="margin-bottom: 20px;">
-            <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">Certifications</h2>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-              ${getCertificationNames(student)
-                .map(
-                  (cert) => `
-                <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px;">
-                  <h3 style="font-size: 16px; margin: 0;">${cert}</h3>
-                </div>
-              `
-                )
-                .join("")}
-            </div>
-          </div>
-          `
-              : ""
-          }
-
-          <!-- Available Assets Section -->
-          ${
-            getAvailableAssets(student).length > 0
-              ? `
-          <div style="margin-bottom: 20px;">
-            <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">Available Assets</h2>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              ${getAvailableAssets(student)
-                .map(
-                  (asset) => `
-                <div style="display: flex; align-items: center;">
-                  <span style="margin-right: 8px; color: #6b7280;">✓</span>
-                  <span>${asset.replace(/_/g, " ")}</span>
-                </div>
-              `
-                )
-                .join("")}
-            </div>
-          </div>
-          `
-              : ""
-          }
-
-          <!-- Identity Documents Section -->
-          ${
-            getIdentityDocuments(student).length > 0
-              ? `
-          <div style="margin-bottom: 20px;">
-            <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">Identity Documents</h2>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              ${getIdentityDocuments(student)
-                .map(
-                  (doc) => `
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <div style="display: flex; align-items: center;">
-                    <span style="margin-right: 8px; color: #6b7280;">📄</span>
-                    <span>${doc.replace(/_/g, " ")}</span>
-                  </div>
-                  <span style="background-color: #d1fae5; border: 1px solid #a7f3d0; border-radius: 4px; padding: 2px 6px; font-size: 14px; color: #065f46;">Verified</span>
-                </div>
-              `
-                )
-                .join("")}
-            </div>
-          </div>
-          `
-              : ""
-          }
-
-          <!-- Cover Letter Section -->
-          ${
-            student.coverLetter
-              ? `
-          <div style="margin-bottom: 20px;">
-            <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">Cover Letter</h2>
-            <div style="background-color: #f9fafb; border-radius: 6px; padding: 15px;">
-              <p style="font-size: 15px; line-height: 1.5; white-space: pre-line;">${student.coverLetter}</p>
-            </div>
-          </div>
-          `
-              : ""
-          }
-
-          <!-- Additional Information Section -->
-          ${
-            student.additionalInfo
-              ? `
-          <div style="margin-bottom: 20px;">
-            <h2 style="font-size: 18px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px;">Additional Information</h2>
-            <p style="font-size: 15px; line-height: 1.5; white-space: pre-line;">${student.additionalInfo}</p>
-          </div>
-          `
-              : ""
-          }
-
-         <!-- Documents Section -->
-<div style="margin-bottom: 20px;">
-  <h2>Documents</h2>
-  <div style="display: flex; flex-direction: column; gap: 10px;">
-    
-    <!-- Resume -->
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-      <div style="display: flex; align-items: center;">
-        <span style="margin-right: 8px;">📄</span>
-        <span>Resume</span>
-      </div>
-      ${
-        getDocuments(student).resume.url
-          ? `<a href="${
-              getDocuments(student).resume.url
-            }" style="color: #2563eb; text-decoration: underline;">${
-              getDocuments(student).resume.url
-            }</a>`
-          : `<span style="color: #b91c1c;">Not uploaded</span>`
-      }
-    </div>
-
-    <!-- Video Resume -->
-    ${
-      getDocuments(student).videoResume.url
-        ? `
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-      <div style="display: flex; align-items: center;">
-        <span style="margin-right: 8px;">🎥</span>
-        <span>Video Resume</span>
-      </div>
-      <a href="${
-        getDocuments(student).videoResume.url
-      }" style="color: #2563eb; text-decoration: underline;">${
-            getDocuments(student).videoResume.url
-          }</a>
-    </div>
-    `
-        : ""
-    }
-
-    <!-- Audio Biodata -->
-    ${
-      getDocuments(student).audioBiodata.url
-        ? `
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-      <div style="display: flex; align-items: center;">
-        <span style="margin-right: 8px;">🎵</span>
-        <span>Audio Bio</span>
-      </div>
-      <a href="${
-        getDocuments(student).audioBiodata.url
-      }" style="color: #2563eb; text-decoration: underline;">${
-            getDocuments(student).audioBiodata.url
-          }</a>
-    </div>
-    `
-        : ""
-    }
-
-    <!-- Photograph -->
-    ${
-      getDocuments(student).photograph.url
-        ? `
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-      <div style="display: flex; align-items: center;">
-        <span style="margin-right: 8px;">🖼️</span>
-        <span>Profile Photo</span>
-      </div>
-      <a href="${
-        getDocuments(student).photograph.url
-      }" style="color: #2563eb; text-decoration: underline;">${
-            getDocuments(student).photograph.url
-          }</a>
-    </div>
-    `
-        : ""
-    }
-
-  </div>
-</div>
-
-          <!-- Footer -->
-          <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #6b7280;">
-            <p>This document was generated from the candidate profile on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
-            <p>© ${new Date().getFullYear()} Oddiant Techlabs - All Rights Reserved</p>
-          </div>
-        </div>
-      `;
-
-      // Wait for the content to render
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Get the content element
-      const content = document.getElementById("pdf-content");
-      if (!content) {
-        throw new Error("PDF content element not found");
-      }
-
-      // Create PDF
+      // Create PDF with better settings
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
         format: "a4",
+        compress: true,
       });
 
-      // Capture the content as an image
-      const canvas = await html2canvas(content, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
+      // Set font
+      pdf.setFont("helvetica");
+      
+      // Page dimensions
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 20;
+      const contentWidth = pageWidth - (margin * 2);
+      
+      let yPosition = margin;
+      const lineHeight = 6;
+      const sectionSpacing = 8;
+      
+      // Column layout variables (used across multiple sections)
+      const colWidth = contentWidth / 2 - 10;
+      const col1X = margin;
+      const col2X = margin + colWidth + 20;
+
+      // Helper function to add text with word wrapping
+      const addWrappedText = (text: string, x: number, y: number, maxWidth: number, fontSize: number = 12) => {
+        if (!text || typeof text !== 'string') {
+          return 0;
+        }
+        pdf.setFontSize(fontSize);
+        const lines = pdf.splitTextToSize(text, maxWidth);
+        pdf.text(lines, x, y);
+        return lines.length * (fontSize * 0.4);
+      };
+
+      // Helper function to add section header
+      const addSectionHeader = (title: string, y: number) => {
+        pdf.setFontSize(16);
+        pdf.setFont("helvetica", "bold");
+        pdf.text(title, margin, y);
+        pdf.setFont("helvetica", "normal");
+        return y + lineHeight + 2;
+      };
+
+      // Helper function to add link with proper file type handling
+      const addLink = (text: string, url: string, x: number, y: number, fileType?: string, filename?: string) => {
+        if (!text || !url) {
+          return;
+        }
+        
+        const originalColor = pdf.getTextColor();
+        pdf.setTextColor(0, 102, 204); // Blue color for links
+        pdf.setFont("helvetica", "bold");
+        pdf.text(text, x, y);
+        
+        // Use our API route to serve files with proper headers
+        let enhancedUrl = url;
+        if (fileType && url && fileType !== 'link') {
+          // Try direct Cloudinary URL first with proper parameters
+          if (url.includes('cloudinary.com')) {
+            const separator = url.includes('?') ? '&' : '?';
+            switch (fileType) {
+              case 'pdf':
+                enhancedUrl = `${url}${separator}fl_attachment,f_pdf`;
+                break;
+              case 'video':
+                enhancedUrl = `${url}${separator}fl_attachment,f_mp4`;
+                break;
+              case 'audio':
+                enhancedUrl = `${url}${separator}fl_attachment,f_mp3`;
+                break;
+              case 'image':
+                enhancedUrl = `${url}${separator}fl_attachment,f_jpg`;
+                break;
+              default:
+                enhancedUrl = `${url}${separator}fl_attachment`;
+            }
+            // Using direct Cloudinary URL with proper parameters
+          } else {
+            // Fallback to our API route
+            const baseUrl = window.location.origin;
+            const apiUrl = `${baseUrl}/api/student/documents/${fileType}?url=${encodeURIComponent(url)}${filename ? `&filename=${encodeURIComponent(filename)}` : ''}`;
+            enhancedUrl = apiUrl;
+          }
+        } else if (fileType === 'link' && url) {
+          // For external links, ensure they have proper protocol
+          if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            enhancedUrl = `https://${url}`;
+          }
+        }
+        
+        pdf.link(x, y - 3, pdf.getTextWidth(text), 4, { url: enhancedUrl });
+        pdf.setTextColor(originalColor); // Reset to original color
+        pdf.setFont("helvetica", "normal");
+      };
+
+      // Helper function to check if we need a new page
+      const checkNewPage = (requiredHeight: number) => {
+        // Add some buffer space to prevent content from being too close to bottom
+        const bufferSpace = 30;
+        if (yPosition + requiredHeight > pageHeight - margin - bufferSpace) {
+          pdf.addPage();
+          yPosition = margin;
+          return true;
+        }
+        return false;
+      };
+
+      // Header Section
+      pdf.setFontSize(24);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(getFullName(student), pageWidth / 2, yPosition, { align: "center" });
+      yPosition += lineHeight;
+
+      pdf.setFontSize(12);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(student.email, pageWidth / 2, yPosition, { align: "center" });
+      yPosition += lineHeight;
+
+      pdf.setFontSize(10);
+      pdf.text(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, pageWidth / 2, yPosition, { align: "center" });
+      yPosition += sectionSpacing * 2;
+
+      // Personal Information Section
+      yPosition = addSectionHeader("Personal Information", yPosition);
+      
+      const personalInfo = [
+        { label: "Full Name", value: getFullName(student) },
+        { label: "Gender", value: student.gender },
+        { label: "Date of Birth", value: getDateOfBirth(student) },
+        { label: "Pincode", value: student.pincode },
+      ].filter(item => item.value && item.value.trim() !== "");
+
+      let personalCol1Y = yPosition;
+      let personalCol2Y = yPosition;
+
+      personalInfo.forEach((item, index) => {
+        const isCol1 = index % 2 === 0;
+        const currentY = isCol1 ? personalCol1Y : personalCol2Y;
+        const currentX = isCol1 ? col1X : col2X;
+
+        pdf.setFontSize(10);
+        pdf.setFont("helvetica", "bold");
+        pdf.text(item.label + ":", currentX, currentY);
+        
+        pdf.setFont("helvetica", "normal");
+        pdf.text(item.value || "Not provided", currentX + pdf.getTextWidth(item.label + ": ") + 2, currentY);
+
+        if (isCol1) {
+          personalCol1Y += lineHeight;
+        } else {
+          personalCol2Y += lineHeight;
+        }
       });
 
-      // Add the image to the PDF
-      const imgData = canvas.toDataURL("image/jpeg", 1.0);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pdfWidth;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      yPosition = Math.max(personalCol1Y, personalCol2Y) + sectionSpacing;
 
-      // If the image is taller than the page, split it into multiple pages
-      let heightLeft = imgHeight;
-      let position = 0;
-      let pageCount = 1;
+      // Contact Information Section
+      yPosition = addSectionHeader("Contact Information", yPosition);
+      
+      const contactInfo = [
+        { label: "Email", value: student.email, isLink: true },
+        { label: "Phone", value: student.phone || "Not provided" },
+        { label: "Alternative Phone", value: student.alternativePhone },
+        { label: "Current Location", value: student.currentCity && student.currentState ? `${student.currentCity}, ${student.currentState}` : "Not provided" },
+        { label: "Permanent Address", value: student.permanentAddress },
+        { label: "Portfolio", value: student.portfolioLink || student.onlinePresence?.portfolio, isLink: true },
+        { label: "Social Media", value: student.socialMediaLink || student.onlinePresence?.socialMedia, isLink: true },
+        { label: "LinkedIn", value: student.linkedIn || student.onlinePresence?.linkedin, isLink: true },
+        { label: "GitHub", value: student.onlinePresence?.github, isLink: true },
+        { label: "Alternative Email", value: student.settings?.alternativeEmail },
+      ].filter(item => item.value && item.value.trim() !== "");
 
-      // Add first page
-      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight;
+      let col1Y = yPosition;
+      let col2Y = yPosition;
 
-      // Add additional pages if needed
-      while (heightLeft > 0) {
-        position = -pdfHeight * pageCount;
-        pageCount++;
-        pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
+      contactInfo.forEach((item, index) => {
+        const isCol1 = index % 2 === 0;
+        const currentY = isCol1 ? col1Y : col2Y;
+        const currentX = isCol1 ? col1X : col2X;
+
+        pdf.setFontSize(10);
+        pdf.setFont("helvetica", "bold");
+        pdf.text(item.label + ":", currentX, currentY);
+        
+        pdf.setFont("helvetica", "normal");
+        if (item.isLink && item.value) {
+          // For external links, use the URL as is (it should already be absolute)
+          addLink(item.value, item.value, currentX + pdf.getTextWidth(item.label + ": ") + 2, currentY, "link", undefined);
+        } else {
+          pdf.text(item.value || "Not provided", currentX + pdf.getTextWidth(item.label + ": ") + 2, currentY);
+        }
+
+        if (isCol1) {
+          col1Y += lineHeight;
+        } else {
+          col2Y += lineHeight;
+        }
+      });
+
+      yPosition = Math.max(col1Y, col2Y) + sectionSpacing;
+
+      // Profile Summary Section
+      if (student.profileOutline) {
+        checkNewPage(lineHeight * 3);
+        yPosition = addSectionHeader("Profile Summary", yPosition);
+        const summaryHeight = addWrappedText(student.profileOutline, margin, yPosition, contentWidth);
+        yPosition += summaryHeight + sectionSpacing;
+      }
+
+      // Skills Section
+      if (student.skills && student.skills.length > 0) {
+        checkNewPage(lineHeight * 2);
+        yPosition = addSectionHeader("Skills", yPosition);
+        const skillsText = student.skills.join(", ");
+        const skillsHeight = addWrappedText(skillsText, margin, yPosition, contentWidth);
+        yPosition += skillsHeight + sectionSpacing;
+      }
+
+      // Professional Experience Summary Section
+      checkNewPage(lineHeight * 4);
+      yPosition = addSectionHeader("Professional Experience Summary", yPosition);
+      
+      const summaryItems = [
+        { label: "Total Experience", value: getTotalExperience(student) },
+        { label: "Current Salary", value: student.currentSalary || (experienceArray.length > 0 && experienceArray[0]?.currentSalary) || "Not specified" },
+        { label: "Expected Salary", value: student.expectedSalary || (experienceArray.length > 0 && experienceArray[0]?.expectedSalary) || "Not specified" },
+        { label: "Notice Period", value: student.noticePeriod || (experienceArray.length > 0 && experienceArray[0]?.noticePeriod) || "Not specified" },
+      ];
+
+      let summaryCol1Y = yPosition;
+      let summaryCol2Y = yPosition;
+      const summaryColWidth = contentWidth / 2 - 10;
+
+      summaryItems.forEach((item, index) => {
+        const isCol1 = index % 2 === 0;
+        const currentY = isCol1 ? summaryCol1Y : summaryCol2Y;
+        const currentX = isCol1 ? margin : margin + summaryColWidth + 20;
+
+        pdf.setFontSize(10);
+        pdf.setFont("helvetica", "bold");
+        pdf.text(item.label + ":", currentX, currentY);
+        
+        pdf.setFont("helvetica", "normal");
+        pdf.text(item.value, currentX + pdf.getTextWidth(item.label + ": ") + 2, currentY);
+
+        if (isCol1) {
+          summaryCol1Y += lineHeight;
+        } else {
+          summaryCol2Y += lineHeight;
+        }
+      });
+
+      yPosition = Math.max(summaryCol1Y, summaryCol2Y) + sectionSpacing;
+
+      // Shift Preference Section
+      if (student.shiftPreference || (student.settings?.shiftPreference && student.settings.shiftPreference !== "flexible")) {
+        checkNewPage(lineHeight * 3);
+        yPosition = addSectionHeader("Shift Preference", yPosition);
+        const shiftText = Array.isArray(student.shiftPreference) 
+          ? student.shiftPreference.join(", ")
+          : (student.shiftPreference || student.settings?.shiftPreference || "Flexible");
+        const shiftHeight = addWrappedText(shiftText, margin, yPosition, contentWidth);
+        yPosition += shiftHeight + sectionSpacing;
+      }
+
+      // Preferred Cities Section
+      if (preferredCities.length > 0) {
+        checkNewPage(lineHeight * 3);
+        yPosition = addSectionHeader("Preferred Cities (Max 5)", yPosition);
+        const citiesText = preferredCities.slice(0, 5).join(", ");
+        const citiesHeight = addWrappedText(citiesText, margin, yPosition, contentWidth);
+        yPosition += citiesHeight + sectionSpacing;
+      }
+
+      // Preferred Job Types Section
+      if (student.settings?.preferredJobTypes && student.settings.preferredJobTypes.length > 0) {
+        checkNewPage(lineHeight * 3);
+        yPosition = addSectionHeader("Preferred Job Types", yPosition);
+        const jobTypesText = student.settings.preferredJobTypes.join(", ");
+        const jobTypesHeight = addWrappedText(jobTypesText, margin, yPosition, contentWidth);
+        yPosition += jobTypesHeight + sectionSpacing;
+      }
+
+      // Preferred Locations Section
+      if (student.settings?.preferredLocations && student.settings.preferredLocations.length > 0) {
+        checkNewPage(lineHeight * 3);
+        yPosition = addSectionHeader("Preferred Locations", yPosition);
+        const locationsText = student.settings.preferredLocations.join(", ");
+        const locationsHeight = addWrappedText(locationsText, margin, yPosition, contentWidth);
+        yPosition += locationsHeight + sectionSpacing;
+      }
+
+
+
+      // Education Section
+      if (student.education && student.education.length > 0) {
+        checkNewPage(lineHeight * 6);
+        yPosition = addSectionHeader("Education", yPosition);
+        
+        student.education.forEach((edu) => {
+          if (!edu) return; // Skip if education entry is null/undefined
+          
+          checkNewPage(lineHeight * 6);
+          
+          pdf.setFontSize(12);
+          pdf.setFont("helvetica", "bold");
+          pdf.text(edu.degree || "Not specified", margin, yPosition);
+          yPosition += lineHeight;
+
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(10);
+          pdf.text(edu.institution || edu.school || "Not specified", margin, yPosition);
+          yPosition += lineHeight;
+
+          if (edu.level) {
+            pdf.text(`Level: ${edu.level}`, margin, yPosition);
+            yPosition += lineHeight;
+          }
+
+          if (edu.field) {
+            pdf.text(`Field of Study: ${edu.field}`, margin, yPosition);
+            yPosition += lineHeight;
+          }
+
+          pdf.text(`${edu.startingYear || "Not provided"} - ${edu.endingYear || "Present"}`, margin, yPosition);
+          yPosition += lineHeight;
+
+          if (edu.mode) {
+            pdf.text(`Mode: ${edu.mode}`, margin, yPosition);
+            yPosition += lineHeight;
+          }
+
+          if (edu.percentage || edu.grade) {
+            pdf.text(`Percentage/CGPA: ${edu.percentage || edu.grade}`, margin, yPosition);
+            yPosition += lineHeight;
+          }
+
+          yPosition += sectionSpacing;
+        });
+      }
+
+      // Current Employment Status Section
+      if (experienceArray.length > 0) {
+        const currentJob = experienceArray.find(exp => exp.currentlyWorking);
+        if (currentJob) {
+          checkNewPage(lineHeight * 4);
+          yPosition = addSectionHeader("Current Employment", yPosition);
+          pdf.setFontSize(12);
+          pdf.setFont("helvetica", "bold");
+          pdf.text(currentJob.title || "Not specified", margin, yPosition);
+          yPosition += lineHeight;
+          
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(10);
+          pdf.text(currentJob.companyName || "Not specified", margin, yPosition);
+          yPosition += lineHeight;
+          
+          if (currentJob.department) {
+            pdf.text(`Department: ${currentJob.department}`, margin, yPosition);
+            yPosition += lineHeight;
+          }
+          
+          yPosition += sectionSpacing;
+        }
+      }
+
+      // Work Experience Section
+      if (experienceArray.length > 0) {
+        checkNewPage(lineHeight * 6);
+        yPosition = addSectionHeader("Work Experience", yPosition);
+        
+        experienceArray.forEach((exp) => {
+          if (!exp) return; // Skip if experience entry is null/undefined
+          
+          checkNewPage(lineHeight * 8);
+          
+          pdf.setFontSize(12);
+          pdf.setFont("helvetica", "bold");
+          pdf.text(exp.title || "Not specified", margin, yPosition);
+          yPosition += lineHeight;
+
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(10);
+          pdf.text(exp.companyName || "Not specified", margin, yPosition);
+          yPosition += lineHeight;
+
+          if (exp.department) {
+            pdf.text(`Department: ${exp.department}`, margin, yPosition);
+            yPosition += lineHeight;
+          }
+
+          if (exp.location) {
+            pdf.text(exp.location, margin, yPosition);
+            yPosition += lineHeight;
+          }
+
+          if (exp.tenure) {
+            pdf.text(`Tenure: ${exp.tenure}`, margin, yPosition);
+            yPosition += lineHeight;
+          }
+
+          if (exp.professionalSummary || exp.summary) {
+            pdf.setFont("helvetica", "bold");
+            pdf.text("Professional Summary:", margin, yPosition);
+            yPosition += lineHeight;
+            
+            pdf.setFont("helvetica", "normal");
+            const summaryHeight = addWrappedText(exp.professionalSummary || exp.summary, margin, yPosition, contentWidth);
+            yPosition += summaryHeight;
+          }
+
+          yPosition += sectionSpacing;
+        });
+      }
+
+      // Certifications Section
+      if (student.certifications && Array.isArray(student.certifications) && student.certifications.length > 0) {
+        checkNewPage(lineHeight * 6);
+        yPosition = addSectionHeader("Certifications", yPosition);
+        
+        if (typeof student.certifications[0] === "string") {
+          // Simple string array
+          student.certifications.forEach((cert) => {
+            if (!cert) return; // Skip if certification is null/undefined
+            
+            checkNewPage(lineHeight * 2);
+            pdf.setFontSize(10);
+            pdf.text(`• ${cert}`, margin, yPosition);
+            yPosition += lineHeight;
+          });
+        } else {
+          // Object array with detailed information
+          (student.certifications as Array<{
+            name: string;
+            issuingOrganization: string;
+            issueDate: string;
+            expiryDate?: string;
+            credentialId?: string;
+            credentialUrl?: string;
+          }>).forEach((cert) => {
+            if (!cert) return; // Skip if certification is null/undefined
+            
+            checkNewPage(lineHeight * 3);
+            
+            pdf.setFontSize(12);
+            pdf.setFont("helvetica", "bold");
+            pdf.text(cert.name, margin, yPosition);
+            yPosition += lineHeight;
+
+            // Only show expiry date if it exists and is meaningful
+            if (cert.expiryDate && cert.expiryDate.trim() !== "" && cert.expiryDate !== "Not specified") {
+              pdf.setFont("helvetica", "normal");
+              pdf.setFontSize(10);
+              pdf.text(`Expiry Date: ${cert.expiryDate}`, margin, yPosition);
+              yPosition += lineHeight;
+            }
+
+            // Only show credential ID if it exists and is meaningful
+            if (cert.credentialId && cert.credentialId.trim() !== "" && cert.credentialId !== "Not specified") {
+              pdf.setFont("helvetica", "normal");
+              pdf.setFontSize(10);
+              pdf.text(`Credential ID: ${cert.credentialId}`, margin, yPosition);
+              yPosition += lineHeight;
+            }
+
+            // Only show credential URL if it exists and is meaningful
+            if (cert.credentialUrl && cert.credentialUrl.trim() !== "" && cert.credentialUrl !== "Not specified") {
+              pdf.setFont("helvetica", "normal");
+              pdf.setFontSize(10);
+              addLink("Verify Credential", cert.credentialUrl, margin, yPosition, "link", undefined);
+              yPosition += lineHeight;
+            }
+
+            yPosition += sectionSpacing;
+          });
+        }
+        yPosition += sectionSpacing;
+      }
+
+      // Available Assets Section
+      const availableAssets = getAvailableAssets(student);
+      if (availableAssets.length > 0) {
+        checkNewPage(lineHeight * (availableAssets.length + 2));
+        yPosition = addSectionHeader("Available Assets", yPosition);
+        
+        pdf.setTextColor(0, 0, 0); // Ensure black color
+        availableAssets.forEach((asset) => {
+          pdf.setFontSize(10);
+          pdf.text(`• ${asset}`, margin, yPosition);
+          yPosition += lineHeight;
+        });
+        yPosition += sectionSpacing;
+      }
+
+      // Identity Documents Section
+      const identityDocuments = getIdentityDocuments(student);
+      if (identityDocuments.length > 0) {
+        checkNewPage(lineHeight * (identityDocuments.length + 2));
+        yPosition = addSectionHeader("Identity Documents", yPosition);
+        
+        pdf.setTextColor(0, 0, 0); // Ensure black color
+        identityDocuments.forEach((doc) => {
+          pdf.setFontSize(10);
+          pdf.text(`• ${doc} - Verified`, margin, yPosition);
+          yPosition += lineHeight;
+        });
+        yPosition += sectionSpacing;
+      }
+
+      // Documents Section
+      checkNewPage(lineHeight * 8);
+      yPosition = addSectionHeader("Documents", yPosition);
+      
+      const documents = getDocuments(student);
+      const documentItems = [
+        { 
+          name: "Resume", 
+          url: documents.resume.url, 
+          fileType: "pdf", 
+          filename: documents.resume.filename || "resume.pdf",
+          uploadDate: documents.resume.uploadDate
+        },
+        { 
+          name: "Video Resume", 
+          url: documents.videoResume.url, 
+          fileType: "video", 
+          filename: documents.videoResume.filename || "video-resume.mp4",
+          uploadDate: documents.videoResume.uploadDate
+        },
+        { 
+          name: "Audio Bio", 
+          url: documents.audioBiodata.url, 
+          fileType: "audio", 
+          filename: documents.audioBiodata.filename || "audio-bio.mp3",
+          uploadDate: documents.audioBiodata.uploadDate
+        },
+        { 
+          name: "Profile Photo", 
+          url: documents.photograph.url, 
+          fileType: "image", 
+          filename: documents.photograph.name || "profile-photo.jpg",
+          uploadDate: documents.photograph.uploadDate
+        },
+        { 
+          name: "Portfolio", 
+          url: student.portfolioLink || student.onlinePresence?.portfolio, 
+          fileType: "link",
+          uploadDate: null
+        },
+      ];
+
+      documentItems.forEach((item) => {
+        pdf.setFontSize(10);
+        pdf.text(`${item.name}:`, margin, yPosition);
+        
+        if (item.url) {
+          addLink("View", item.url, margin + pdf.getTextWidth(`${item.name}: `) + 2, yPosition, item.fileType, item.filename);
+        } else {
+          pdf.text("Not uploaded", margin + pdf.getTextWidth(`${item.name}: `) + 2, yPosition);
+        }
+        yPosition += lineHeight;
+      });
+      yPosition += sectionSpacing;
+
+      // Cover Letter Section
+      if (student.coverLetter) {
+        checkNewPage(lineHeight * 4);
+        yPosition = addSectionHeader("Cover Letter", yPosition);
+        const coverLetterHeight = addWrappedText(student.coverLetter, margin, yPosition, contentWidth);
+        yPosition += coverLetterHeight + sectionSpacing;
+      }
+
+      // Additional Information Section
+      if (student.additionalInfo) {
+        checkNewPage(lineHeight * 4);
+        yPosition = addSectionHeader("Additional Information", yPosition);
+        const additionalInfoHeight = addWrappedText(student.additionalInfo, margin, yPosition, contentWidth);
+        yPosition += additionalInfoHeight + sectionSpacing;
+      }
+
+      // Footer - Add to current page if there's space, otherwise add to current page without forcing new page
+      const footerHeight = 20; // Space needed for footer
+      
+      // Check if we have enough space on current page for footer
+      if (yPosition + footerHeight > pageHeight - margin) {
+        // If not enough space, add footer to current page at bottom
+        pdf.setFontSize(10);
+        pdf.text(`This document was generated from the candidate profile on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, pageWidth / 2, pageHeight - 15, { align: "center" });
+        pdf.setFontSize(8);
+        pdf.text(`© ${new Date().getFullYear()} Oddiant Techlabs - All Rights Reserved`, pageWidth / 2, pageHeight - 10, { align: "center" });
+      } else {
+        // If enough space, add footer after current content
+        yPosition += sectionSpacing;
+        pdf.setFontSize(10);
+        pdf.text(`This document was generated from the candidate profile on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, pageWidth / 2, yPosition, { align: "center" });
+        yPosition += lineHeight;
+        pdf.setFontSize(8);
+        pdf.text(`© ${new Date().getFullYear()} Oddiant Techlabs - All Rights Reserved`, pageWidth / 2, yPosition, { align: "center" });
       }
 
       // Save the PDF
-      pdf.save(`${getFullName(student).replace(/\s+/g, "_")}_Resume.pdf`);
+      console.log("About to save PDF...");
+      
+      // Wrap pdf.save in a Promise to make it non-blocking
+      await new Promise<void>((resolve, reject) => {
+        try {
+          pdf.save(`${getFullName(student).replace(/\s+/g, "_")}_Resume.pdf`);
+          console.log("PDF saved successfully");
+          resolve();
+        } catch (error) {
+          console.error("Error saving PDF:", error);
+          reject(error);
+        }
+      });
 
-      // Clean up
-      document.body.removeChild(pdfContainer);
+      // Clear the timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
 
-      toast.dismiss();
+      console.log("Dismissing loading toast...");
+      // Try multiple approaches to dismiss the toast
+      if (loadingToast) {
+        toast.dismiss(loadingToast);
+      } else {
+        // Fallback: dismiss all toasts
+        toast.dismiss();
+      }
+      console.log("Showing success toast...");
       toast.success("PDF resume generated successfully");
     } catch (error) {
       console.error("Error generating PDF:", error);
-      toast.dismiss();
+      
+      // Clear the timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      console.log("Dismissing loading toast due to error...");
+      // Try multiple approaches to dismiss the toast
+      if (loadingToast) {
+        toast.dismiss(loadingToast);
+      } else {
+        // Fallback: dismiss all toasts
+        toast.dismiss();
+      }
       toast.error("Failed to generate PDF resume");
     } finally {
+      console.log("Finally block - setting isGeneratingPDF to false");
       setIsGeneratingPDF(false);
+      
+      // Force dismiss any remaining loading toast as a fallback
+      if (loadingToast) {
+        console.log("Force dismissing loading toast in finally block");
+        toast.dismiss(loadingToast);
+      } else {
+        // Fallback: dismiss all toasts
+        console.log("Force dismissing all toasts in finally block");
+        toast.dismiss();
+      }
     }
   };
 
@@ -3167,11 +3138,31 @@ export default function StudentDashboardPage() {
         {activeTab === "profile" && (
           <div>
             <Card>
-              <CardHeader>
-                <CardTitle>My Profile</CardTitle>
-                <CardDescription>
-                  View and manage your profile information
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>My Profile</CardTitle>
+                  <CardDescription>
+                    View and manage your profile information
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  className="flex items-center justify-center"
+                  onClick={handleExportToPDF}
+                  disabled={isGeneratingPDF}
+                >
+                  {isGeneratingPDF ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Generating PDF...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Export to PDF
+                    </>
+                  )}
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col md:flex-row gap-8">
@@ -3253,7 +3244,7 @@ export default function StudentDashboardPage() {
                       Edit Profile
                     </Button>
                     {(student.documents?.resume?.url || student.resumeUrl) && (
-                      <Button variant="outline" className="w-full mb-2" asChild>
+                      <Button variant="outline" className="w-full mb-2 text-black" asChild>
                         <a
                           href={
                             student.documents?.resume?.url || student.resumeUrl
@@ -3285,7 +3276,7 @@ export default function StudentDashboardPage() {
                     </Button>
                   </div>
 
-                  <div className="md:w-2/3" ref={pdfContentRef}>
+                  <div className="md:w-2/3 relative" ref={pdfContentRef}>
                     <div className="space-y-6">
                       <div>
                         <h4 className="text-sm font-medium text-gray-500 mb-1">

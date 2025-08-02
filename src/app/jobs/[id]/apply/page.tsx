@@ -1285,6 +1285,7 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
       "BSc Radiography",
       "BSc Radiotherapy",
       "BSW LLB",
+      "BTech",
       "BTech Cyber Security",
       "BV. Sc. in Animal Production & Management",
       "Cardiology",
