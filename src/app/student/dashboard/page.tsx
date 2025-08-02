@@ -2506,7 +2506,7 @@ export default function StudentDashboardPage() {
         )}
 
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Dashboard</h2>
+
           <Button
             variant="outline"
             onClick={handleRefresh}
@@ -4058,6 +4058,51 @@ export default function StudentDashboardPage() {
                         <p className="text-xs text-gray-500 mt-1">
                           You can use this email to sign in to your account
                         </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Password Settings */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-3">
+                      Password Settings
+                    </h4>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-sm font-medium">
+                            Change Password
+                          </Label>
+                          <p className="text-xs text-gray-500">
+                            Update your password to keep your account secure
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push("/student/change-password")}
+                        >
+                          Change Password
+                        </Button>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-sm font-medium">
+                            Forgot Password
+                          </Label>
+                          <p className="text-xs text-gray-500">
+                            Reset your password if you've forgotten it
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push("/student/forgot-password")}
+                        >
+                          Reset Password
+                        </Button>
                       </div>
                     </div>
                   </div>
