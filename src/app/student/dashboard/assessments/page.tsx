@@ -518,17 +518,6 @@ export default function StudentAssessmentDashboard() {
             <h1 className="text-xl font-semibold text-black">
               Candidate Dashboard
             </h1>
-
-            {/* Search Bar - RIGHT NEXT TO Candidate Dashboard text */}
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-              <Input
-                placeholder="Search Dashboard..."
-                className="pl-10 h-9 bg-gray-100 text-black w-full"
-                value={globalSearch}
-                onChange={(e) => setGlobalSearch(e.target.value)}
-              />
-            </div>
           </div>
 
           <div className="flex items-center space-x-4">
