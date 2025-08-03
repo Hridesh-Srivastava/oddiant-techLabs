@@ -2129,106 +2129,21 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
 
       <Toaster position="top-center" />
 
-      {/* Header */}
-      <header className="bg-black text-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+              {/* Header */}
+        <header className="bg-white text-black">
+          <div className="w-full px-6 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-semibold text-white">Employer Dashboard</h1>
-            <div className="relative w-64 ml-4">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search dashboard..."
-                className="pl-8 bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-blue-500"
-                value={globalSearchTerm}
-                onChange={(e) => setGlobalSearchTerm(e.target.value)}
-              />
-              {showSearchResults && (
-                <div className="absolute z-50 mt-1 w-full bg-white rounded-md shadow-lg border border-gray-200">
-                  <div className="p-2">
-                    {searchResults.candidates.length === 0 &&
-                    searchResults.jobs.length === 0 &&
-                    searchResults.interviews.length === 0 ? (
-                      <p className="text-sm text-gray-500 p-2">No results found</p>
-                    ) : (
-                      <>
-                        {searchResults.candidates.length > 0 && (
-                          <div className="mb-2">
-                            <h3 className="text-xs font-semibold text-gray-500 mb-1 px-2">
-                              Candidates
-                            </h3>
-                            {searchResults.candidates.slice(0, 3).map((candidate) => (
-                              <div
-                                key={candidate._id}
-                                className="px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer"
-                                onClick={() => handleSearchResultClick("candidate", candidate._id)}
-                              >
-                                <p className="text-sm font-medium">{candidate.name}</p>
-                                <p className="text-xs text-gray-500">{candidate.email}</p>
-                              </div>
-                            ))}
-                            {searchResults.candidates.length > 3 && (
-                              <p className="text-xs text-blue-500 px-2 pt-1">
-                                +{searchResults.candidates.length - 3} more candidates
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {searchResults.jobs.length > 0 && (
-                          <div className="mb-2">
-                            <h3 className="text-xs font-semibold text-gray-500 mb-1 px-2">Jobs</h3>
-                            {searchResults.jobs.slice(0, 3).map((job) => (
-                              <div
-                                key={job._id}
-                                className="px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer"
-                                onClick={() => handleSearchResultClick("job", job._id)}
-                              >
-                                <p className="text-sm font-medium">{job.jobTitle}</p>
-                                <p className="text-xs text-gray-500">
-                                  {job.department} • {job.jobLocation}
-                                </p>
-                              </div>
-                            ))}
-                            {searchResults.jobs.length > 3 && (
-                              <p className="text-xs text-blue-500 px-2 pt-1">
-                                +{searchResults.jobs.length - 3} more jobs
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {searchResults.interviews.length > 0 && (
-                          <div>
-                            <h3 className="text-xs font-semibold text-gray-500 mb-1 px-2">
-                              Interviews
-                            </h3>
-                            {searchResults.interviews.slice(0, 3).map((interview) => (
-                              <div
-                                key={interview._id}
-                                className="px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer"
-                                onClick={() => handleSearchResultClick("interview", interview._id)}
-                              >
-                                <p className="text-sm font-medium">{interview.candidate.name}</p>
-                                <p className="text-xs text-gray-500">
-                                  {interview.position} • {interview.date}
-                                </p>
-                              </div>
-                            ))}
-                            {searchResults.interviews.length > 3 && (
-                              <p className="text-xs text-blue-500 px-2 pt-1">
-                                +{searchResults.interviews.length - 3} more interviews
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+            <h1 className="text-xl font-semibold">Employer Dashboard</h1>
           </div>
+          
+          {/* Right side - Welcome message and logout button */}
           <div className="flex items-center space-x-4">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={employee.avatar} alt={`${employee.firstName} ${employee.lastName}`} />
+              <AvatarFallback className="bg-gray-200 text-gray-600 text-sm font-medium">
+                {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
             <span className="text-sm">
               Welcome, {employee.firstName} {employee.lastName}
             </span>
@@ -2236,7 +2151,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="text-black bg-blue-400 border-white hover:white"
+              className="text-white bg-black border-black hover:bg-green-600 hover:text-black"
             >
               <LogOut className="h-4 w-4 mr-2" />
               Logout
@@ -2288,7 +2203,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
             size="sm"
             onClick={() => refreshData(true)}
             disabled={isRefreshing}
-            className="flex items-center gap-2 bg-green-700 text-white"
+            className="flex items-center gap-2 bg-black text-white hover:text-black hover:bg-green-600"
           >
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
             {isRefreshing ? "Refreshing..." : "Refresh Data"}
@@ -2393,7 +2308,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                   <div className="mt-4 flex justify-center">
                     <Button
                       variant="outline"
-                      className="bg-blue-500 text-white hover:bg-blue-600"
+                      className="bg-black text-white hover:bg-green-600 hover:text-black"
                       onClick={() => setActiveTab("settings")}
                     >
                       <UserCog className="h-4 w-4 mr-2" />
@@ -2464,7 +2379,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                     {candidates.length > 0 && (
                       <Button
                         variant="outline"
-                        className="w-full mt-2 bg-blue-500 text-white"
+                        className="w-full mt-2 bg-black text-white hover:text-black hover:bg-green-600"
                         onClick={() => setActiveTab("candidates")}
                       >
                         <Users className="h-4 w-4 mr-2" />
@@ -2507,7 +2422,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="bg-black text-white"
+                                className="bg-black text-white hover:text-black hover:bg-green-600"
                                 onClick={() => router.push(`/employee/jobs/${job._id}`)}
                               >
                                 View
@@ -2515,7 +2430,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="bg-black text-white"
+                                className="bg-black text-white hover:text-black hover:bg-green-600"
                                 onClick={() => router.push(`/employee/jobs/${job._id}/edit`)}
                               >
                                 Edit
@@ -2526,7 +2441,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                       ))}
                       <Button
                         variant="outline"
-                        className="w-full bg-blue-500 text-white"
+                        className="w-full bg-black text-white hover:text-black hover:bg-green-600"
                         onClick={() => setActiveTab("jobs")}
                       >
                         <Briefcase className="h-4 w-4 mr-2" />
@@ -2570,7 +2485,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
 
                     <Button
                       variant="outline"
-                      className="w-full bg-blue-500 text-white"
+                      className="w-full bg-black text-white hover:text-black hover:bg-green-600"
                       onClick={() => setActiveTab("interviews")}
                     >
                       <Calendar className="h-4 w-4 mr-2" />
@@ -2601,7 +2516,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                       <Download className="h-4 w-4 mr-1" />
                       {isExporting ? "Exporting..." : "Export Selected"}
                     </Button>
-                    <Button onClick={() => router.push("/employee/candidates/add")}>
+                    <Button onClick={() => router.push("/employee/candidates/add")} className="bg-black text-white hover:text-black hover:bg-green-600">
                       <PlusCircle className="h-4 w-4 mr-2" />
                       Add Candidate
                     </Button>
@@ -2688,7 +2603,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="bg-black text-white"
+                              className="bg-black text-white hover:text-black hover:bg-green-600"
                               onClick={() => router.push(`/employee/candidates/${candidate._id}`)}
                             >
                               View
@@ -2696,7 +2611,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="text-white bg-black"
+                              className="bg-black text-white hover:text-black hover:bg-blue-600"
                               onClick={() => router.push(`/employee/candidates/${candidate._id}/contact`)}
                             >
                               <Send className="h-4 w-4 mr-1" />
@@ -2747,7 +2662,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                     <CardTitle>Job Postings</CardTitle>
                     <CardDescription>Manage your active and closed job postings</CardDescription>
                   </div>
-                  <Button onClick={() => router.push("/employee/jobs/add")}>
+                  <Button onClick={() => router.push("/employee/jobs/add")} className="bg-black text-white hover:text-black hover:bg-green-600">
                     <PlusCircle className="h-4 w-4 mr-2" />
                     Add New Job
                   </Button>
@@ -2786,7 +2701,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="bg-black text-white"
+                                className="bg-black text-white hover:text-black hover:bg-green-600"
                                 onClick={() => router.push(`/employee/jobs/${job._id}`)}
                               >
                                 View
@@ -2794,7 +2709,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="bg-black text-white"
+                                className="bg-black text-white hover:text-black hover:bg-green-600"
                                 onClick={() => router.push(`/employee/jobs/${job._id}/edit`)}
                               >
                                 Edit
@@ -2827,7 +2742,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                   </div>
                   <Button
                     onClick={() => router.push("/employee/interviews/schedule")}
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-black text-white hover:text-black hover:bg-green-600"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Schedule Interview
@@ -2840,7 +2755,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                   <div>
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-xl font-semibold">Today's Interviews</h3>
-                      <Button variant="outline" onClick={() => refreshData(true)} disabled={isRefreshing}>
+                      <Button variant="outline" onClick={() => refreshData(true)} disabled={isRefreshing} className="bg-black text-white hover:text-black hover:bg-green-600">
                         {isRefreshing ? (
                           <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                         ) : (
@@ -3122,7 +3037,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                     </div>
                   </div>
                   {emailError && <p className="text-red-500 text-sm mt-1">{emailError}</p>}
-                  <Button onClick={handleSavePersonalInfo} disabled={isUpdatingProfile}>
+                  <Button onClick={handleSavePersonalInfo} disabled={isUpdatingProfile} className="bg-black text-white hover:text-black hover:bg-green-600">
                     {isUpdatingProfile ? (
                       <>
                         <div className="animate-spin mr-2 h-4 w-4 border-2 border-t-transparent border-white rounded-full"></div>
@@ -3189,7 +3104,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                       />
                     </div>
                   </div>
-                  <Button onClick={handleUpdatePassword} disabled={isUpdatingPassword}>
+                  <Button onClick={handleUpdatePassword} disabled={isUpdatingPassword} className="bg-black text-white hover:text-black hover:bg-green-600">
                     {isUpdatingPassword ? (
                       <>
                         <div className="animate-spin mr-2 h-4 w-4 border-2 border-t-transparent border-white rounded-full"></div>
@@ -3272,7 +3187,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                       </div>
                     </div>
                   </div>
-                  <Button onClick={handleSaveNotificationSettings} disabled={isUpdatingNotifications}>
+                  <Button onClick={handleSaveNotificationSettings} disabled={isUpdatingNotifications} className="bg-black text-white hover:text-black hover:bg-green-600">
                     {isUpdatingNotifications ? (
                       <>
                         <div className="animate-spin mr-2 h-4 w-4 border-2 border-t-transparent border-white rounded-full"></div>
