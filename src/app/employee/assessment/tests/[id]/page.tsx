@@ -910,7 +910,7 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button onClick={() => router.push(`/employee/assessment/tests/${testId}/edit`)}>
+          <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => router.push(`/employee/assessment/tests/${testId}/edit`)}>
             <Edit className="h-4 w-4 mr-2" />
             Edit Test
           </Button>
@@ -1195,7 +1195,7 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
                       <div className="pt-2">
                         <Button
                           variant="outline"
-                          className="w-full"
+                          className="w-full bg-black text-white hover:text-black hover:bg-green-600"
                           onClick={() => router.push(`/employee/assessment/invitations?testId=${testId}`)}
                         >
                           <Send className="h-4 w-4 mr-2" />
@@ -1217,7 +1217,7 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
                 <CardTitle>Candidates</CardTitle>
                 <CardDescription>Candidates who have been invited to take this test</CardDescription>
               </div>
-              <Button onClick={() => router.push(`/employee/assessment/invitations?testId=${testId}`)}>
+              <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => router.push(`/employee/assessment/invitations?testId=${testId}`)}>
                 <Send className="h-4 w-4 mr-2" />
                 Invite Candidates
               </Button>
@@ -1264,7 +1264,7 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
                               <td className="py-3 px-4">
                                 <div className="flex gap-2">
                                   {/* View candidate details */}
-                                  <Button variant="outline" size="sm" asChild>
+                                  <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" asChild>
                                     <Link href={`/employee/assessment/candidates?email=${candidate.email}`}>
                                       <Eye className="h-4 w-4 mr-2" />
                                       View
@@ -1316,7 +1316,7 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
                   <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-lg font-medium mb-2">No candidates yet</h3>
                   <p className="text-muted-foreground mb-4">Invite candidates to take this test</p>
-                  <Button onClick={() => router.push(`/employee/assessment/invitations?testId=${testId}`)}>
+                  <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => router.push(`/employee/assessment/invitations?testId=${testId}`)}>
                     <Send className="h-4 w-4 mr-2" />
                     Invite Candidates
                   </Button>
@@ -1334,7 +1334,7 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
                 <CardDescription>Results from candidates who have completed this test</CardDescription>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={handleExportResults}>
+                <Button className="bg-green-600 text-white" variant="outline" onClick={handleExportResults}>
                   <Download className="h-4 w-4 mr-2" />
                   Export Results
                 </Button>
@@ -1404,7 +1404,7 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
                               </td>
                               <td className="py-3 px-4">
                                 <div className="flex gap-2">
-                                  <Button variant="outline" size="sm" asChild>
+                                  <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" asChild>
                                     <Link href={`/employee/assessment/results/${result._id}`}>View</Link>
                                   </Button>
                                   {!result.resultsDeclared && (
@@ -1456,7 +1456,7 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
                   <p className="text-muted-foreground mb-4">
                     No candidates have completed this test yet. Invite candidates to take the test.
                   </p>
-                  <Button onClick={() => router.push(`/employee/assessment/invitations?testId=${testId}`)}>
+                  <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => router.push(`/employee/assessment/invitations?testId=${testId}`)}>
                     <Send className="h-4 w-4 mr-2" />
                     Invite Candidates
                   </Button>

@@ -447,7 +447,7 @@ export default function InviteCandidateToJobsPage({
                             <Button
                               onClick={() => handleInviteToJob(job._id)}
                               disabled={invitingJobs.has(job._id) || job.status !== "open"}
-                              className="min-w-[120px]"
+                              className="min-w-[120px] bg-black text-white hover:text-black hover:bg-green-600"
                             >
                               {invitingJobs.has(job._id) ? (
                                 <>
