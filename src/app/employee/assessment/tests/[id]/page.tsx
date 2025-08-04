@@ -50,6 +50,34 @@ import {
 import ReactMarkdown from "react-markdown"
 import rehypeRaw from "rehype-raw"
 
+// Helper function to construct full name from name components
+function constructFullName(student: any, fallbackName?: string): string {
+  // If we have proper name components, construct the full name
+  if (student.salutation || student.firstName || student.middleName || student.lastName) {
+    const nameParts = [
+      student.salutation,
+      student.firstName,
+      student.middleName,
+      student.lastName
+    ].filter(Boolean); // Remove empty/undefined values
+    
+    if (nameParts.length > 0) {
+      return nameParts.join(" ");
+    }
+  }
+  
+  // Fallback to existing name fields
+  if (student.name) return student.name;
+  if (student.firstName) return student.firstName;
+  if (student.candidateName) return student.candidateName;
+  
+  // Final fallback to email prefix
+  if (student.email) return student.email.split("@")[0];
+  
+  // Last resort fallback
+  return fallbackName || "Unknown";
+}
+
 interface TestData {
   _id: string
   name: string
@@ -313,7 +341,7 @@ export default function TestDetailsPage() {
 
             candidateMap.set(email, {
               _id: `invitation-${invitation._id}`,
-              name: invitation.candidateName || email.split("@")[0],
+              name: constructFullName(invitation, invitation.candidateName || email.split("@")[0]),
               email,
               status: candidateStatus,
               score: 0,
@@ -345,7 +373,7 @@ export default function TestDetailsPage() {
             // If candidate not found in invitations, add from result
             candidateMap.set(email, {
               _id: result._id,
-              name: result.candidateName || email.split("@")[0],
+              name: constructFullName(result, result.candidateName || email.split("@")[0]),
               email,
               status: result.resultsDeclared ? result.status : "Completed",
               score: result.score,
@@ -366,11 +394,22 @@ export default function TestDetailsPage() {
       });
       if (res.ok) {
         const { students } = await res.json();
+        
+        // Update existing candidates with proper names from student data
+        for (const student of students) {
+          if (candidateMap.has(student.email)) {
+            const candidateData = candidateMap.get(student.email);
+            // Update the name with proper full name construction
+            candidateData.name = constructFullName(student, candidateData.name);
+          }
+        }
+        
+        // Add new students if not already present
         for (const student of students) {
           if (!candidateMap.has(student.email)) {
             candidateMap.set(student.email, {
               _id: student._id,
-              name: student.firstName || student.name || student.email.split("@")[0],
+              name: constructFullName(student),
               email: student.email,
               status: "Student",
               score: null,

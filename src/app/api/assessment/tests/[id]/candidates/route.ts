@@ -3,6 +3,34 @@ import { connectToDatabase } from "@/lib/mongodb"
 import { getUserFromRequest } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 
+// Helper function to construct full name from name components
+function constructFullName(student: any, fallbackName?: string): string {
+  // If we have proper name components, construct the full name
+  if (student.salutation || student.firstName || student.middleName || student.lastName) {
+    const nameParts = [
+      student.salutation,
+      student.firstName,
+      student.middleName,
+      student.lastName
+    ].filter(Boolean); // Remove empty/undefined values
+    
+    if (nameParts.length > 0) {
+      return nameParts.join(" ");
+    }
+  }
+  
+  // Fallback to existing name fields
+  if (student.name) return student.name;
+  if (student.firstName) return student.firstName;
+  if (student.candidateName) return student.candidateName;
+  
+  // Final fallback to email prefix
+  if (student.email) return student.email.split("@")[0];
+  
+  // Last resort fallback
+  return fallbackName || "Unknown";
+}
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Get user ID from request
@@ -53,7 +81,7 @@ const  testId = param.id
         // Initialize candidate data
         candidateMap.set(email, {
           email,
-          name: invitation.candidateName || email.split("@")[0],
+          name: constructFullName(invitation, invitation.candidateName || email.split("@")[0]),
           testsAssigned: 0,
           testsCompleted: 0,
           totalScore: 0,
@@ -137,7 +165,7 @@ const  testId = param.id
 
         candidateMap.set(email, {
           email,
-          name: result.candidateName || email.split("@")[0],
+          name: constructFullName(result, result.candidateName || email.split("@")[0]),
           testsAssigned: 1,
           testsCompleted: 1,
           totalScore: result.score || 0,
@@ -161,12 +189,21 @@ const  testId = param.id
       .find({ email: { $in: candidateEmails } })
       .toArray();
 
+    // Update existing candidates with proper names from student data
+    for (const student of students) {
+      if (candidateMap.has(student.email)) {
+        const candidateData = candidateMap.get(student.email);
+        // Update the name with proper full name construction
+        candidateData.name = constructFullName(student, candidateData.name);
+      }
+    }
+
     // Merge students into candidateMap if not already present
     for (const student of students) {
       if (!candidateMap.has(student.email)) {
         candidateMap.set(student.email, {
           email: student.email,
-          name: student.firstName || student.name || student.email.split("@")[0],
+          name: constructFullName(student),
           testsAssigned: 0,
           testsCompleted: 0,
           totalScore: 0,
