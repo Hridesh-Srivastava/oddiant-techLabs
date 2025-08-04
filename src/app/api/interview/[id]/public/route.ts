@@ -43,14 +43,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       console.error("Error fetching candidate:", error)
     }
 
-    // Get employee details for contact info
+    // Get employer details for contact info
     let employee = null
     try {
       if (interview.employeeId) {
         employee = await db.collection("employees").findOne({ _id: new ObjectId(interview.employeeId) })
       }
     } catch (error) {
-      console.error("Error fetching employee:", error)
+      console.error("Error fetching employer:", error)
     }
 
     // Format candidate information

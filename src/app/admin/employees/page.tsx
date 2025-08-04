@@ -61,13 +61,13 @@ export default function AdminEmployeesPage() {
         toast.error("Received invalid data format from server")
       }
     } catch (error: any) {
-      console.error("Failed to fetch employees:", error)
-      setError(error.message || "Failed to fetch employees")
+      console.error("Failed to fetch employers:", error)
+      setError(error.message || "Failed to fetch employers")
 
       if (error.message.includes("401")) {
         toast.error("Authentication failed. Please log in again.")
       } else {
-        toast.error("Failed to fetch employees")
+        toast.error("Failed to fetch employers")
       }
       setEmployees([])
     } finally {
@@ -114,9 +114,13 @@ export default function AdminEmployeesPage() {
         const fullName = `${employee.firstName || ""} ${employee.lastName || ""}`.toLowerCase()
         const email = employee.email?.toLowerCase() || ""
         const companyName = employee.companyName?.toLowerCase() || ""
+        const employeeId = employee._id?.toLowerCase() || ""
 
         const matchesSearchTerm =
-          fullName.includes(searchTermLower) || email.includes(searchTermLower) || companyName.includes(searchTermLower)
+          fullName.includes(searchTermLower) || 
+          email.includes(searchTermLower) || 
+          companyName.includes(searchTermLower) ||
+          employeeId.includes(searchTermLower)
 
         let matchesFilter = true
         if (filter !== "all") {
@@ -202,7 +206,7 @@ export default function AdminEmployeesPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-black" />
             <Input
               type="search"
-              placeholder="Search by name, email, or company..."
+              placeholder="Search by name, email, company, or employer ID..."
               className="pl-10 bg-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -236,7 +240,7 @@ export default function AdminEmployeesPage() {
       ) : error ? (
         <div className="text-center py-10 bg-red-50 rounded-lg border border-red-200">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-700 font-medium">Error loading employees</p>
+          <p className="text-red-700 font-medium">Error loading employers</p>
           <p className="text-red-600 text-sm mt-1">{error}</p>
           <Button onClick={handleRefresh} className="mt-4" variant="outline">
             Try Again
@@ -244,7 +248,7 @@ export default function AdminEmployeesPage() {
         </div>
       ) : filteredEmployees.length === 0 ? (
         <div className="text-center py-10 bg-gray-50 rounded-lg">
-          <p className="text-gray-500">No employees found matching your criteria</p>
+          <p className="text-gray-500">No employers found matching your criteria</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -253,6 +257,9 @@ export default function AdminEmployeesPage() {
               <tr>
                 <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Name
+                </th>
+                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  Employer ID
                 </th>
                 <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Email
@@ -279,6 +286,9 @@ export default function AdminEmployeesPage() {
                         </p>
                       </div>
                     </div>
+                  </td>
+                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                    <p className="text-gray-900 whitespace-no-wrap font-mono text-xs">{employee._id}</p>
                   </td>
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                     <p className="text-gray-900 whitespace-no-wrap">{employee.email || ""}</p>

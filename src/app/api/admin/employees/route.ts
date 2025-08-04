@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs"
 
 export async function GET(request: NextRequest) {
   try {
-    console.log("Admin employees route called")
+    console.log("Admin employers route called")
 
     // Get user ID and type from request
     const userId = await getUserFromRequest(request)
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     // Connect to database
     const { db } = await connectToDatabase()
 
-    console.log("Fetching employees...")
+    console.log("Fetching employers...")
 
     // Get all employees
     const employees = await db.collection("employees").find({}).sort({ createdAt: -1 }).toArray()
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       },
     )
   } catch (error) {
-    console.error("Error fetching employees:", error)
-    return NextResponse.json({ success: false, message: "Failed to fetch employees" }, { status: 500 })
+    console.error("Error fetching employers:", error)
+    return NextResponse.json({ success: false, message: "Failed to fetch employers" }, { status: 500 })
   }
 }

@@ -68,11 +68,11 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     // Connect to database
     const { db } = await connectToDatabase()
 
-    // Get employee details for the comment
+    // Get employer details for the comment
     const employee = await db.collection("employees").findOne({ _id: new ObjectId(userId) })
     const employeeName = employee
       ? `${employee.firstName || ""} ${employee.lastName || ""}`.trim() || employee.email
-      : "Unknown Employee"
+      : "Unknown Employer"
 
     // Create a new comment object
     const newComment = {

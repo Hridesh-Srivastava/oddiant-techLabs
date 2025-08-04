@@ -214,7 +214,7 @@ The Oddiant Techlabs Team`,
       return NextResponse.json({ success: false, message: "Invalid action" }, { status: 400 })
     }
   } catch (error) {
-    console.error("Error in employee verification:", error)
+    console.error("Error in employer verification:", error)
     return NextResponse.json({ success: false, message: "Verification failed. Please try again." }, { status: 500 })
   }
 }

@@ -8,7 +8,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     const { id: employeeId } = await context.params
 
     if (!employeeId) {
-      return NextResponse.json({ success: false, message: "Employee ID is required" }, { status: 400 })
+      return NextResponse.json({ success: false, message: "Employer ID is required" }, { status: 400 })
     }
 
     // Connect to database
@@ -19,12 +19,12 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     try {
       employee = await db.collection("employees").findOne({ _id: new ObjectId(employeeId) })
     } catch (error) {
-      console.error("Error finding employee by ID:", error)
-      return NextResponse.json({ success: false, message: "Invalid employee ID format" }, { status: 400 })
+      console.error("Error finding employer by ID:", error)
+      return NextResponse.json({ success: false, message: "Invalid employer ID format" }, { status: 400 })
     }
 
     if (!employee) {
-      return NextResponse.json({ success: false, message: "Employee not found" }, { status: 404 })
+      return NextResponse.json({ success: false, message: "Employer not found" }, { status: 404 })
     }
 
     // Remove sensitive information
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       },
     )
   } catch (error) {
-    console.error("Error fetching employee:", error)
-    return NextResponse.json({ success: false, message: "Failed to fetch employee" }, { status: 500 })
+    console.error("Error fetching employer:", error)
+    return NextResponse.json({ success: false, message: "Failed to fetch employer" }, { status: 500 })
   }
 }

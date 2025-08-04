@@ -34,11 +34,11 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       return NextResponse.json({ success: false, message: "Result has already been declared" }, { status: 400 })
     }
 
-    // Get employee details
+    // Get employer details
     const employee = await db.collection("employees").findOne({ _id: new ObjectId(userId) })
 
     if (!employee) {
-      return NextResponse.json({ success: false, message: "Employee not found" }, { status: 404 })
+      return NextResponse.json({ success: false, message: "Employer not found" }, { status: 404 })
     }
 
     // Get test details

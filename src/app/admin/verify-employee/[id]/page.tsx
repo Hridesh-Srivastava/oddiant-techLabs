@@ -83,7 +83,7 @@ export default function VerifyEmployeePage() {
     const fetchEmployeeData = async () => {
       try {
         setError(null)
-        console.log("Fetching employee data for ID:", employeeId)
+        console.log("Fetching employer data for ID:", employeeId)
 
         const response = await fetch(`/api/admin/employee/${employeeId}`, {
           method: "GET",
@@ -96,7 +96,7 @@ export default function VerifyEmployeePage() {
           credentials: "include",
         })
 
-        console.log("Employee fetch response status:", response.status)
+        console.log("Employer fetch response status:", response.status)
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ message: "Unknown error" }))
@@ -104,7 +104,7 @@ export default function VerifyEmployeePage() {
         }
 
         const data = await response.json()
-        console.log("Employee data received:", data)
+        console.log("Employer data received:", data)
 
         if (data.success && data.employee) {
           setEmployee(data.employee)
@@ -113,8 +113,8 @@ export default function VerifyEmployeePage() {
           throw new Error("Invalid response format")
         }
       } catch (error: any) {
-        console.error("Error loading employee data:", error)
-        setError(error.message || "Failed to load employee data")
+        console.error("Error loading employer data:", error)
+        setError(error.message || "Failed to load employer data")
 
         // Show specific error messages
         if (error.message.includes("401")) {
@@ -122,9 +122,9 @@ export default function VerifyEmployeePage() {
         } else if (error.message.includes("403")) {
           toast.error("Access denied. Admin privileges required.")
         } else if (error.message.includes("404")) {
-          toast.error("Employee not found.")
+          toast.error("Employer not found.")
         } else {
-          toast.error(`Error loading employee: ${error.message}`)
+          toast.error(`Error loading employer: ${error.message}`)
         }
       } finally {
         setIsLoading(false)
@@ -153,12 +153,12 @@ export default function VerifyEmployeePage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "Unknown error" }))
-        throw new Error(errorData.message || "Failed to verify employee")
+        throw new Error(errorData.message || "Failed to verify employer")
       }
 
-      toast.success("Employee verified successfully")
+      toast.success("Employer verified successfully")
 
-      // Update employee state
+      // Update employer state
       if (employee) {
         setEmployee({
           ...employee,
@@ -170,14 +170,14 @@ export default function VerifyEmployeePage() {
       setTimeout(() => {
         if (isEmailAccess) {
           // For email access, show success message and stay on page
-          toast.success("Employee has been approved successfully!")
+          toast.success("Employer has been approved successfully!")
         } else {
           router.push("/admin/employees")
         }
       }, 2000)
     } catch (error: any) {
-      console.error("Error verifying employee:", error)
-      toast.error(`Failed to verify employee: ${error.message}`)
+      console.error("Error verifying employer:", error)
+      toast.error(`Failed to verify employer: ${error.message}`)
     } finally {
       setIsProcessing(false)
     }
@@ -200,20 +200,20 @@ export default function VerifyEmployeePage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "Unknown error" }))
-        throw new Error(errorData.message || "Failed to delete employee")
+        throw new Error(errorData.message || "Failed to delete employer")
       }
 
-      toast.success("Employee deleted successfully")
+      toast.success("Employer deleted successfully")
       setTimeout(() => {
         if (isEmailAccess) {
-          toast.success("Employee has been deleted successfully!")
+          toast.success("Employer has been deleted successfully!")
         } else {
           router.push("/admin/employees")
         }
       }, 2000)
     } catch (error: any) {
-      console.error("Error deleting employee:", error)
-      toast.error(`Failed to delete employee: ${error.message}`)
+      console.error("Error deleting employer:", error)
+      toast.error(`Failed to delete employer: ${error.message}`)
     } finally {
       setIsProcessing(false)
       setIsDeleteDialogOpen(false)
@@ -253,7 +253,7 @@ export default function VerifyEmployeePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-red-600">
               <AlertCircle className="h-5 w-5" />
-              Error Loading Employee
+              Error Loading Employer
             </CardTitle>
             <CardDescription>{error}</CardDescription>
           </CardHeader>
@@ -275,8 +275,8 @@ export default function VerifyEmployeePage() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Employee Not Found</CardTitle>
-            <CardDescription>The employee you are looking for does not exist or has been removed.</CardDescription>
+            <CardTitle>Employer Not Found</CardTitle>
+            <CardDescription>The employer you are looking for does not exist or has been removed.</CardDescription>
           </CardHeader>
           <CardFooter>
             <Button onClick={handleBackToEmployees} className="w-full">
@@ -300,7 +300,7 @@ export default function VerifyEmployeePage() {
           {isEmailAccess && (
             <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
               <p className="text-sm text-blue-700">
-                📧 You are accessing this page through an email link. Actions will be processed automatically.
+                 You are accessing this page through an email link. Actions will be processed automatically.
               </p>
             </div>
           )}
@@ -339,6 +339,12 @@ export default function VerifyEmployeePage() {
                     <p className="text-sm font-medium text-gray-500">Full Name</p>
                     <p className="text-gray-900">
                       {employee.firstName} {employee.middleName} {employee.lastName}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Employer ID</p>
+                    <p className="text-gray-900 font-mono text-sm">
+                      {employee._id}
                     </p>
                   </div>
                   <div>
@@ -575,7 +581,7 @@ export default function VerifyEmployeePage() {
               className="bg-green-600 hover:bg-green-700"
             >
               <CheckCircle className="mr-2 h-4 w-4" />
-              {isProcessing ? "Processing..." : employee.verified ? "Already Approved" : "Approve Employee"}
+              {isProcessing ? "Processing..." : employee.verified ? "Already Approved" : "Approve Employer"}
             </Button>
           </CardFooter>
         </Card>
@@ -585,9 +591,9 @@ export default function VerifyEmployeePage() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to delete this employee?</AlertDialogTitle>
+            <AlertDialogTitle>Are you sure you want to delete this employer?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the employee account and all associated data
+              This action cannot be undone. This will permanently delete the employer account and all associated data
               from the database.
             </AlertDialogDescription>
           </AlertDialogHeader>

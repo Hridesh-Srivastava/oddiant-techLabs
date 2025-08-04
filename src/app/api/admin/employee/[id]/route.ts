@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs"
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    console.log("Admin employee detail route called")
+    console.log("Admin employer detail route called")
 
     // Get user ID and type from request
     const userId = await getUserFromRequest(request)
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id: employeeId } = await params
 
     if (!employeeId) {
-      return NextResponse.json({ success: false, message: "Employee ID is required" }, { status: 400 })
+      return NextResponse.json({ success: false, message: "Employer ID is required" }, { status: 400 })
     }
 
     const { db } = await connectToDatabase()
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const employee = await db.collection("employees").findOne({ _id: new ObjectId(employeeId) })
 
     if (!employee) {
-      return NextResponse.json({ success: false, message: "Employee not found" }, { status: 404 })
+      return NextResponse.json({ success: false, message: "Employer not found" }, { status: 404 })
     }
 
     const { password, ...employeeData } = employee
@@ -64,8 +64,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       { status: 200 },
     )
   } catch (error) {
-    console.error("Error fetching employee:", error)
-    return NextResponse.json({ success: false, message: "Failed to fetch employee" }, { status: 500 })
+    console.error("Error fetching employer:", error)
+    return NextResponse.json({ success: false, message: "Failed to fetch employer" }, { status: 500 })
   }
 }
 
@@ -83,7 +83,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const { id: employeeId } = await params
 
     if (!employeeId) {
-      return NextResponse.json({ success: false, message: "Employee ID is required" }, { status: 400 })
+      return NextResponse.json({ success: false, message: "Employer ID is required" }, { status: 400 })
     }
 
     const { db } = await connectToDatabase()
@@ -92,12 +92,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const result = await db.collection("employees").deleteOne({ _id: new ObjectId(employeeId) })
 
     if (result.deletedCount === 0) {
-      return NextResponse.json({ success: false, message: "Employee not found" }, { status: 404 })
+      return NextResponse.json({ success: false, message: "Employer not found" }, { status: 404 })
     }
 
-    return NextResponse.json({ success: true, message: "Employee deleted successfully" }, { status: 200 })
+    return NextResponse.json({ success: true, message: "Employer deleted successfully" }, { status: 200 })
   } catch (error) {
-    console.error("Error deleting employee:", error)
-    return NextResponse.json({ success: false, message: "Failed to delete employee" }, { status: 500 })
+    console.error("Error deleting employer:", error)
+    return NextResponse.json({ success: false, message: "Failed to delete employer" }, { status: 500 })
   }
 }

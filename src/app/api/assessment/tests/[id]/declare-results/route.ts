@@ -42,15 +42,15 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
     console.log("Test found:", test.name)
 
-    // Get employee details for email
+    // Get employer details for email
     const employee = await db.collection("employees").findOne({ _id: new ObjectId(userId) })
 
     if (!employee) {
-      console.log("Employee not found")
-      return NextResponse.json({ success: false, message: "Employee not found" }, { status: 404 })
+      console.log("Employer not found")
+      return NextResponse.json({ success: false, message: "Employer not found" }, { status: 404 })
     }
 
-    console.log("Employee found:", employee.firstName, employee.lastName)
+    console.log("Employer found:", employee.firstName, employee.lastName)
 
     let declaredCount = 0
     let emailsSent = 0
