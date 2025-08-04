@@ -193,7 +193,7 @@ export async function POST(req: NextRequest) {
     // Send email notification to admin
     try {
       await sendEmail({
-        to: process.env.EMAIL_TO || "hi@oddiant.com", // Make sure this is the super admin email
+        to: process.env.EMAIL_TO || "hi@oddiant.com", 
         subject: `Employee Appeal Submitted: ${firstName} ${lastName}`,
         text: `
 An employee has submitted an appeal:

@@ -181,7 +181,7 @@ export function ApplicantStatus({ applicantId, currentStatus, jobId }: Applicant
             >
               Cancel
             </Button>
-            <Button onClick={submitStatusChange} disabled={isUpdating}>
+            <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={submitStatusChange} disabled={isUpdating}>
               {isUpdating ? "Updating..." : "Update Status"}
             </Button>
           </DialogFooter>

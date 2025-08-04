@@ -348,7 +348,7 @@ export default function TestResultPage() {
                   <CardTitle>Question Review</CardTitle>
                   <CardDescription>Review your answers</CardDescription>
                 </div>
-                <Button variant="outline" onClick={() => setShowAnswers(!showAnswers)}>
+                <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" onClick={() => setShowAnswers(!showAnswers)}>
                   {showAnswers ? "Hide Detailed Answers" : "Show Detailed Answers"}
                 </Button>
               </div>

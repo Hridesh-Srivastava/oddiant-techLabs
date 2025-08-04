@@ -976,7 +976,8 @@ export default function StudentDashboardPage() {
   const handleJobSearch = (term: string) => {
     setSearchTerm(term);
     setCurrentPage(1); // Reset to first page when searching
-    // The useEffect will automatically fetch with new search term
+    // Directly call fetchJobs to ensure immediate update
+    fetchJobs(1, term, filterLocation, filterJobType, jobFilters.recentOnly);
   };
 
   // Debounced search function to avoid too many API calls
@@ -1000,21 +1001,24 @@ export default function StudentDashboardPage() {
   const handleLocationFilter = (location: string) => {
     setFilterLocation(location);
     setCurrentPage(1); // Reset to first page when filtering
-    // The useEffect will automatically fetch with new filter
+    // Directly call fetchJobs to ensure immediate update
+    fetchJobs(1, searchTerm, location, filterJobType, jobFilters.recentOnly);
   };
 
   // New function to handle job type filter
   const handleJobTypeFilter = (jobType: string) => {
     setFilterJobType(jobType);
     setCurrentPage(1); // Reset to first page when filtering
-    // The useEffect will automatically fetch with new filter
+    // Directly call fetchJobs to ensure immediate update
+    fetchJobs(1, searchTerm, filterLocation, jobType, jobFilters.recentOnly);
   };
 
   // Update this function to work with backend pagination
   const filterRecentJobs = (days = 7) => {
     setJobFilters({ ...jobFilters, recentOnly: true });
     setCurrentPage(1); // Reset to first page when filtering
-    // The useEffect will automatically fetch with recentOnly filter
+    // Directly call fetchJobs to ensure immediate update
+    fetchJobs(1, searchTerm, filterLocation, filterJobType, true);
 
     toast.success(`Showing newly available jobs`);
   };
@@ -1026,7 +1030,8 @@ export default function StudentDashboardPage() {
     setFilterJobType("");
     setJobFilters({ ...jobFilters, recentOnly: false });
     setCurrentPage(1); // Reset to first page when resetting filters
-    // The useEffect will automatically fetch with reset filters
+    // Directly call fetchJobs to ensure immediate update
+    fetchJobs(1, "", "", "", false);
 
     toast.success("All job filters have been reset");
   };
@@ -2611,6 +2616,7 @@ export default function StudentDashboardPage() {
                                 ) : (
                                   <Button
                                     onClick={() => handleApplyToJob(job._id)}
+                                    className="bg-black text-white hover:text-black hover:bg-green-600"
                                   >
                                     Apply Now
                                   </Button>
@@ -2949,6 +2955,7 @@ export default function StudentDashboardPage() {
                             <div className="flex justify-end mt-4">
                               <Button
                                 variant="outline"
+                                className="bg-black text-white hover:text-black hover:bg-green-600"
                                 onClick={() =>
                                   router.push(
                                     `/student/applications/${application._id}`
@@ -3032,7 +3039,7 @@ export default function StudentDashboardPage() {
                 </div>
                 <Button
                   variant="outline"
-                  className="flex items-center justify-center"
+                  className="flex items-center justify-center text-white bg-green-600"
                   onClick={handleExportToPDF}
                   disabled={isGeneratingPDF}
                 >
@@ -3123,7 +3130,7 @@ export default function StudentDashboardPage() {
                     </p>
                     <Button
                       variant="outline"
-                      className="w-full mb-2"
+                      className="w-full mb-2 bg-black text-white hover:text-black hover:bg-green-600"
                       onClick={() => router.push("/student/profile/edit")}
                     >
                       Edit Profile
@@ -3143,7 +3150,7 @@ export default function StudentDashboardPage() {
                     )}
                     <Button
                       variant="outline"
-                      className="w-full flex items-center justify-center"
+                      className="w-full flex items-center justify-center text-white bg-green-600"
                       onClick={handleExportToPDF}
                       disabled={isGeneratingPDF}
                     >
@@ -3864,6 +3871,7 @@ export default function StudentDashboardPage() {
                           />
                           <Button
                             onClick={handleSavePrimaryEmail}
+                            className="bg-black text-white hover:text-black hover:bg-green-600"
                             disabled={
                               isUpdatingPrimaryEmail ||
                               !primaryEmail ||
@@ -3897,6 +3905,7 @@ export default function StudentDashboardPage() {
                             />
                             <Button
                               variant="outline"
+                              className="bg-black text-white hover:text-black hover:bg-green-600"
                               onClick={handleRemoveAlternativeEmail}
                               disabled={isRemovingAlternativeEmail}
                             >
@@ -3958,6 +3967,7 @@ export default function StudentDashboardPage() {
                         <Button
                           variant="outline"
                           size="sm"
+                          className="bg-black text-white hover:text-black hover:bg-green-600"
                           onClick={() => router.push("/student/change-password")}
                         >
                           Change Password
@@ -3975,6 +3985,7 @@ export default function StudentDashboardPage() {
                         <Button
                           variant="outline"
                           size="sm"
+                          className="bg-black text-white hover:text-black hover:bg-green-600"
                           onClick={() => router.push("/student/forgot-password")}
                         >
                           Reset Password
@@ -4177,6 +4188,7 @@ export default function StudentDashboardPage() {
                     <Button
                       onClick={handleSaveSettings}
                       disabled={isUpdatingSettings}
+                      className="bg-black text-white hover:text-black hover:bg-green-600"
                     >
                       {isUpdatingSettings ? "Saving..." : "Save Settings"}
                     </Button>

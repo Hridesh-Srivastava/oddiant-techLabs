@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import { toast, Toaster } from "sonner"
+import { EmployeeNavbar } from "@/components/layout/employee-navbar"
 import {
   ArrowLeft,
   Edit,
@@ -874,8 +875,10 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
   }
 
   return (
-    <div className="container mx-auto py-6">
-      <Toaster position="top-center" />
+    <>
+      <EmployeeNavbar />
+      <div className="container mx-auto py-6">
+        <Toaster position="top-center" />
 
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center">
@@ -1606,6 +1609,7 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </>
   )
 }

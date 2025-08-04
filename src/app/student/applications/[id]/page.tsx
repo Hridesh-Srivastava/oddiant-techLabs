@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator"
 import { Toaster } from "sonner"
 import { ArrowLeft, Briefcase, Building, Calendar, MapPin, AlertTriangle, ExternalLink, Clock } from "lucide-react"
 import { use } from "react"
+import { StudentNavbar } from "@/components/layout/student-navbar"
 
 interface Application {
   _id: string
@@ -216,6 +217,8 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
       <Toaster position="top-center" />
 
       <div className="max-w-7xl mx-auto">
+        <StudentNavbar />
+        
         <Button variant="ghost" className="mb-6" onClick={() => router.push("/student/dashboard?tab=applications")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Applications
@@ -331,7 +334,7 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
                 <Separator />
 
                 <div className="flex justify-between items-center">
-                  <Button variant="outline" onClick={() => router.push(`/jobs/${application.jobId}`)}>
+                  <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" onClick={() => router.push(`/jobs/${application.jobId}`)}>
                     View Job Details
                   </Button>
 
@@ -394,7 +397,7 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
                         >
                           <div className="flex justify-between items-start mb-2">
                             <h4 className="font-medium text-sm line-clamp-2">{job.jobTitle}</h4>
-                            <ExternalLink className="h-4 w-4 text-gray-400 flex-shrink-0 ml-2" />
+                            <ExternalLink className="h-4 w-4 text-black flex-shrink-0 ml-2" />
                           </div>
                           <p className="text-xs text-gray-600 mb-2">{job.companyName}</p>
                           <div className="flex items-center text-xs text-gray-500 mb-2">
@@ -420,7 +423,7 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
                     <div className="pt-4 border-t">
                       <Button 
                         onClick={handleExploreMoreJobs} 
-                        className="w-full"
+                        className="w-full bg-black text-white hover:text-black hover:bg-green-600"
                         variant="outline"
                       >
                         <ExternalLink className="h-4 w-4 mr-2" />

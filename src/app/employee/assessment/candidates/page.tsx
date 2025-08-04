@@ -482,7 +482,7 @@ export default function CandidatesPage() {
                     </Badge>
                   </div>
                   <div className="flex justify-end items-center">
-                    <Button className="text-black" variant="outline" size="sm" asChild>
+                    <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" asChild>
                       <Link href={`/employee/assessment/candidates/${candidate._id}`}>View</Link>
                     </Button>
                     <Button

@@ -81,17 +81,17 @@ export default function RejectEmployeePage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "Unknown error" }))
-        throw new Error(errorData.message || "Failed to reject employee")
+        throw new Error(errorData.message || "Failed to reject employer")
       }
 
-      toast.success("Employee rejected successfully")
+      toast.success("Employer rejected successfully")
       setTimeout(() => {
         router.push("/admin/employees")
       }, 2000)
     } catch (error) {
-      console.error("Error rejecting employee:", error)
+      console.error("Error rejecting employer:", error)
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
-      toast.error(`Failed to reject employee: ${errorMessage}`)
+      toast.error(`Failed to reject employer: ${errorMessage}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -108,7 +108,7 @@ export default function RejectEmployeePage() {
         <div className="mb-6">
           <Button variant="outline" onClick={handleBack} className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
-            Back to Employee Details
+            Back to Employers Details
           </Button>
         </div>
 
@@ -116,7 +116,7 @@ export default function RejectEmployeePage() {
           <CardHeader className="bg-red-50 border-b">
             <CardTitle className="text-2xl text-red-700 flex items-center gap-2">
               <AlertCircle className="h-6 w-6" />
-              Reject Employee Application
+              Reject Employer Application
             </CardTitle>
             <CardDescription>Please provide a reason for rejection and any additional comments</CardDescription>
           </CardHeader>

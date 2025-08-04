@@ -93,19 +93,55 @@ export async function GET(request: NextRequest) {
     if (recentOnly) {
       const sevenDaysAgo = new Date()
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-      filterQuery.createdAt = { $gte: sevenDaysAgo.toISOString() }
+      
+      // Simple approach: just check if createdAt is greater than or equal to 7 days ago
+      const dateFilter = { createdAt: { $gte: sevenDaysAgo } }
+      
+      // If there's already a search filter, use $and to combine them
+      if (filterQuery.$or) {
+        filterQuery.$and = [
+          { $or: filterQuery.$or },
+          dateFilter
+        ]
+        delete filterQuery.$or
+      } else {
+        // No search filter, just use the date filter
+        filterQuery.createdAt = dateFilter.createdAt
+      }
+      
+      // Debug: Log the date filter (only in development)
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Recent jobs filter:", {
+          sevenDaysAgo: sevenDaysAgo.toISOString(),
+          finalFilterQuery: filterQuery
+        })
+      }
     }
 
     // Get total count for pagination
     const totalJobs = await db.collection("jobs").countDocuments(filterQuery)
     
-    // Debug: Log search parameters and results
-    console.log("Search debug:", {
-      search,
-      isObjectId: search ? /^[0-9a-fA-F]{24}$/.test(search) : false,
-      filterQuery,
-      totalJobs
-    })
+    // Debug: Log search parameters and results (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.log("Search debug:", {
+        search,
+        isObjectId: search ? /^[0-9a-fA-F]{24}$/.test(search) : false,
+        filterQuery,
+        totalJobs,
+        recentOnly
+      })
+      
+      // Debug: Check what jobs exist in the database
+      if (recentOnly) {
+        const allJobs = await db.collection("jobs").find({}).sort({ createdAt: -1 }).limit(5).toArray()
+        console.log("Recent jobs debug - All jobs (last 5):", allJobs.map(job => ({
+          _id: job._id,
+          jobTitle: job.jobTitle,
+          createdAt: job.createdAt,
+          createdAtType: typeof job.createdAt
+        })))
+      }
+    }
 
     // Get paginated jobs
     const jobs = await db

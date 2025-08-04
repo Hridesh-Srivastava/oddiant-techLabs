@@ -170,11 +170,11 @@ export default function AdminEmployeesPage() {
         </div>
       )}
 
-      <h1 className="text-3xl font-semibold mb-6 text-black">Manage Employees</h1>
+      <h1 className="text-3xl font-semibold mb-6 text-black">Manage Employers</h1>
 
       <div className="flex justify-end mb-4">
         <Button
-          className="flex items-center gap-2 bg-black hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow-md transition-colors duration-150 font-semibold text-base"
+          className="flex items-center gap-2 bg-black text-white hover:text-black hover:bg-green-600 px-4 py-2 rounded-lg shadow-md transition-colors duration-150 font-semibold text-base"
           onClick={async () => {
             try {
               const res = await fetch("/api/auth/logout", { method: "POST" })
@@ -190,8 +190,8 @@ export default function AdminEmployeesPage() {
           }}
         >
           <span className="font-medium">Logout</span>
-          <span className="ml-2 flex items-center justify-center w-7 h-7 rounded bg-black group-hover:bg-green-700 transition-colors">
-            <LogOut className="w-4 h-4 text-white" />
+          <span className="ml-2 flex items-center justify-center w-7 h-7 rounded transition-colors">
+            <LogOut className="w-4 h-4" />
           </span>
         </Button>
       </div>
@@ -212,7 +212,7 @@ export default function AdminEmployeesPage() {
             variant="ghost"
             disabled={isRefreshing}
             onClick={handleRefresh}
-            className="flex-shrink-0 text-black bg-white hover:bg-green-600 hover:text-white"
+            className="flex-shrink-0 bg-white text-black hover:bg-gray-200"
           >
             <RotateCw className={`h-4 w-4 mr-1 ${isRefreshing ? "animate-spin" : ""}`} />
             {isRefreshing ? "Refreshing..." : "Refresh"}
@@ -288,7 +288,7 @@ export default function AdminEmployeesPage() {
                   </td>
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{getStatusBadge(employee)}</td>
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <Button variant="outline" size="sm" onClick={() => handleViewEmployee(employee._id)}>
+                    <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" onClick={() => handleViewEmployee(employee._id)}>
                       <Eye className="h-4 w-4 mr-2" />
                       Review
                     </Button>

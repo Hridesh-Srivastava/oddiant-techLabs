@@ -1157,7 +1157,7 @@ export default function CandidateDetailsPage({
                   <div className="text-center py-8">
                     <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                     <p className="text-gray-500 mb-4">No interviews scheduled yet</p>
-                    <Button onClick={() => router.push(`/employee/interviews/schedule?candidateId=${candidateId}`)}>
+                    <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => router.push(`/employee/interviews/schedule?candidateId=${candidateId}`)}>
                       Schedule Interview
                     </Button>
                   </div>

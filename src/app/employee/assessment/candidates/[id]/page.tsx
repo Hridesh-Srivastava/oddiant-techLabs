@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { EmployeeNavbar } from "@/components/layout/employee-navbar"
 
 interface CandidateData {
   _id: string
@@ -586,8 +587,10 @@ export default function CandidateDetailsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-6">
-        <Toaster position="top-center" />
+      <div className="min-h-screen bg-gray-50">
+        <EmployeeNavbar />
+        <div className="container mx-auto py-6">
+          <Toaster position="top-center" />
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="sm" className="mr-4 text-black" asChild>
             <Link href="/employee/assessment/candidates">
@@ -635,14 +638,17 @@ export default function CandidateDetailsPage() {
             <Skeleton className="h-64 w-full" />
           </div>
         </Tabs>
+        </div>
       </div>
     )
   }
 
   if (!candidate) {
     return (
-      <div className="container mx-auto py-6">
-        <Toaster position="top-center" />
+      <div className="min-h-screen bg-gray-50">
+        <EmployeeNavbar />
+        <div className="container mx-auto py-6">
+          <Toaster position="top-center" />
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="sm" className="mr-4 text-black" asChild>
             <Link href="/employee/assessment/candidates">
@@ -665,13 +671,16 @@ export default function CandidateDetailsPage() {
             </Button>
           </CardContent>
         </Card>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto py-6">
-      <Toaster position="top-center" />
+    <div className="min-h-screen bg-gray-50">
+      <EmployeeNavbar />
+      <div className="container mx-auto py-6">
+        <Toaster position="top-center" />
 
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
@@ -795,13 +804,13 @@ export default function CandidateDetailsPage() {
                                     (r) => r.testId === invitation.testId && r.candidateEmail === invitation.email
                                   );
                                   return matchingResult ? (
-                                    <Button variant="outline" size="sm" asChild>
+                                    <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" asChild>
                                       <Link href={`/employee/assessment/results/${matchingResult._id}`}>
                                         View Result
                                       </Link>
                                     </Button>
                                   ) : (
-                                    <Button variant="outline" size="sm" disabled>
+                                    <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" disabled>
                                       View Result
                                     </Button>
                                   );
@@ -1155,7 +1164,7 @@ export default function CandidateDetailsPage() {
             <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSendInvitation} disabled={!selectedTest || isSendingInvitation}>
+            <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={handleSendInvitation} disabled={!selectedTest || isSendingInvitation}>
               {isSendingInvitation ? (
                 <>
                   <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
@@ -1243,6 +1252,7 @@ export default function CandidateDetailsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   )
 }

@@ -240,7 +240,7 @@ export default function VerifyEmployeePage() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading employee details...</p>
+          <p className="text-gray-600">Loading employer details...</p>
         </div>
       </div>
     )
@@ -259,7 +259,7 @@ export default function VerifyEmployeePage() {
           </CardHeader>
           <CardFooter className="flex gap-2">
             <Button variant="outline" onClick={handleBackToEmployees} className="flex-1">
-              {isEmailAccess ? "Go to Login" : "Back to Employees"}
+              {isEmailAccess ? "Go to Login" : "Back to Employers"}
             </Button>
             <Button onClick={() => window.location.reload()} className="flex-1">
               Try Again
@@ -280,7 +280,7 @@ export default function VerifyEmployeePage() {
           </CardHeader>
           <CardFooter>
             <Button onClick={handleBackToEmployees} className="w-full">
-              {isEmailAccess ? "Go to Login" : "Back to Employees"}
+              {isEmailAccess ? "Go to Login" : "Back to Employers"}
             </Button>
           </CardFooter>
         </Card>
@@ -295,7 +295,7 @@ export default function VerifyEmployeePage() {
         <div className="mb-6">
           <Button variant="outline" onClick={handleBackToEmployees} className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
-            {isEmailAccess ? "Go to Login" : "Back to Employees"}
+            {isEmailAccess ? "Go to Login" : "Back to Employers"}
           </Button>
           {isEmailAccess && (
             <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
@@ -310,9 +310,9 @@ export default function VerifyEmployeePage() {
           <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50 border-b">
             <div className="flex justify-between items-start">
               <div>
-                <CardTitle className="text-2xl text-gray-800">Verify Employee Account</CardTitle>
+                <CardTitle className="text-2xl text-gray-800">Verify Employer Account</CardTitle>
                 <CardDescription className="text-gray-600">
-                  Review the information below and approve or reject this employee account
+                  Review the information below and approve or reject this employer account
                 </CardDescription>
               </div>
               <div className="bg-white px-3 py-1 rounded-full text-sm font-medium border shadow-sm">

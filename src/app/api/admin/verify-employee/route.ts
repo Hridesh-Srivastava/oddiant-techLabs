@@ -209,7 +209,7 @@ The Oddiant Techlabs Team`,
         console.error("Error sending rejection email:", emailError)
       }
 
-      return NextResponse.json({ success: true, message: "Employee rejected successfully" }, { status: 200 })
+      return NextResponse.json({ success: true, message: "Employer rejected successfully" }, { status: 200 })
     } else {
       return NextResponse.json({ success: false, message: "Invalid action" }, { status: 400 })
     }

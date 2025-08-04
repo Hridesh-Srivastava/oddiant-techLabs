@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog"
 import ReactMarkdown from "react-markdown"
 import rehypeRaw from "rehype-raw"
+import { EmployeeNavbar } from "@/components/layout/employee-navbar"
 
 interface ResultData {
   _id: string
@@ -326,8 +327,10 @@ export default function ResultDetailsPage() {
   }
 
   return (
-    <div className="container mx-auto py-6">
-      <Toaster position="top-center" />
+    <div className="min-h-screen bg-gray-50">
+      <EmployeeNavbar />
+      <div className="container mx-auto py-6">
+        <Toaster position="top-center" />
 
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center">
@@ -746,6 +749,7 @@ export default function ResultDetailsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   )
 }

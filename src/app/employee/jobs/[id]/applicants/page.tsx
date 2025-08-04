@@ -23,6 +23,10 @@ interface Applicant {
   appliedDate: string
   avatar?: string
   lastComment?: string
+  salutation?: string
+  firstName?: string
+  middleName?: string
+  lastName?: string
 }
 
 interface Job {
@@ -49,6 +53,30 @@ export default function JobApplicantsPage({
   const [isDownloading, setIsDownloading] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Function to format full name with salutation and middle name
+  const formatFullName = (applicant: Applicant) => {
+    const parts = []
+    
+    if (applicant.salutation) {
+      parts.push(applicant.salutation)
+    }
+    
+    if (applicant.firstName) {
+      parts.push(applicant.firstName)
+    }
+    
+    if (applicant.middleName) {
+      parts.push(applicant.middleName)
+    }
+    
+    if (applicant.lastName) {
+      parts.push(applicant.lastName)
+    }
+    
+    // If we have individual name parts, use them; otherwise fall back to the name field
+    return parts.length > 0 ? parts.join(' ') : applicant.name
+  }
 
   const fetchData = async () => {
     if (!jobId) return
@@ -351,12 +379,12 @@ export default function JobApplicantsPage({
                       <Avatar className="h-8 w-8 mr-2">
                         <AvatarImage
                           src={applicant.avatar || "/placeholder.svg?height=32&width=32"}
-                          alt={applicant.name}
+                          alt={formatFullName(applicant)}
                         />
-                        <AvatarFallback>{applicant.name?.charAt(0) || "?"}</AvatarFallback>
+                        <AvatarFallback>{formatFullName(applicant)?.charAt(0) || "?"}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium">{applicant.name}</p>
+                        <p className="font-medium">{formatFullName(applicant)}</p>
                         <p className="text-xs text-gray-500">{applicant.email}</p>
                       </div>
                     </div>
@@ -375,6 +403,7 @@ export default function JobApplicantsPage({
                       <Button
                         variant="outline"
                         size="sm"
+                        className="bg-black text-white hover:text-black hover:bg-green-600"
                         onClick={() => router.push(`/employee/candidates/${applicant._id}`)}
                       >
                         View Profile

@@ -21,6 +21,7 @@ import {
 import { AdvancedCodeEditor } from "@/components/advanced-code-editor"
 import ReactMarkdown from "react-markdown"
 import rehypeRaw from "rehype-raw"
+import { EmployeeNavbar } from "@/components/layout/employee-navbar"
 
 interface TestData {
   _id: string
@@ -1042,8 +1043,10 @@ function solution() {
   }
 
   return (
-    <div className="container mx-auto py-6">
-      <Toaster position="top-center" />
+    <>
+      <EmployeeNavbar />
+      <div className="container mx-auto py-6">
+        <Toaster position="top-center" />
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center">
           <Button variant="ghost" onClick={() => router.back()} className="mr-4">
@@ -1506,6 +1509,7 @@ function solution() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </>
   )
 }
