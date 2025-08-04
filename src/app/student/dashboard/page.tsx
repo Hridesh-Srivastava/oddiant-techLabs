@@ -2648,8 +2648,8 @@ export default function StudentDashboardPage() {
                             onClick={() => paginate(number)}
                             className={`w-8 ${
                               currentPage === number
-                                ? "bg-blue-600 text-white"
-                                : "hover:bg-gray-100"
+                                ? "bg-black text-white hover:bg-green-600 hover:text-black"
+                                : "hover:bg-green-600 hover:text-black"
                             }`}
                           >
                             {number}
@@ -2991,8 +2991,8 @@ export default function StudentDashboardPage() {
                             onClick={() => paginateApplications(number)}
                             className={`w-8 ${
                               applicationPaginationInfo.currentPage === number
-                                ? "bg-blue-600 text-white"
-                                : "hover:bg-gray-100"
+                                ? "bg-black text-white hover:bg-green-600 hover:text-black"
+                                : "hover:bg-green-600 hover:text-black"
                             }`}
                           >
                             {number}

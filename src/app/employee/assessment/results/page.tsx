@@ -345,12 +345,12 @@ export default function ResultsPage() {
         <h1 className="text-3xl font-bold">Test Results</h1>
         <div className="flex gap-2">
           {pendingResultsCount > 0 && (
-            <Button onClick={() => setShowBatchDeclareDialog(true)}>
+            <Button onClick={() => setShowBatchDeclareDialog(true)} className="bg-black text-white hover:text-black hover:bg-green-600">
               <CheckCircle className="h-4 w-4 mr-2" />
               Declare All Results ({pendingResultsCount})
             </Button>
           )}
-          <Button onClick={handleExport}>
+          <Button onClick={handleExport} className="text-white bg-green-600">
             <Download className="h-4 w-4 mr-2" />
             Export Results
           </Button>
@@ -588,7 +588,7 @@ export default function ResultsPage() {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" asChild>
+                        <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" asChild>
                           <Link href={`/employee/assessment/results/${result._id}`}>View</Link>
                         </Button>
                         {!result.resultsDeclared && (
@@ -645,6 +645,7 @@ export default function ResultsPage() {
                 variant={pageNum === currentPage ? "default" : "outline"}
                 size="sm"
                 onClick={() => handlePageChange(pageNum)}
+                                   className={pageNum === currentPage ? "bg-black text-white hover:bg-green-600 hover:text-black" : "hover:bg-green-600 hover:text-black"}
               >
                 {pageNum}
               </Button>
@@ -703,7 +704,7 @@ export default function ResultsPage() {
             <Button variant="outline" onClick={() => setShowBatchDeclareDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleBatchDeclareResults} disabled={isDeclaringBatch}>
+            <Button onClick={handleBatchDeclareResults} disabled={isDeclaringBatch} className="bg-black text-white hover:text-black hover:bg-green-600">
               {isDeclaringBatch ? (
                 "Declaring..."
               ) : (

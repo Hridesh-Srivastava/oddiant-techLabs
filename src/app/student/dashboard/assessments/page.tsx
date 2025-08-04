@@ -773,7 +773,7 @@ export default function StudentAssessmentDashboard() {
                     <ChevronLeft className="w-4 h-4 mr-1" /> Previous
                   </Button>
                   {Array.from({length: totalAvailablePages}, (_,i) => (
-                    <Button key={i} variant="outline" size="sm" onClick={()=>setAvailablePage(i+1)} className={availablePage===i+1?"bg-blue-600 text-white hover:bg-blue-700":"hover:bg-gray-100"}>{i+1}</Button>
+                                         <Button key={i} variant="outline" size="sm" onClick={()=>setAvailablePage(i+1)} className={availablePage===i+1?"bg-black text-white hover:bg-green-600 hover:text-black":"hover:bg-green-600 hover:text-black"}>{i+1}</Button>
                   ))}
                   <Button variant="outline" size="sm" onClick={()=>setAvailablePage(p=>Math.min(totalAvailablePages,p+1))} disabled={availablePage===totalAvailablePages} className="flex items-center">
                     Next <ChevronRight className="w-4 h-4 ml-1" />
@@ -894,7 +894,7 @@ export default function StudentAssessmentDashboard() {
                     <ChevronLeft className="w-4 h-4 mr-1" /> Previous
                   </Button>
                   {Array.from({length: totalInvitationsPages}, (_,i) => (
-                    <Button key={i} variant="outline" size="sm" onClick={()=>setInvitationsPage(i+1)} className={invitationsPage===i+1?"bg-blue-600 text-white hover:bg-blue-700":"hover:bg-gray-100"}>{i+1}</Button>
+                                         <Button key={i} variant="outline" size="sm" onClick={()=>setInvitationsPage(i+1)} className={invitationsPage===i+1?"bg-black text-white hover:bg-green-600 hover:text-black":"hover:bg-green-600 hover:text-black"}>{i+1}</Button>
                   ))}
                   <Button variant="outline" size="sm" onClick={()=>setInvitationsPage(p=>Math.min(totalInvitationsPages,p+1))} disabled={invitationsPage===totalInvitationsPages} className="flex items-center">
                     Next <ChevronRight className="w-4 h-4 ml-1" />
@@ -1041,7 +1041,7 @@ export default function StudentAssessmentDashboard() {
                     <ChevronLeft className="w-4 h-4 mr-1" /> Previous
                   </Button>
                   {Array.from({length: totalYourTestsPages}, (_,i) => (
-                    <Button key={i} variant="outline" size="sm" onClick={()=>setYourTestsPage(i+1)} className={yourTestsPage===i+1?"bg-blue-600 text-white hover:bg-blue-700":"hover:bg-gray-100"}>{i+1}</Button>
+                                         <Button key={i} variant="outline" size="sm" onClick={()=>setYourTestsPage(i+1)} className={yourTestsPage===i+1?"bg-black text-white hover:bg-green-600 hover:text-black":"hover:bg-green-600 hover:text-black"}>{i+1}</Button>
                   ))}
                   <Button variant="outline" size="sm" onClick={()=>setYourTestsPage(p=>Math.min(totalYourTestsPages,p+1))} disabled={yourTestsPage===totalYourTestsPages} className="flex items-center">
                     Next <ChevronRight className="w-4 h-4 ml-1" />
@@ -1159,7 +1159,7 @@ export default function StudentAssessmentDashboard() {
                     <ChevronLeft className="w-4 h-4 mr-1" /> Previous
                   </Button>
                   {Array.from({length: totalResultsPages}, (_,i) => (
-                    <Button key={i} variant="outline" size="sm" onClick={()=>setResultsPage(i+1)} className={resultsPage===i+1?"bg-blue-600 text-white hover:bg-blue-700":"hover:bg-gray-100"}>{i+1}</Button>
+                                         <Button key={i} variant="outline" size="sm" onClick={()=>setResultsPage(i+1)} className={resultsPage===i+1?"bg-black text-white hover:bg-green-600 hover:text-black":"hover:bg-green-600 hover:text-black"}>{i+1}</Button>
                   ))}
                   <Button variant="outline" size="sm" onClick={()=>setResultsPage(p=>Math.min(totalResultsPages,p+1))} disabled={resultsPage===totalResultsPages} className="flex items-center">
                     Next <ChevronRight className="w-4 h-4 ml-1" />

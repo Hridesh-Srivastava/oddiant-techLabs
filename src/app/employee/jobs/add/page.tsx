@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import { toast, Toaster } from "sonner"
 import JobPostingForm from "@/components/job-posting-form"
+import { EmployeeNavbar } from "@/components/layout/employee-navbar"
 
 export default function AddJobPage() {
   const router = useRouter()
@@ -44,9 +45,11 @@ export default function AddJobPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <Toaster position="top-center" />
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50">
+      <EmployeeNavbar />
+      <div className="py-8">
+        <Toaster position="top-center" />
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <Button variant="ghost" className="mb-6" onClick={() => router.back()} disabled={isSubmitting}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Dashboard
@@ -61,6 +64,7 @@ export default function AddJobPage() {
             <JobPostingForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   )

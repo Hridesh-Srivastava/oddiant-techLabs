@@ -342,7 +342,7 @@ export default function ResultDetailsPage() {
         </div>
         <div className="flex gap-2">
           <Button
-            variant="outline"
+            variant="outline" className="text-white bg-green-600"
             onClick={async () => {
               try {
                 const res = await fetch(`/api/assessment/results/${result._id}/download`, {
@@ -377,7 +377,7 @@ export default function ResultDetailsPage() {
             <Download className="h-4 w-4 mr-2" />
             Download Excel
           </Button>
-          <Button variant="outline" onClick={() => {
+          <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" onClick={() => {
             window.location.href = `mailto:${result.candidateEmail}`;
           }}>
             <Mail className="h-4 w-4 mr-2" />
@@ -615,7 +615,7 @@ export default function ResultDetailsPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <Button
-                className="w-full"
+                className="w-full text-white bg-green-600"
                 variant="outline"
                 onClick={async () => {
                   try {
@@ -651,7 +651,7 @@ export default function ResultDetailsPage() {
                 Download Excel
               </Button>
               <Button
-                className="w-full"
+                className="w-full bg-black text-white hover:text-black hover:bg-green-600"
                 variant="outline"
                 onClick={() => {
                   window.location.href = `mailto:${result.candidateEmail}`;

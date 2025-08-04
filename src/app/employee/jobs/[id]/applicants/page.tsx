@@ -297,7 +297,7 @@ export default function JobApplicantsPage({
                   variant="outline"
                   onClick={downloadExcel}
                   disabled={isDownloading || selectedApplicants.length === 0}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 bg-green-600 text-white"
                 >
                   <Download className="h-4 w-4" />
                   {isDownloading ? "Downloading..." : "Download in Excel"}

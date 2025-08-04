@@ -253,8 +253,8 @@ export default function InviteCandidateToJobsPage({
                   onClick={() => handlePageChange(page as number)}
                   className={`min-w-[40px] ${
                     currentPage === page
-                      ? "bg-blue-600 hover:bg-blue-700 text-white"
-                      : "hover:bg-gray-100"
+                      ? "bg-black text-white hover:bg-green-600 hover:text-black"
+                      : "hover:bg-green-600 hover:text-black"
                   }`}
                 >
                   {page}
@@ -307,7 +307,7 @@ export default function InviteCandidateToJobsPage({
               <p className="text-gray-500 mb-6">
                 The candidate you are looking for does not exist or has been removed.
               </p>
-              <Button onClick={() => router.push("/employee/dashboard?tab=candidates")}>View All Candidates</Button>
+              <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => router.push("/employee/dashboard?tab=candidates")}>View All Candidates</Button>
             </CardContent>
           </Card>
         </div>

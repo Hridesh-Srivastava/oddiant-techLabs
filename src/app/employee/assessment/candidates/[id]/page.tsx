@@ -589,7 +589,7 @@ export default function CandidateDetailsPage() {
       <div className="container mx-auto py-6">
         <Toaster position="top-center" />
         <div className="flex items-center mb-6">
-          <Button variant="ghost" size="sm" className="mr-4" asChild>
+          <Button variant="ghost" size="sm" className="mr-4 text-black" asChild>
             <Link href="/employee/assessment/candidates">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
@@ -644,7 +644,7 @@ export default function CandidateDetailsPage() {
       <div className="container mx-auto py-6">
         <Toaster position="top-center" />
         <div className="flex items-center mb-6">
-          <Button variant="ghost" size="sm" className="mr-4" asChild>
+          <Button variant="ghost" size="sm" className="mr-4 text-black" asChild>
             <Link href="/employee/assessment/candidates">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
@@ -660,7 +660,7 @@ export default function CandidateDetailsPage() {
             <p className="text-muted-foreground mb-6">
               The candidate may have been deleted or you may not have permission to view it.
             </p>
-            <Button asChild>
+            <Button asChild className="bg-black text-white hover:text-black hover:bg-green-600">
               <Link href="/employee/assessment/candidates">View All Candidates</Link>
             </Button>
           </CardContent>
@@ -675,7 +675,7 @@ export default function CandidateDetailsPage() {
 
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
-          <Button variant="ghost" size="sm" className="mr-4" asChild>
+          <Button variant="ghost" size="sm" className="mr-4 text-black" asChild>
             <Link href="/employee/assessment/candidates">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
@@ -689,7 +689,7 @@ export default function CandidateDetailsPage() {
             </div>
           </div>
         </div>
-        <Button onClick={() => setShowInviteDialog(true)}>
+        <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => setShowInviteDialog(true)}>
           <Mail className="h-4 w-4 mr-2" />
           Invite to Test
         </Button>
@@ -851,8 +851,8 @@ export default function CandidateDetailsPage() {
                         onClick={() => setInvPage(pageNum)}
                         className={
                           pageNum === invPage
-                            ? "bg-blue-500 text-white hover:bg-blue-600"
-                            : "hover:bg-gray-100"
+                            ? "bg-black text-white hover:bg-green-600 hover:text-black"
+                            : "hover:bg-green-600 hover:text-black"
                         }
                       >
                         {pageNum}
@@ -876,7 +876,7 @@ export default function CandidateDetailsPage() {
                   <p className="text-muted-foreground mb-4">
                     You haven't sent any test invitations to this candidate yet.
                   </p>
-                  <Button onClick={() => setShowInviteDialog(true)}>Invite to Test</Button>
+                  <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => setShowInviteDialog(true)}>Invite to Test</Button>
                 </div>
               )}
             </CardContent>
@@ -894,7 +894,7 @@ export default function CandidateDetailsPage() {
                   size="sm"
                   onClick={handleDownloadAllResults}
                   disabled={results.length === 0 || actionLoading === 'download-all'}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 bg-green-600 text-white"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   {actionLoading === 'download-all' ? 'Downloading...' : 'Download All'}
@@ -935,6 +935,7 @@ export default function CandidateDetailsPage() {
                                 size="sm"
                                 onClick={() => handleDownloadResult(result._id)}
                                 disabled={actionLoading === result._id}
+                                className="text-white bg-green-600"
                               >
                                 <Download className="h-4 w-4 mr-2" />
                                 Download
@@ -976,8 +977,8 @@ export default function CandidateDetailsPage() {
                         onClick={() => setResPage(pageNum)}
                         className={
                           pageNum === resPage
-                            ? "bg-blue-500 text-white hover:bg-blue-600"
-                            : "hover:bg-gray-100"
+                            ? "bg-black text-white hover:bg-green-600 hover:text-black"
+                            : "hover:bg-green-600 hover:text-black"
                         }
                       >
                         {pageNum}
@@ -1049,7 +1050,7 @@ export default function CandidateDetailsPage() {
                           <td className="py-3 px-4">{formatDate(verification.createdAt)}</td>
                           <td className="py-3 px-4">{formatDate(verification.updatedAt)}</td>
                           <td className="py-3 px-4">
-                            <Button variant="outline" size="sm" onClick={() => viewVerification(verification)}>
+                            <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" onClick={() => viewVerification(verification)}>
                               View
                             </Button>
                           </td>
@@ -1077,8 +1078,8 @@ export default function CandidateDetailsPage() {
                         onClick={() => setVerPage(pageNum)}
                         className={
                           pageNum === verPage
-                            ? "bg-blue-500 text-white hover:bg-blue-600"
-                            : "hover:bg-gray-100"
+                            ? "bg-black text-white hover:bg-green-600 hover:text-black"
+                            : "hover:bg-green-600 hover:text-black"
                         }
                       >
                         {pageNum}
@@ -1238,7 +1239,7 @@ export default function CandidateDetailsPage() {
             )}
           </div>
           <DialogFooter>
-            <Button onClick={() => setShowVerificationDialog(false)}>Close</Button>
+            <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => setShowVerificationDialog(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

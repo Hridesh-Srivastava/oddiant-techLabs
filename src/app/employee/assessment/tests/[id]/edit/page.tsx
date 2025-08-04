@@ -1057,7 +1057,7 @@ function solution() {
             <Eye className="h-4 w-4 mr-2" />
             Preview
           </Button>
-          <Button onClick={handleSaveTest} disabled={isSaving}>
+          <Button onClick={handleSaveTest} disabled={isSaving} className="bg-black text-white hover:text-black hover:bg-green-600">
             <Save className="h-4 w-4 mr-2" />
             {isSaving ? "Saving..." : "Save Changes"}
           </Button>
@@ -1158,7 +1158,7 @@ function solution() {
                 <CardTitle>Test Sections</CardTitle>
                 <CardDescription>Organize your test into sections</CardDescription>
               </div>
-              <Button onClick={handleAddSection}>
+              <Button onClick={handleAddSection} className="bg-black text-white hover:text-black hover:bg-green-600">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Section
               </Button>
@@ -1168,7 +1168,7 @@ function solution() {
                 {test.sections.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground mb-4">No sections added yet. Add a section to get started.</p>
-                    <Button onClick={handleAddSection}>
+                    <Button onClick={handleAddSection} className="bg-black text-white hover:text-black hover:bg-green-600">
                       <Plus className="h-4 w-4 mr-2" />
                       Add Section
                     </Button>
@@ -1219,7 +1219,7 @@ function solution() {
                                 {section.questions.length} questions in this section
                               </span>
                             </div>
-                            <Button variant="outline" size="sm" onClick={() => handleAddQuestion(index)}>
+                            <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" onClick={() => handleAddQuestion(index)}>
                               <Plus className="h-4 w-4 mr-2" />
                               Add Question
                             </Button>
@@ -1457,7 +1457,7 @@ function solution() {
         <Button variant="outline" onClick={() => router.back()}>
           Cancel
         </Button>
-        <Button onClick={handleSaveTest} disabled={isSaving}>
+        <Button onClick={handleSaveTest} disabled={isSaving} className="bg-black text-white hover:text-black hover:bg-green-600">
           <Save className="h-4 w-4 mr-2" />
           {isSaving ? "Saving..." : "Save Changes"}
         </Button>
@@ -1502,7 +1502,7 @@ function solution() {
             <Button variant="outline" onClick={() => setShowQuestionDialog(false)} type="button">
               Cancel
             </Button>
-            <Button onClick={handleSaveQuestion} type="button">{editingQuestion ? "Update Question" : "Add Question"}</Button>
+            <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={handleSaveQuestion} type="button">{editingQuestion ? "Update Question" : "Add Question"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

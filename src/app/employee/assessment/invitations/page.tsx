@@ -441,7 +441,7 @@ export default function InvitationsPage() {
         <Toaster position="top-center" />
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Invitations</h1>
-          <Button onClick={handleSendInvitations} disabled={isSending || !selectedTest || !emails.trim()}>
+          <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={handleSendInvitations} disabled={isSending || !selectedTest || !emails.trim()}>
             <Send className="h-4 w-4 mr-2" />
             {isSending ? "Sending..." : "Send Invitations"}
           </Button>
@@ -714,7 +714,7 @@ export default function InvitationsPage() {
                   <Button
                     onClick={handleSendInvitations}
                     disabled={isSending || !selectedTest || !emails.trim()}
-                    className="w-full"
+                    className="w-full bg-black text-white hover:text-black hover:bg-green-600"
                   >
                     {isSending ? (
                       <>

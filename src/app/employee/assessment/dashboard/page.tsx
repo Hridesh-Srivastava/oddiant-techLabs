@@ -4,12 +4,13 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { toast, Toaster } from "sonner"
-import { FileText, Plus, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react"
+import { FileText, Plus, RefreshCw, ChevronLeft, ChevronRight, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AssessmentLayout } from "@/components/assessment-layout"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface TestData {
   _id: string
@@ -28,9 +29,18 @@ interface ResultData {
   status: "Passed" | "Failed"
 }
 
+interface EmployeeData {
+  _id: string
+  firstName: string
+  lastName: string
+  email: string
+  avatar?: string
+}
+
 export default function AssessmentDashboard() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
+  const [employee, setEmployee] = useState<EmployeeData | null>(null)
   const [dashboardStats, setDashboardStats] = useState({
     totalTests: 0,
     activeTests: 0,
@@ -57,8 +67,49 @@ export default function AssessmentDashboard() {
   const totalResultsPages = Math.max(1, Math.ceil(recentResults.length / RESULTS_PER_PAGE))
 
   useEffect(() => {
+    fetchEmployeeData()
     fetchDashboardData()
   }, [])
+
+  const fetchEmployeeData = async () => {
+    try {
+      const response = await fetch("/api/employee/profile", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setEmployee(data.employee)
+      } else {
+        console.error("Failed to fetch employee data")
+      }
+    } catch (error) {
+      console.error("Error fetching employee data:", error)
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (response.ok) {
+        router.push("/auth/employee/login")
+      } else {
+        toast.error("Logout failed. Please try again.")
+      }
+    } catch (error) {
+      console.error("Logout error:", error)
+      toast.error("Logout failed. Please try again.")
+    }
+  }
 
   const fetchDashboardData = async () => {
     try {
@@ -187,8 +238,40 @@ export default function AssessmentDashboard() {
   }
 
   return (
-    <AssessmentLayout>
-      <div className="container py-6">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header with avatar, username, and logout */}
+      <header className="bg-white text-black shadow">
+        <div className="w-full px-6 py-4 flex justify-between items-center">
+          <div className="flex items-center space-x-4">
+            <h1 className="text-xl font-semibold">Assessment Dashboard</h1>
+          </div>
+          
+          {/* Right side - Welcome message and logout button */}
+          <div className="flex items-center space-x-4">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={employee?.avatar} alt={`${employee?.firstName} ${employee?.lastName}`} />
+              <AvatarFallback className="bg-gray-200 text-gray-600 text-sm font-medium">
+                {employee?.firstName?.charAt(0)}{employee?.lastName?.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-sm">
+              Welcome, {employee?.firstName} {employee?.lastName}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="text-white bg-black border-black hover:bg-green-600 hover:text-black"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <AssessmentLayout>
+        <div className="container mx-auto px-6 py-6">
         <Toaster position="top-center" />
 
         <div className="flex justify-between items-center mb-6">
@@ -198,7 +281,7 @@ export default function AssessmentDashboard() {
               <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
               {isRefreshing ? "Refreshing..." : "Refresh"}
             </Button>
-            <Button asChild>
+            <Button asChild className="bg-black text-white hover:text-black hover:bg-green-600">
               <Link href="/employee/assessment/tests/create">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Test
@@ -379,13 +462,13 @@ export default function AssessmentDashboard() {
                             <td className="py-3 px-4">{formatDate(test.createdAt)}</td>
                             <td className="py-3 px-4">
                               <div className="flex gap-2">
-                                <Button variant="outline" size="sm" asChild>
+                                <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" asChild>
                                   <Link href={`/employee/assessment/tests/${test._id}`}>View</Link>
                                 </Button>
-                                <Button variant="outline" size="sm" asChild>
+                                <Button className="text-black" variant="outline" size="sm" asChild>
                                   <Link href={`/employee/assessment/tests/${test._id}/edit`}>Edit</Link>
                                 </Button>
-                                <Button variant="outline" size="sm" asChild>
+                                <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" asChild>
                                   <Link href={`/employee/assessment/tests/${test._id}/preview`}>Preview</Link>
                                 </Button>
                                 {test.status === "Draft" ? (
@@ -426,7 +509,7 @@ export default function AssessmentDashboard() {
                     <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <h3 className="text-lg font-medium mb-2">No tests created yet</h3>
                     <p className="text-muted-foreground mb-4">Create your first assessment test to get started</p>
-                    <Button asChild>
+                    <Button asChild className="bg-black text-white hover:text-black hover:bg-green-600">
                       <Link href="/employee/assessment/tests/create">
                         <Plus className="h-4 w-4 mr-2" />
                         Create Test
@@ -493,7 +576,7 @@ export default function AssessmentDashboard() {
                     <p className="text-muted-foreground mb-4">
                       Results will appear here once candidates complete their assessments
                     </p>
-                    <Button asChild>
+                    <Button asChild className="bg-black text-white hover:text-black hover:bg-green-600">
                       <Link href="/employee/assessment/invitations">
                         <Plus className="h-4 w-4 mr-2" />
                         Invite Candidates
@@ -504,8 +587,9 @@ export default function AssessmentDashboard() {
               </div>
             </TabsContent>
           </Tabs>
-        </Card>
-      </div>
-    </AssessmentLayout>
-  )
-}
+                 </Card>
+       </div>
+     </AssessmentLayout>
+    </div>
+   )
+ }

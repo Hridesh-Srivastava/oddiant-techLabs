@@ -553,7 +553,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                 <CardTitle>Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full" onClick={() => router.push(`/employee/jobs/${jobId}/applicants`)}>
+                <Button className="w-full bg-black text-white hover:text-black hover:bg-green-600" onClick={() => router.push(`/employee/jobs/${jobId}/applicants`)}>
                   <Users className="h-4 w-4 mr-2" />
                   View Applicants
                 </Button>
@@ -565,7 +565,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Job
                 </Button>
-                <Button variant="outline" className="w-full" onClick={handleShareJob}>
+                <Button variant="outline" className="w-full bg-black text-white hover:text-black hover:bg-green-600" onClick={handleShareJob}>
                   <Share2 className="h-4 w-4 mr-2" />
                   Share Job
                 </Button>

@@ -892,7 +892,7 @@ export function FilterPanel({ filters, setFilters, applyAtsScoreFilter, applyCus
             placeholder="Add keyword..."
             onKeyDown={(e) => e.key === "Enter" && addMandatoryKeyword()}
           />
-          <Button type="button" onClick={addMandatoryKeyword}>
+          <Button type="button" onClick={addMandatoryKeyword} className="bg-black text-white hover:text-black hover:bg-green-600">
             Add
           </Button>
         </div>
@@ -919,7 +919,7 @@ export function FilterPanel({ filters, setFilters, applyAtsScoreFilter, applyCus
             placeholder="Add keyword..."
             onKeyDown={(e) => e.key === "Enter" && addPreferredKeyword()}
           />
-          <Button type="button" onClick={addPreferredKeyword}>
+          <Button type="button" onClick={addPreferredKeyword} className="bg-black text-white hover:text-black hover:bg-green-600">
             Add
           </Button>
         </div>
@@ -946,7 +946,7 @@ export function FilterPanel({ filters, setFilters, applyAtsScoreFilter, applyCus
             placeholder="Add keyword to exclude..."
             onKeyDown={(e) => e.key === "Enter" && addNotKeyword()}
           />
-          <Button type="button" onClick={addNotKeyword}>
+          <Button type="button" onClick={addNotKeyword} className="bg-black text-white hover:text-black hover:bg-green-600">
             Add
           </Button>
         </div>
@@ -1149,7 +1149,7 @@ export function FilterPanel({ filters, setFilters, applyAtsScoreFilter, applyCus
               </option>
             ))}
           </select>
-          <Button type="button" onClick={addEducationLevel}>
+          <Button type="button" onClick={addEducationLevel} className="bg-black text-white hover:text-black hover:bg-green-600">
             Add
           </Button>
         </div>
@@ -1256,8 +1256,8 @@ export function FilterPanel({ filters, setFilters, applyAtsScoreFilter, applyCus
       </div>
 
       <div className="flex gap-2 mt-4">
-        <Button onClick={applyAtsScoreFilter} variant="secondary">Apply ATS Score Filter</Button>
-        <Button onClick={handleApplyCustomFilters} variant="default">Apply Custom Filters</Button>
+        <Button onClick={applyAtsScoreFilter} variant="secondary" className="bg-black text-white hover:text-black hover:bg-green-600">Apply ATS Score Filter</Button>
+        <Button onClick={handleApplyCustomFilters} variant="default" className="bg-black text-white hover:text-black hover:bg-green-600">Apply Custom Filters</Button>
       </div>
     </div>
   )

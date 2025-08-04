@@ -141,7 +141,7 @@ export function CandidateList({
           size="sm"
           onClick={handleExportSelected}
           disabled={isExporting || selectedCandidates.length === 0}
-          className="flex items-center gap-1 bg-blue-500 text-white"
+          className="flex items-center gap-1 bg-green-600 text-white"
         >
           <Download className="h-4 w-4 mr-1" />
           {isExporting ? "Exporting..." : "Export Selected"}
@@ -238,7 +238,7 @@ export function CandidateList({
                         handleViewCandidate(candidate._id)
                       }}
                       disabled={viewingCandidate === candidate._id}
-                      className="flex items-center bg-black text-white"
+                      className="flex items-center bg-black text-white hover:text-black hover:bg-green-600"
                     >
                       {viewingCandidate === candidate._id ? (
                         <div className="animate-spin h-4 w-4 border-2 border-t-transparent border-current rounded-full"></div>

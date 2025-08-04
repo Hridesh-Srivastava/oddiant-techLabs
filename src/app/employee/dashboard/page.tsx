@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
 import { toast, Toaster } from "sonner"
 import {
   User,
@@ -201,7 +201,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
             variant="outline"
             size="sm"
             onClick={() => onPageChange(pageNum)}
-            className={`${pageNum === currentPage ? "bg-blue-500 text-white hover:bg-blue-600" : "hover:bg-gray-100"}`}
+                                className={`${pageNum === currentPage ? "bg-black text-white hover:bg-green-600 hover:text-black" : "hover:bg-green-600 hover:text-black"}`}
           >
             {pageNum}
           </Button>
@@ -334,6 +334,14 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
   })
 
   const [atsHighlightKeywords, setAtsHighlightKeywords] = useState(true)
+  const [isAssessmentsLoading, setIsAssessmentsLoading] = useState(false)
+
+  // Reset assessments loading when tab changes
+  useEffect(() => {
+    if (activeTab !== "assessments") {
+      setIsAssessmentsLoading(false)
+    }
+  }, [activeTab])
 
   // Column filter states for ATS candidates
   const [candidateNameFilter, setCandidateNameFilter] = useState<string[]>([])
@@ -2026,7 +2034,13 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
 
   // Handle navigation to assessments dashboard
   const handleAssessmentsClick = () => {
-    router.push("/employee/assessment/dashboard")
+    setIsAssessmentsLoading(true)
+    setActiveTab("assessments")
+    
+    // Simulate loading time and then navigate
+    setTimeout(() => {
+      router.push("/employee/assessment/dashboard")
+    }, 2000) // 2 seconds loading time
   }
 
   // After filteredCandidates state declaration:
@@ -2210,63 +2224,92 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
           </Button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
-          <TabsList className="grid grid-cols-7 w-full max-w-3xl text-white mx-auto bg-gradient-to-br from-black to-black h-12 items-center">
-            <TabsTrigger
-              value="overview"
-              className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
-            >
-              <User size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger
-              value="candidates"
-              className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
-            >
-              <Users size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
-              Candidates
-            </TabsTrigger>
-            <TabsTrigger
-              value="jobs"
-              className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
-            >
-              <Briefcase size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
-              Jobs
-            </TabsTrigger>
-            <TabsTrigger
-              value="interviews"
-              className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
-            >
-              <Calendar size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
-              Interviews
-            </TabsTrigger>
-            <TabsTrigger
-              value="ats"
-              className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
-            >
-              <Search size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
-              ATS
-            </TabsTrigger>
-            <TabsTrigger
-              value="assessments"
-              onClick={handleAssessmentsClick}
-              className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
-            >
-              <span className="inline-flex items-center justify-center rounded-full w-8 h-8 mr-2">
-                <ClipboardCheck size={22} strokeWidth={2.5} />
-              </span>
-              Assessments
-            </TabsTrigger>
-            <TabsTrigger
-              value="settings"
-              className="flex items-center justify-center data-[state=active]:text-purple-400 data-[state=active]:bg-black hover:bg-gray-800"
-            >
-              <Settings size={20} className="w-[20px] h-[20px] mr-2 flex-shrink-0" />
-              Settings
-            </TabsTrigger>
-          </TabsList>
+        <div className="flex space-x-2 justify-center mb-6">
+          <button
+            onClick={() => handleTabChange("overview")}
+            className={`px-4 py-2 font-medium ${
+              activeTab === "overview"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <User className="h-4 w-4 inline mr-2" />
+            Overview
+          </button>
+          <button
+            onClick={() => handleTabChange("candidates")}
+            className={`px-4 py-2 font-medium ${
+              activeTab === "candidates"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <Users className="h-4 w-4 inline mr-2" />
+            Candidates
+          </button>
+          <button
+            onClick={() => handleTabChange("jobs")}
+            className={`px-4 py-2 font-medium ${
+              activeTab === "jobs"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <Briefcase className="h-4 w-4 inline mr-2" />
+            Jobs
+          </button>
+          <button
+            onClick={() => handleTabChange("interviews")}
+            className={`px-4 py-2 font-medium ${
+              activeTab === "interviews"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <Calendar className="h-4 w-4 inline mr-2" />
+            Interviews
+          </button>
+          <button
+            onClick={() => handleTabChange("ats")}
+            className={`px-4 py-2 font-medium ${
+              activeTab === "ats"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <Search className="h-4 w-4 inline mr-2" />
+            ATS
+          </button>
+          <button
+            onClick={handleAssessmentsClick}
+            disabled={isAssessmentsLoading}
+            className={`px-4 py-2 font-medium ${
+              activeTab === "assessments"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-500 hover:text-gray-700"
+            } ${isAssessmentsLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
+            {isAssessmentsLoading ? (
+              <div className="animate-spin rounded-full h-4 w-4 inline mr-2 border-t-2 border-b-2 border-blue-500"></div>
+            ) : (
+              <ClipboardCheck className="h-4 w-4 inline mr-2" />
+            )}
+            {isAssessmentsLoading ? "Loading..." : "Assessments"}
+          </button>
+          <button
+            onClick={() => handleTabChange("settings")}
+            className={`px-4 py-2 font-medium ${
+              activeTab === "settings"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <Settings className="h-4 w-4 inline mr-2" />
+            Settings
+          </button>
+        </div>
 
-          <TabsContent value="overview">
+          {activeTab === "overview" && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="lg:col-span-1 bg-gradient-to-br from-purple-50 to-purple-100">
                 <CardHeader>
@@ -2495,9 +2538,9 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
+          )}
 
-          <TabsContent value="candidates">
+          {activeTab === "candidates" && (
             <Card>
               <CardHeader>
                 <div className="flex justify-between items-center">
@@ -2511,7 +2554,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                       size="sm"
                       onClick={handleExportSelectedCandidates}
                       disabled={isExporting || selectedCandidates.length === 0}
-                      className="flex items-center bg-blue-500 text-white"
+                      className="flex items-center bg-green-600 text-white"
                     >
                       <Download className="h-4 w-4 mr-1" />
                       {isExporting ? "Exporting..." : "Export Selected"}
@@ -2652,9 +2695,9 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="jobs">
+          {activeTab === "jobs" && (
             <Card>
               <CardHeader>
                 <div className="flex justify-between items-center">
@@ -2730,9 +2773,9 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="interviews">
+          {activeTab === "interviews" && (
             <Card>
               <CardHeader>
                 <div className="flex justify-between items-center">
@@ -2807,7 +2850,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => router.push(`/employee/interviews/${interview._id}`)}
-                                  className="flex items-center hover:bg-gray-50"
+                                  className="flex items-center bg-black text-white hover:text-black hover:bg-green-600"
                                 >
                                   <Eye className="h-4 w-4 mr-1" />
                                   Details
@@ -2950,9 +2993,9 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="settings">
+          {activeTab === "settings" && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-center font-lg">Account Settings</CardTitle>
@@ -3219,9 +3262,9 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="ats">
+          {activeTab === "ats" && (
             <Card>
               <CardHeader>
                 <div className="flex flex-col md:flex-row justify-between md:items-center space-y-4 md:space-y-0">
@@ -3408,6 +3451,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                               variant={pageNum === currentAtsPage ? "default" : "outline"}
                               size="sm"
                               onClick={() => setCurrentAtsPage(pageNum)}
+                              className={pageNum === currentAtsPage ? "bg-black text-white hover:bg-green-600 hover:text-black" : "hover:bg-green-600 hover:text-black"}
                             >
                               {pageNum}
                             </Button>
@@ -3423,29 +3467,40 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="assessments">
+          {activeTab === "assessments" && (
             <Card>
               <CardHeader>
                 <CardTitle>Assessments Dashboard</CardTitle>
                 <CardDescription>Manage and view candidate assessments</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center space-x-2">
-                  <span>Assessment dashboard is loading</span>
-                  <span className="flex">
-                    <span className="animate-bounce [animation-delay:0s]">.</span>
-                    <span className="animate-bounce [animation-delay:0.15s]">.</span>
-                    <span className="animate-bounce [animation-delay:0.3s]">.</span>
-                    <span className="animate-bounce [animation-delay:0.45s]">.</span>
-                  </span>
-                </div>
+                {isAssessmentsLoading ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-lg font-medium text-gray-700">Assessment dashboard is loading</span>
+                      <span className="flex">
+                        <span className="animate-bounce [animation-delay:0s] text-blue-500">.</span>
+                        <span className="animate-bounce [animation-delay:0.15s] text-blue-500">.</span>
+                        <span className="animate-bounce [animation-delay:0.3s] text-blue-500">.</span>
+                        <span className="animate-bounce [animation-delay:0.45s] text-blue-500">.</span>
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-2">Please wait while we prepare your assessment dashboard...</p>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">Assessment dashboard loaded successfully!</p>
+                    <p className="text-sm text-gray-400 mt-2">Redirecting to assessment dashboard...</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="settings">
+          {activeTab === "settings" && (
             <Card>
               <CardHeader>
                 <CardTitle>Account Settings</CardTitle>
@@ -3455,8 +3510,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                 <p>This is the settings content.</p>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+          )}
       </main>
     </div>
   )

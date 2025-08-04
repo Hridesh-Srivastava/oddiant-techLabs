@@ -278,11 +278,11 @@ export default function CandidatesPage() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Candidates</h1>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleExportResults} disabled={isExporting !== false}>
+            <Button className="text-white bg-green-600" variant="outline" onClick={handleExportResults} disabled={isExporting !== false}>
               <Download className="h-4 w-4 mr-2" />
               {isExporting !== false ? "Exporting..." : "Export"}
             </Button>
-            <Button asChild>
+            <Button asChild className="bg-black text-white hover:text-black hover:bg-green-600">
               <Link href="/employee/assessment/invitations">
                 <UserPlus className="h-4 w-4 mr-2" />
                 Invite Candidates
@@ -482,13 +482,13 @@ export default function CandidatesPage() {
                     </Badge>
                   </div>
                   <div className="flex justify-end items-center">
-                    <Button variant="outline" size="sm" asChild>
+                    <Button className="text-black" variant="outline" size="sm" asChild>
                       <Link href={`/employee/assessment/candidates/${candidate._id}`}>View</Link>
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="ml-2 flex items-center gap-1"
+                      className="ml-2 flex items-center gap-1 text-white bg-green-600"
                       onClick={() => handleExportCandidateResults(candidate.email, candidate.testsCompleted)}
                       disabled={candidate.testsCompleted === 0 || isExporting === candidate.email}
                     >
@@ -515,6 +515,7 @@ export default function CandidatesPage() {
                       variant={pageNum === currentPage ? "default" : "outline"}
                       size="sm"
                       onClick={() => handlePageChange(pageNum)}
+                      className={pageNum === currentPage ? "bg-black text-white hover:bg-green-600 hover:text-black" : "hover:bg-green-600 hover:text-black"}
                     >
                       {pageNum}
                     </Button>
@@ -538,7 +539,7 @@ export default function CandidatesPage() {
                   ? "Try adjusting your filters or search term"
                   : "Invite candidates to take your assessments"}
               </p>
-              <Button asChild>
+              <Button asChild className="bg-black text-white hover:text-black hover:bg-green-600">
                 <Link href="/employee/assessment/invitations">
                   <UserPlus className="h-4 w-4 mr-2" />
                   Invite Candidates

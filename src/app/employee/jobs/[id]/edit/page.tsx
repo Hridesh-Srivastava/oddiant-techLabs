@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react"
 import { toast, Toaster } from "sonner"
 import JobPostingForm from "@/components/job-posting-form"
 import { use } from "react"
+import { EmployeeNavbar } from "@/components/layout/employee-navbar"
 
 export default function EditJobPage({ params }: { params: Promise<{ id: string }> }) {
   // Unwrap the params object using React.use()
@@ -101,8 +102,10 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
 
   if (!job) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gray-50">
+        <EmployeeNavbar />
+        <div className="py-8">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
@@ -118,14 +121,17 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
             </CardContent>
           </Card>
         </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <Toaster position="top-center" />
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50">
+      <EmployeeNavbar />
+      <div className="py-8">
+        <Toaster position="top-center" />
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <Button variant="ghost" className="mb-6" onClick={() => router.back()} disabled={isSubmitting}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Job Details
@@ -146,6 +152,7 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
             />
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   )

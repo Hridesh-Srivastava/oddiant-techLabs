@@ -347,11 +347,11 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
                   </Badge>
                   {!isEditing && (
                     <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" onClick={handleEdit}>
+                      <Button variant="outline" size="sm" onClick={handleEdit} className="bg-black text-white hover:text-black hover:bg-green-600">
                         <Edit className="h-4 w-4 mr-2" />
                         Edit
                       </Button>
-                      <Button variant="outline" size="sm" onClick={handleDelete} disabled={isDeleting}>
+                      <Button variant="outline" size="sm" onClick={handleDelete} disabled={isDeleting} className="bg-red-600 text-white hover:bg-red-500 hover:text-white">
                         {isDeleting ? (
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         ) : (
@@ -440,7 +440,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
                         <X className="h-4 w-4 mr-2" />
                         Cancel
                       </Button>
-                      <Button onClick={handleSave} disabled={isSaving}>
+                      <Button onClick={handleSave} disabled={isSaving} className="bg-black text-white hover:text-black hover:bg-green-600">
                         {isSaving ? (
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         ) : (
@@ -478,7 +478,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
                       <div>
                         <p className="font-medium mb-2">Meeting Link</p>
                         <div className="flex items-center space-x-2">
-                          <Button onClick={handleJoinMeeting} className="flex-1">
+                          <Button onClick={handleJoinMeeting} className="flex-1 bg-black text-white hover:text-black hover:bg-green-600">
                             <Video className="h-4 w-4 mr-2" />
                             Join Meeting
                             <ExternalLink className="h-4 w-4 ml-2" />
@@ -638,7 +638,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
               <CardContent className="space-y-3">
                 <Button
                   variant="outline"
-                  className="w-full justify-start"
+                  className="w-full justify-start bg-black text-white hover:text-black hover:bg-green-600"
                   onClick={() => router.push(`/employee/candidates/${interview.candidateId}/contact`)}
                 >
                   <User className="h-4 w-4 mr-2" />
@@ -653,7 +653,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
                   Schedule Another Interview
                 </Button>
                 {interview.meetingLink && (
-                  <Button className="w-full justify-start" onClick={handleJoinMeeting}>
+                  <Button className="w-full justify-start bg-black text-white hover:text-black hover:bg-green-600" onClick={handleJoinMeeting}>
                     <Video className="h-4 w-4 mr-2" />
                     Join Meeting
                   </Button>

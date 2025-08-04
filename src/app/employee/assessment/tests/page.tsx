@@ -247,7 +247,7 @@ export default function TestsPage() {
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Tests</h1>
-        <Button asChild>
+        <Button asChild className="bg-black text-white hover:text-black hover:bg-green-600">
           <Link href="/employee/assessment/tests/create">
             <Plus className="h-4 w-4 mr-2" />
             Create Test
@@ -446,18 +446,18 @@ export default function TestsPage() {
                   </Badge>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" className="bg-black text-white hover:text-black hover:bg-green-600">
                         Actions
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
+                      <DropdownMenuItem className="text-black" asChild>
                         <Link href={`/employee/assessment/tests/${test._id}`}>View</Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
+                      <DropdownMenuItem className="text-black" asChild>
                         <Link href={`/employee/assessment/tests/${test._id}/edit`}>Edit</Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
+                      <DropdownMenuItem className="text-black" asChild>
                         <Link href={`/employee/assessment/tests/${test._id}/preview`}>Preview</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleDeleteTest(test._id)} className="text-destructive">
@@ -487,7 +487,7 @@ export default function TestsPage() {
                   variant={currentPage === idx + 1 ? "default" : "outline"}
                   size="sm"
                   onClick={() => handlePageChange(idx + 1)}
-                  className={currentPage === idx + 1 ? "bg-blue-600 text-white hover:bg-blue-700" : ""}
+                                     className={currentPage === idx + 1 ? "bg-black text-white hover:bg-green-600 hover:text-black" : "hover:bg-green-600 hover:text-black"}
                 >
                   {idx + 1}
                 </Button>
@@ -512,7 +512,7 @@ export default function TestsPage() {
               ? "Try adjusting your filters or search term"
               : "Create a new test to get started"}
           </p>
-          <Button asChild>
+          <Button asChild className="bg-black text-white hover:text-black hover:bg-green-600">
             <Link href="/employee/assessment/tests/create">
               <Plus className="h-4 w-4 mr-2" />
               Create a new test

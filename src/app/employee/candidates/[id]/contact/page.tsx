@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { EmployeeNavbar } from "@/components/layout/employee-navbar"
 
 interface Candidate {
   _id: string
@@ -186,8 +187,10 @@ export default function ContactCandidatePage({ params }: { params: Promise<{ id:
 
   if (!candidate) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gray-50">
+        <EmployeeNavbar />
+        <div className="py-8">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
@@ -200,18 +203,21 @@ export default function ContactCandidatePage({ params }: { params: Promise<{ id:
               <p className="text-gray-500 mb-6">
                 The candidate you are trying to contact does not exist or has been removed.
               </p>
-              <Button onClick={() => router.push("/employee/dashboard?tab=candidates")}>View All Candidates</Button>
+              <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => router.push("/employee/dashboard?tab=candidates")}>View All Candidates</Button>
             </CardContent>
           </Card>
+        </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <Toaster position="top-center" />
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50">
+      <EmployeeNavbar />
+      <div className="py-8">
+        <Toaster position="top-center" />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Candidate
@@ -299,7 +305,7 @@ export default function ContactCandidatePage({ params }: { params: Promise<{ id:
                     onChange={(e) => setEmailBody(e.target.value)}
                   />
                 </div>
-                <Button className="w-full" onClick={handleSendEmail} disabled={isSending}>
+                <Button className="w-full bg-black text-white hover:text-black hover:bg-green-600" onClick={handleSendEmail} disabled={isSending}>
                   {isSending ? (
                     <>
                       <div className="animate-spin mr-2 h-4 w-4 border-2 border-t-transparent border-white rounded-full"></div>
@@ -346,7 +352,7 @@ export default function ContactCandidatePage({ params }: { params: Promise<{ id:
                   />
                   <p className="text-xs text-gray-500 text-right">{smsMessage.length}/160 characters</p>
                 </div>
-                <Button className="w-full" onClick={handleSendSMS} disabled={isSending}>
+                <Button className="w-full bg-black text-white hover:text-black hover:bg-green-600" onClick={handleSendSMS} disabled={isSending}>
                   {isSending ? (
                     <>
                       <div className="animate-spin mr-2 h-4 w-4 border-2 border-t-transparent border-white rounded-full"></div>
@@ -363,6 +369,7 @@ export default function ContactCandidatePage({ params }: { params: Promise<{ id:
             </Card>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     </div>
   )

@@ -135,7 +135,7 @@ export function ResumeViewer({ resume, highlightKeywords, keywords }: ResumeView
             size="sm"
             onClick={handleDownload}
             disabled={isExporting}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 bg-green-600 text-white"
           >
             <Download className="h-4 w-4 mr-1" />
             {isExporting ? "Exporting..." : "Export to Excel"}

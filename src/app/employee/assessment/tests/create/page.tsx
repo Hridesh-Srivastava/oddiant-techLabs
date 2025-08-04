@@ -585,7 +585,7 @@ function solution() {
               <h2 className="text-lg font-medium">Test Sections</h2>
               <button
                 onClick={addSection}
-                className="flex items-center px-3 py-1 text-sm font-medium text-white bg-black rounded-md hover:bg-gray-800"
+                className="flex items-center px-3 py-1 text-sm font-medium rounded-md bg-black text-white hover:text-black hover:bg-green-600"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Section
@@ -925,7 +925,7 @@ function solution() {
                             </button>
                             <button
                               onClick={() => handleSaveQuestion(section.id)}
-                              className="px-3 py-1 text-sm font-medium text-white bg-black rounded-md hover:bg-gray-800"
+                              className="px-3 py-1 text-sm font-medium bg-black text-white hover:text-black hover:bg-green-600 rounded-md"
                             >
                               Save Question
                             </button>
@@ -1096,7 +1096,7 @@ function solution() {
               <button
                 onClick={handleSaveTest}
                 disabled={isSaving}
-                className="w-full flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
+                className="w-full flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm bg-black text-white hover:text-black hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
               >
                 {isSaving ? (
                   <>

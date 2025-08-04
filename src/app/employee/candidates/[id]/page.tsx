@@ -514,7 +514,7 @@ export default function CandidateDetailsPage({
               <p className="text-gray-500 mb-6">
                 The candidate you are looking for does not exist or has been removed.
               </p>
-              <Button onClick={() => router.push("/employee/dashboard?tab=candidates")}>View All Candidates</Button>
+              <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => router.push("/employee/dashboard?tab=candidates")}>View All Candidates</Button>
             </CardContent>
           </Card>
         </div>
@@ -554,7 +554,7 @@ export default function CandidateDetailsPage({
                   <div className="w-full mt-6 space-y-2">
                     <Button
                       variant="outline"
-                      className="w-full justify-start"
+                      className="w-full justify-start bg-black text-white hover:text-black hover:bg-green-600"
                       onClick={() => router.push(`/employee/candidates/${candidateId}/contact`)}
                     >
                       <Mail className="h-4 w-4 mr-2" />
@@ -570,7 +570,7 @@ export default function CandidateDetailsPage({
                     </Button>
                     <Button
                       variant="outline"
-                      className="w-full justify-start"
+                      className="w-full justify-start bg-green-600 text-white"
                       onClick={handleExportToExcel}
                       disabled={isExporting}
                     >
@@ -1145,6 +1145,7 @@ export default function CandidateDetailsPage({
                             variant="outline"
                             size="sm"
                             onClick={() => router.push(`/employee/interviews/${interview._id}`)}
+                            className="bg-black text-white hover:text-black hover:bg-green-600"
                           >
                             View Details
                           </Button>

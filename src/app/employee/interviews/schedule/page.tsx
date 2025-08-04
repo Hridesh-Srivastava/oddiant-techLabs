@@ -322,7 +322,7 @@ export default function ScheduleInterviewPage() {
                   <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={isSubmitting}>
+                  <Button type="submit" disabled={isSubmitting} className="bg-black text-white hover:text-black hover:bg-green-600">
                     {isSubmitting ? (
                       <>
                         <div className="animate-spin mr-2 h-4 w-4 border-2 border-t-transparent border-white rounded-full"></div>

@@ -48,9 +48,9 @@ export function EmployeeNavbar() {
   const isAssessments = pathname.includes("/employee/assessment")
 
   return (
-    <div className="w-full shadow-sm mb-6">
-      <div className="max-w-7xl mx-auto ">
-        <nav className="flex overflow-x-auto ml-72 mr-72 bg-gradient-to-br from-black to-black">
+    <div className="w-full bg-white border-b border-gray-200 mb-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <nav className="flex space-x-8 justify-center">
           {navItems.map((item) => {
             const isActive = item.label.toLowerCase() === currentTab || (item.label === "Assessments" && isAssessments)
 
@@ -59,13 +59,13 @@ export function EmployeeNavbar() {
                 key={item.label}
                 href={item.href}
                 className={cn(
-                  "flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors",
+                  "flex items-center px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors",
                   isActive
-                    ? "border-purple-600 text-purple-600"
-                    : "border-transparent text-white hover:underline",
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-gray-500 hover:text-gray-700",
                 )}
               >
-                <item.icon className="w-5 h-5 mr-2" />
+                <item.icon className="w-4 h-4 mr-2" />
                 {item.label}
               </Link>
             )

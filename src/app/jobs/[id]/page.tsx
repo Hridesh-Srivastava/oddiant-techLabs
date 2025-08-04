@@ -416,7 +416,7 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
               </CardHeader>
               <CardContent className="space-y-4">
                 <p>Interested in this position? Submit your application now.</p>
-                <Button className="w-full" onClick={handleApply} disabled={isApplying || job.status !== "open"}>
+                <Button className="w-full bg-black text-white hover:text-black hover:bg-green-600" onClick={handleApply} disabled={isApplying || job.status !== "open"}>
                   {isApplying ? (
                     <>
                       <div className="animate-spin mr-2 h-4 w-4 border-2 border-t-transparent border-white rounded-full"></div>

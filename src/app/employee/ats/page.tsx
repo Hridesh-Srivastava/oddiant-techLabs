@@ -219,7 +219,7 @@ export default function ATSPage() {
               variant="outline"
               onClick={handleExport}
               disabled={isExporting || filteredResumes.length === 0}
-              className="flex items-center"
+              className="flex items-center bg-green-600 text-white"
             >
               <Download className="h-4 w-4 mr-2" />
               {isExporting ? "Exporting..." : "Export to Excel"}

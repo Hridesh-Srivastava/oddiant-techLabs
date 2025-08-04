@@ -94,7 +94,7 @@ export default function EditCandidatePage({ params }: { params: Promise<{ id: st
               <p className="text-gray-500 mb-6">
                 The candidate you are trying to edit does not exist or has been removed.
               </p>
-              <Button onClick={() => router.push("/employee/dashboard?tab=candidates")}>View All Candidates</Button>
+              <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => router.push("/employee/dashboard?tab=candidates")}>View All Candidates</Button>
             </CardContent>
           </Card>
         </div>
