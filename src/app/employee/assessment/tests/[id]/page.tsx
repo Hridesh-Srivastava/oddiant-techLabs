@@ -233,7 +233,7 @@ export default function TestDetailsPage() {
       console.log("Fetching results for test ID:", testId)
 
       // Fetch all results and filter by testId
-      const response = await fetch("/api/assessment/results", {
+      const response = await fetch("/api/assessment/results?limit=10000", {
         method: "GET",
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -293,8 +293,8 @@ export default function TestDetailsPage() {
     try {
       setIsLoadingCandidates(true)
 
-      // Get all invitations for this test
-      const invitationsResponse = await fetch(`/api/assessment/invitations`, {
+      // Get all invitations for this test by requesting a large limit
+      const invitationsResponse = await fetch(`/api/assessment/invitations?limit=10000`, {
         method: "GET",
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
