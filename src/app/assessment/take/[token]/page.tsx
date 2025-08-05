@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { toast, Toaster } from "sonner"
-import { Clock, CheckCircle, AlertCircle, Calculator, AlertTriangle, X, Camera, FileText } from "lucide-react"
+import { Clock, CheckCircle, AlertCircle, Calculator, AlertTriangle, X, Camera, FileText, Mic } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -155,6 +155,7 @@ export default function TakeTestPage() {
   const [verificationStep, setVerificationStep] = useState<"system" | "id" | "rules" | "complete">("system")
   const [systemChecks, setSystemChecks] = useState({
     cameraAccess: false,
+    microphoneAccess: false,
     fullscreenMode: false,
     compatibleBrowser: true,
     tabFocus: true,
@@ -859,7 +860,7 @@ export default function TakeTestPage() {
           height: { ideal: 480, min: 240 },
           facingMode: "user",
         },
-        audio: false,
+        audio: true,
       }
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints)
@@ -955,6 +956,7 @@ export default function TakeTestPage() {
           setSystemChecks((prev) => ({
             ...prev,
             cameraAccess: true,
+            microphoneAccess: true,
           }))
         }
 
@@ -990,6 +992,7 @@ export default function TakeTestPage() {
         setSystemChecks((prev) => ({
           ...prev,
           cameraAccess: false,
+          microphoneAccess: false,
         }))
       }
 
@@ -2512,6 +2515,31 @@ export default function TakeTestPage() {
                               }`}
                             />
                           </div>
+
+                          {/* Microphone Status Indicator */}
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground">
+                              Microphone:{" "}
+                              {mediaStreamRef.current && mediaStreamRef.current.getAudioTracks().length > 0
+                                ? "Active"
+                                : webcamStatus === "requesting"
+                                  ? "Starting..."
+                                  : webcamStatus === "error"
+                                    ? "Error"
+                                    : "Inactive"}
+                            </p>
+                            <div
+                              className={`w-2 h-2 rounded-full ${
+                                mediaStreamRef.current && mediaStreamRef.current.getAudioTracks().length > 0
+                                  ? "bg-green-500"
+                                  : webcamStatus === "requesting"
+                                    ? "bg-yellow-500 animate-pulse"
+                                    : webcamStatus === "error"
+                                      ? "bg-red-500"
+                                      : "bg-gray-500"
+                              }`}
+                            />
+                          </div>
                         </div>
                       )}
 
@@ -2617,8 +2645,8 @@ export default function TakeTestPage() {
 
                   <div className="flex justify-between items-center">
                     <div className="w-full">
-                      <Progress value={75} className="h-2 mb-2" />
-                      <p className="text-sm text-muted-foreground">System check progress: 75%</p>
+                      <Progress value={systemChecks.cameraAccess && systemChecks.microphoneAccess ? 100 : 50} className="h-2 mb-2" />
+                      <p className="text-sm text-muted-foreground">System check progress: {systemChecks.cameraAccess && systemChecks.microphoneAccess ? 100 : 50}%</p>
                     </div>
                   </div>
 
@@ -2671,6 +2699,22 @@ export default function TakeTestPage() {
                           <span>Camera Access</span>
                         </div>
                         {!systemChecks.cameraAccess && (
+                          <Button size="sm" onClick={startWebcam} disabled={webcamStatus === "requesting"}>
+                            {webcamStatus === "requesting" ? "Starting..." : "Allow"}
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 border rounded-md">
+                        <div className="flex items-center">
+                          {systemChecks.microphoneAccess ? (
+                            <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                          ) : (
+                            <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+                          )}
+                          <span>Microphone Access</span>
+                        </div>
+                        {!systemChecks.microphoneAccess && (
                           <Button size="sm" onClick={startWebcam} disabled={webcamStatus === "requesting"}>
                             {webcamStatus === "requesting" ? "Starting..." : "Allow"}
                           </Button>

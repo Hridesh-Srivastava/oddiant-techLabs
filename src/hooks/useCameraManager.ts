@@ -47,7 +47,7 @@ export function useCameraManager(): CameraManager {
           height: { ideal: 480, min: 240 },
           facingMode: "user",
         },
-        audio: false,
+        audio: true,
       })
 
       console.log("📹 Camera started successfully")

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { toast, Toaster } from "sonner"
-import { CheckCircle, AlertCircle, Camera } from "lucide-react"
+import { CheckCircle, AlertCircle, Camera, Mic } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -15,11 +15,13 @@ export default function SystemCheckPage() {
   const [invitationToken, setInvitationToken] = useState<string | null>(null)
   const [systemChecks, setSystemChecks] = useState({
     cameraAccess: false,
+    microphoneAccess: false,
     fullscreenMode: false,
     compatibleBrowser: false,
     tabFocus: true,
   })
   const [isCheckingCamera, setIsCheckingCamera] = useState(true)
+  const [isCheckingMicrophone, setIsCheckingMicrophone] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [checkProgress, setCheckProgress] = useState(0)
   const [checkComplete, setCheckComplete] = useState(false)
@@ -49,6 +51,9 @@ export default function SystemCheckPage() {
 
     // Check camera access
     checkCameraAccess()
+
+    // Check microphone access
+    checkMicrophoneAccess()
 
     // Set up tab switching detection
     document.addEventListener("visibilitychange", handleVisibilityChange)
@@ -81,10 +86,10 @@ export default function SystemCheckPage() {
     if (progress === 100) {
       setCheckComplete(true)
       setCheckFailed(false)
-    } else if (!isCheckingCamera && !isFullscreen) {
+    } else if (!isCheckingCamera && !isCheckingMicrophone && !isFullscreen) {
       setCheckFailed(true)
     }
-  }, [systemChecks, isCheckingCamera, isFullscreen])
+  }, [systemChecks, isCheckingCamera, isCheckingMicrophone, isFullscreen])
 
   const checkBrowserCompatibility = () => {
     // Check for modern browser features required for the exam
@@ -124,6 +129,29 @@ export default function SystemCheckPage() {
       }))
     } finally {
       setIsCheckingCamera(false)
+    }
+  }
+
+  const checkMicrophoneAccess = async () => {
+    setIsCheckingMicrophone(true)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      
+      // Stop the audio stream immediately after getting permission
+      stream.getTracks().forEach((track) => track.stop())
+
+      setSystemChecks((prev) => ({
+        ...prev,
+        microphoneAccess: true,
+      }))
+    } catch (error) {
+      console.error("Microphone access error:", error)
+      setSystemChecks((prev) => ({
+        ...prev,
+        microphoneAccess: false,
+      }))
+    } finally {
+      setIsCheckingMicrophone(false)
     }
   }
 
@@ -240,6 +268,22 @@ export default function SystemCheckPage() {
                 </div>
                 {!systemChecks.cameraAccess && !isCheckingCamera && (
                   <Button size="sm" onClick={checkCameraAccess}>
+                    Allow
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between p-3 border rounded-md">
+                <div className="flex items-center">
+                  {systemChecks.microphoneAccess ? (
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+                  )}
+                  <span>Microphone Access</span>
+                </div>
+                {!systemChecks.microphoneAccess && !isCheckingMicrophone && (
+                  <Button size="sm" onClick={checkMicrophoneAccess}>
                     Allow
                   </Button>
                 )}

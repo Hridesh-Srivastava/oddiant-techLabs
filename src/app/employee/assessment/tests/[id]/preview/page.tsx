@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { toast, Toaster } from "sonner"
-import { ArrowLeft, Clock, CheckCircle, AlertCircle, Calculator, X, Upload, Camera, AlertTriangle, FileText } from "lucide-react"
+import { ArrowLeft, Clock, CheckCircle, AlertCircle, Calculator, X, Upload, Camera, AlertTriangle, FileText, Mic } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -123,6 +123,7 @@ export default function TestPreviewPage() {
   // System check states
   const [systemChecks, setSystemChecks] = useState({
     cameraAccess: false,
+    microphoneAccess: false,
     fullscreenMode: false,
     compatibleBrowser: true,
     tabFocus: true,
@@ -153,10 +154,12 @@ export default function TestPreviewPage() {
   useEffect(() => {
     setSystemChecks((prev) => {
       const newCameraAccess = cameraManager.status === "active";
-      if (prev.cameraAccess === newCameraAccess) return prev;
+      const newMicrophoneAccess = cameraManager.status === "active";
+      if (prev.cameraAccess === newCameraAccess && prev.microphoneAccess === newMicrophoneAccess) return prev;
       return {
         ...prev,
         cameraAccess: newCameraAccess,
+        microphoneAccess: newMicrophoneAccess,
       };
     });
   }, [cameraManager.status]);
@@ -1576,6 +1579,32 @@ export default function TestPreviewPage() {
                               />
                             </div>
                           </div>
+
+                          <div className="flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">
+  Microphone:{" "}
+  {cameraManager.stream && cameraManager.stream.getAudioTracks().length > 0
+    ? "Active"
+    : cameraManager.status === "requesting"
+      ? "Starting..."
+      : cameraManager.status === "error"
+        ? "Error"
+        : "Inactive"}
+</p>
+<div className="flex items-center gap-2">
+  <div
+    className={`w-2 h-2 rounded-full ${
+      cameraManager.stream && cameraManager.stream.getAudioTracks().length > 0
+        ? "bg-green-500"
+        : cameraManager.status === "requesting"
+          ? "bg-yellow-500 animate-pulse"
+          : cameraManager.status === "error"
+            ? "bg-red-500"
+            : "bg-gray-500"
+    }`}
+  />
+</div>
+                          </div>
                           <Button
                             variant="outline"
                             size="sm"
@@ -1838,9 +1867,9 @@ export default function TestPreviewPage() {
 
                     <div className="flex justify-between items-center">
                       <div className="w-full">
-                        <Progress value={systemChecks.cameraAccess ? 100 : 25} className="h-2 mb-2" />
+                        <Progress value={systemChecks.cameraAccess && systemChecks.microphoneAccess ? 100 : 50} className="h-2 mb-2" />
                         <p className="text-sm text-muted-foreground">
-                          System check progress: {systemChecks.cameraAccess ? 100 : 25}%
+                          System check progress: {systemChecks.cameraAccess && systemChecks.microphoneAccess ? 100 : 50}%
                         </p>
                       </div>
                     </div>
@@ -1859,6 +1888,26 @@ export default function TestPreviewPage() {
                             <span>Camera Access</span>
                           </div>
                           {!systemChecks.cameraAccess && (
+                            <Button
+                              size="sm"
+                              onClick={cameraManager.startCamera}
+                              disabled={cameraManager.status === "requesting"}
+                            >
+                              {cameraManager.status === "requesting" ? "Starting..." : "Allow"}
+                            </Button>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between p-3 border rounded-md">
+                          <div className="flex items-center">
+                            {systemChecks.microphoneAccess ? (
+                              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                            ) : (
+                              <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+                            )}
+                            <span>Microphone Access</span>
+                          </div>
+                          {!systemChecks.microphoneAccess && (
                             <Button
                               size="sm"
                               onClick={cameraManager.startCamera}
@@ -1923,7 +1972,7 @@ export default function TestPreviewPage() {
                           }
                           toast.success("System Check completed!")
                         }}
-                        disabled={!systemChecks.cameraAccess}
+                        disabled={!systemChecks.cameraAccess || !systemChecks.microphoneAccess}
                       >
                         Complete & Next: ID Verification
                       </Button>
