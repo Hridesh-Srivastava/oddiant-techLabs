@@ -188,7 +188,7 @@ export default function ExamRulesPage() {
                 <Button variant="outline" onClick={handleBackStep}>
                   Back
                 </Button>
-                <Button onClick={handleStartExam} disabled={!acceptedRules}>
+                <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={handleStartExam} disabled={!acceptedRules}>
                   Start Exam
                 </Button>
               </div>
@@ -200,7 +200,7 @@ export default function ExamRulesPage() {
               <p className="text-muted-foreground mb-4">
                 The requested test could not be found or has been deactivated.
               </p>
-              <Button variant="outline" onClick={() => router.push("/")}>
+              <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" onClick={() => router.push("/")}>
                 Return Home
               </Button>
             </div>

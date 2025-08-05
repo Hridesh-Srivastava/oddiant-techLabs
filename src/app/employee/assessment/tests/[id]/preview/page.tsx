@@ -140,6 +140,7 @@ export default function TestPreviewPage() {
 
   // Add state to track if test cases have been run for each coding question
   const [hasRunTestCases, setHasRunTestCases] = useState<Record<string, boolean>>({});
+  const [visitedQuestionKeys, setVisitedQuestionKeys] = useState<Set<string>>(new Set())
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -587,6 +588,16 @@ export default function TestPreviewPage() {
     }
   }
 
+  // Track visited questions when navigating
+  useEffect(() => {
+    if (test) {
+      const currentQuestionKey = `${test.sections[currentSection]?.id}-${test.sections[currentSection]?.questions[currentQuestion]?.id}`
+      if (currentQuestionKey) {
+        setVisitedQuestionKeys(prev => new Set([...prev, currentQuestionKey]))
+      }
+    }
+  }, [currentSection, currentQuestion, test])
+
   const handleSubmitTest = async () => {
     setIsSubmitting(true);
     try {
@@ -865,7 +876,7 @@ export default function TestPreviewPage() {
             const newCount = prev + 1;
             if (test?.settings.preventTabSwitching) {
               setShowTabWarning(true);
-              if (newCount >= 4) {
+              if (newCount >= 3) {
                 handleTestTermination();
               }
             }
@@ -882,7 +893,7 @@ export default function TestPreviewPage() {
           const newCount = prev + 1;
           if (test?.settings.preventTabSwitching) {
             setShowTabWarning(true);
-            if (newCount >= 4) {
+            if (newCount >= 3) {
               handleTestTermination();
             }
           }
@@ -1048,7 +1059,7 @@ export default function TestPreviewPage() {
                 <AlertTriangle className="h-16 w-16 mx-auto text-red-500 mb-4" />
                 <h1 className="text-2xl font-bold text-red-600 mb-2">Test Terminated</h1>
                 <p className="text-muted-foreground mb-4">
-                  Your test has been terminated due to excessive tab switching violations ({tabSwitchCount}/4).
+                  Your test has been terminated due to excessive tab switching violations ({tabSwitchCount}/3).
                 </p>
                 <p className="text-sm text-muted-foreground mb-6">
                   Your current progress has been saved and submitted automatically.
@@ -1202,10 +1213,10 @@ export default function TestPreviewPage() {
                     <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
                       <li>Once you start the test, the timer will begin and cannot be paused.</li>
                       <li>Answer all questions to the best of your ability.</li>
-                      <li>Your webcam will remain active during the test for proctoring purposes.</li>
+                      <li>Your webcam and microphone will remain active during the test for proctoring purposes.</li>
                       {test.settings.preventTabSwitching && (
                         <li className="text-amber-600">
-                          Switching tabs or leaving the test page is not allowed and will be recorded. After 4
+                          Switching tabs or leaving the test page is not allowed and will be recorded. After 3
                           violations, your test will be automatically terminated.
                         </li>
                       )}
@@ -1278,7 +1289,7 @@ export default function TestPreviewPage() {
                           {tabSwitchCount > 0 && (
                             <div className="flex items-center gap-1 text-amber-600">
                               <AlertTriangle className="h-4 w-4" />
-                              <span className="text-sm">{tabSwitchCount}/4</span>
+                              <span className="text-sm">{tabSwitchCount}/3</span>
                             </div>
                           )}
                         </div>
@@ -1460,6 +1471,7 @@ export default function TestPreviewPage() {
                               Previous
                             </Button>
                             <Button
+                            className="bg-black text-white hover:text-black hover:bg-green-600"
                               onClick={handleNextQuestion}
                               disabled={
                                 currentSection === test.sections.length - 1 &&
@@ -1513,11 +1525,24 @@ export default function TestPreviewPage() {
                                 <div className="flex flex-wrap gap-1">
                                   {section.questions.map((question, qIndex) => {
                                     const questionKey = `${section.id}-${question.id}`
-                                    const isAnswered =
-                                      answers[questionKey] &&
-                                      (typeof answers[questionKey] === "string"
-                                        ? (answers[questionKey] as string).trim() !== ""
-                                        : (answers[questionKey] as string[]).length > 0)
+                                    const isAnswered = question.type === "Coding"
+                                      ? codingResults[question.id] && codingResults[question.id].length > 0
+                                      : answers[questionKey] &&
+                                        (typeof answers[questionKey] === "string"
+                                          ? (answers[questionKey] as string).trim() !== ""
+                                          : (answers[questionKey] as string[]).length > 0)
+
+                                    // For coding questions, check if they have been visited but not executed
+                                    const isVisited = visitedQuestionKeys.has(questionKey)
+                                    const isCurrentQuestion = currentSection === sIndex && currentQuestion === qIndex
+                                    const hasCodeButNotExecuted = question.type === "Coding" && 
+                                      isVisited && !isCurrentQuestion &&
+                                      answers[questionKey] && (answers[questionKey] as string).trim() !== "" &&
+                                      !(codingResults[question.id] && codingResults[question.id].length > 0)
+
+                                    // For MCQ and writing questions, check if they have been visited but not attempted
+                                    const hasVisitedButNotAttempted = (question.type === "Multiple Choice" || question.type === "Written Answer") && 
+                                      isVisited && !isCurrentQuestion && !isAnswered
 
                                     return (
                                       <button
@@ -1526,12 +1551,14 @@ export default function TestPreviewPage() {
                                           setCurrentSection(sIndex)
                                           setCurrentQuestion(qIndex)
                                         }}
-                                        className={`w-6 h-6 text-xs flex items-center justify-center rounded-sm ${
+                                        className={`w-6 h-6 text-xs flex items-center justify-center rounded-sm transition-colors ${
                                           currentSection === sIndex && currentQuestion === qIndex
-                                            ? "bg-primary text-primary-foreground"
+                                            ? "bg-primary text-primary-foreground hover:bg-green-600 hover:text-black"
                                             : isAnswered
-                                              ? "bg-green-100 text-green-800"
-                                              : "bg-muted"
+                                              ? "bg-green-100 text-green-800 hover:bg-green-600 hover:text-black"
+                                              : hasCodeButNotExecuted || hasVisitedButNotAttempted
+                                                ? "bg-red-100 text-red-800 hover:bg-red-200"
+                                                : "bg-muted hover:bg-green-600 hover:text-black"
                                         }`}
                                       >
                                         {qIndex + 1}
@@ -1829,7 +1856,7 @@ export default function TestPreviewPage() {
                   <div>
                     <p className="font-medium">Tab switching detected!</p>
                     <p className="text-sm text-muted-foreground">
-                      Warning {tabSwitchCount}/4 - Your test will be terminated after 4 violations.
+                      Warning {tabSwitchCount}/3 - Your test will be terminated after 3 violations.
                     </p>
                   </div>
                 </div>
@@ -1928,7 +1955,7 @@ export default function TestPreviewPage() {
                             <span>Fullscreen Mode</span>
                           </div>
                           {!systemChecks.fullscreenMode && (
-                            <Button size="sm" onClick={enableFullscreen}>
+                            <Button className="bg-black text-white hover:text-black hover:bg-green-600" size="sm" onClick={enableFullscreen}>
                               Enable
                             </Button>
                           )}
@@ -1963,6 +1990,7 @@ export default function TestPreviewPage() {
                         Close Preview
                       </Button>
                       <Button
+                      className="bg-black text-white hover:text-black hover:bg-green-600"
                         onClick={() => {
                           completeStep("systemCheck")
                           setShowSystemCheck(false)
@@ -2108,6 +2136,7 @@ export default function TestPreviewPage() {
                         Back: System Check
                       </Button>
                       <Button
+                      className="bg-black text-white hover:text-black hover:bg-green-600"
                         onClick={() => {
                           completeStep("idVerification")
                           setShowIdVerification(false)
@@ -2226,6 +2255,7 @@ export default function TestPreviewPage() {
                         Back: ID Verification
                       </Button>
                       <Button
+                      className="bg-black text-white hover:text-black hover:bg-green-600"
                         onClick={() => {
                           completeStep("examRules")
                           setShowRules(false)
@@ -2290,7 +2320,7 @@ export default function TestPreviewPage() {
                   >
                     Cancel
                   </Button>
-                  <Button onClick={captureImage} disabled={cameraManager.status !== "active"}>
+                  <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={captureImage} disabled={cameraManager.status !== "active"}>
                     Capture
                   </Button>
                 </div>

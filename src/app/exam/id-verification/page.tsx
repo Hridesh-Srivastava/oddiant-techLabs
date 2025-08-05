@@ -330,7 +330,7 @@ export default function IDVerificationPage() {
                       <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
                         Upload
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => startCamera(false)}>
+                      <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" onClick={() => startCamera(false)}>
                         <Camera className="h-4 w-4 mr-2" />
                         Capture
                       </Button>
@@ -363,7 +363,7 @@ export default function IDVerificationPage() {
                   <div className="border border-dashed rounded-md p-6 flex flex-col items-center justify-center">
                     <Camera className="h-8 w-8 text-muted-foreground mb-2" />
                     <p className="text-sm text-muted-foreground mb-2">Capture your face using webcam</p>
-                    <Button variant="outline" size="sm" onClick={() => startCamera(true)}>
+                    <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" onClick={() => startCamera(true)}>
                       <Camera className="h-4 w-4 mr-2" />
                       Capture
                     </Button>
@@ -392,7 +392,7 @@ export default function IDVerificationPage() {
                   <Button variant="outline" onClick={stopCamera}>
                     Cancel
                   </Button>
-                  <Button onClick={captureImage} disabled={isUploading}>
+                  <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={captureImage} disabled={isUploading}>
                     {isUploading ? "Uploading..." : "Capture"}
                   </Button>
                 </div>
@@ -407,7 +407,7 @@ export default function IDVerificationPage() {
             <Button variant="outline" onClick={handleBackStep}>
               Back
             </Button>
-            <Button onClick={handleNextStep} disabled={!verificationComplete}>
+            <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={handleNextStep} disabled={!verificationComplete}>
               Next: Exam Rules
             </Button>
           </div>

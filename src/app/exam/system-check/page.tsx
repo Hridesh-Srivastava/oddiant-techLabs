@@ -267,7 +267,7 @@ export default function SystemCheckPage() {
                   <span>Camera Access</span>
                 </div>
                 {!systemChecks.cameraAccess && !isCheckingCamera && (
-                  <Button size="sm" onClick={checkCameraAccess}>
+                  <Button className="bg-black text-white hover:text-black hover:bg-green-600" size="sm" onClick={checkCameraAccess}>
                     Allow
                   </Button>
                 )}
@@ -283,7 +283,7 @@ export default function SystemCheckPage() {
                   <span>Microphone Access</span>
                 </div>
                 {!systemChecks.microphoneAccess && !isCheckingMicrophone && (
-                  <Button size="sm" onClick={checkMicrophoneAccess}>
+                  <Button className="bg-black text-white hover:text-black hover:bg-green-600" size="sm" onClick={checkMicrophoneAccess}>
                     Allow
                   </Button>
                 )}
@@ -299,7 +299,7 @@ export default function SystemCheckPage() {
                   <span>Fullscreen Mode</span>
                 </div>
                 {!systemChecks.fullscreenMode && (
-                  <Button size="sm" onClick={enableFullscreen}>
+                  <Button className="bg-black text-white hover:text-black hover:bg-green-600" size="sm" onClick={enableFullscreen}>
                     Enable
                   </Button>
                 )}
@@ -343,7 +343,7 @@ export default function SystemCheckPage() {
             <Button variant="outline" onClick={() => router.push("/")}>
               Cancel
             </Button>
-            <Button onClick={handleNextStep} disabled={!checkComplete}>
+            <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={handleNextStep} disabled={!checkComplete}>
               Next: ID Verification
             </Button>
           </div>

@@ -131,6 +131,7 @@ export default function TakeTestPage() {
     resultsDeclared: boolean
   } | null>(null)
   const [startTime, setStartTime] = useState<Date | null>(null)
+  const [visitedQuestionKeys, setVisitedQuestionKeys] = useState<Set<string>>(new Set())
 
   // Tab switching detection with improved logic
   const [showTabWarning, setShowTabWarning] = useState(false)
@@ -1144,7 +1145,7 @@ export default function TakeTestPage() {
           const newCount = prev + 1
           if (test?.settings.preventTabSwitching) {
             setShowTabWarning(true)
-            if (newCount >= 4) {
+            if (newCount >= 3) {
               handleTestTermination()
             }
           }
@@ -1161,7 +1162,7 @@ export default function TakeTestPage() {
           const newCount = prev + 1
           if (test?.settings.preventTabSwitching) {
             setShowTabWarning(true)
-            if (newCount >= 4) {
+            if (newCount >= 3) {
               handleTestTermination()
             }
           }
@@ -1516,6 +1517,16 @@ export default function TakeTestPage() {
     }
   }
 
+  // Track visited questions when navigating
+  useEffect(() => {
+    if (test) {
+      const currentQuestionKey = `${test.sections[currentSection]?.id}-${test.sections[currentSection]?.questions[currentQuestion]?.id}`
+      if (currentQuestionKey) {
+        setVisitedQuestionKeys(prev => new Set([...prev, currentQuestionKey]))
+      }
+    }
+  }, [currentSection, currentQuestion, test])
+
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600)
     const minutes = Math.floor((seconds % 3600) / 60)
@@ -1825,7 +1836,7 @@ export default function TakeTestPage() {
               <AlertTriangle className="h-16 w-16 mx-auto text-red-500 mb-4" />
               <h1 className="text-2xl font-bold text-red-600 mb-2">Test Terminated</h1>
               <p className="text-muted-foreground mb-4">
-                Your test has been terminated due to excessive tab switching violations ({tabSwitchCount}/4).
+                Your test has been terminated due to excessive tab switching violations ({tabSwitchCount}/3).
               </p>
               <p className="text-sm text-muted-foreground mb-6">
                 Your current progress has been saved and submitted automatically.
@@ -2073,10 +2084,10 @@ export default function TakeTestPage() {
                   <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
                     <li>Once you start the test, the timer will begin and cannot be paused.</li>
                     <li>Answer all questions to the best of your ability.</li>
-                    <li>Your webcam will remain active during the test for proctoring purposes.</li>
+                    <li>Your webcam and microphone will remain active during the test for proctoring purposes.</li>
                     {test.settings.preventTabSwitching && (
                       <li className="text-amber-600">
-                        Switching tabs or leaving the test page is not allowed and will be recorded. After 4 violations,
+                        Switching tabs or leaving the test page is not allowed and will be recorded. After 3 violations,
                         your test will be automatically terminated.
                       </li>
                     )}
@@ -2098,7 +2109,7 @@ export default function TakeTestPage() {
                 <Separator />
 
                 <div className="text-center">
-                  <Button size="lg" onClick={handleStartTest}>
+                  <Button className="bg-black text-white hover:text-black hover:bg-green-600" size="lg" onClick={handleStartTest}>
                     Start Test
                   </Button>
                 </div>
@@ -2131,7 +2142,7 @@ export default function TakeTestPage() {
                         {tabSwitchCount > 0 && (
                           <div className="flex items-center gap-1 text-amber-600">
                             <AlertTriangle className="h-4 w-4" />
-                            <span className="text-sm">{tabSwitchCount}/4</span>
+                            <span className="text-sm">{tabSwitchCount}/3</span>
                           </div>
                         )}
                       </div>
@@ -2365,7 +2376,7 @@ export default function TakeTestPage() {
                               currentSection === test.sections.length - 1 &&
                               currentQuestion === test.sections[currentSection].questions.length - 1
                             }
-                            className="w-full sm:w-auto"
+                            className="w-full sm:w-auto bg-black text-white hover:text-black hover:bg-green-600"
                           >
                             Next Question
                           </Button>
@@ -2408,11 +2419,27 @@ export default function TakeTestPage() {
                               <div className="grid grid-cols-5 sm:grid-cols-6 lg:grid-cols-5 gap-1">
                                 {section.questions.map((question, qIndex) => {
                                   const questionKey = `${section.id}-${question.id}`
-                                  const isAnswered =
-                                    answers[questionKey] &&
-                                    (typeof answers[questionKey] === "string"
-                                      ? (answers[questionKey] as string).trim() !== ""
-                                      : (answers[questionKey] as string[]).length > 0)
+                                  const isAnswered = question.type === "Coding"
+                                    ? (questionCodeSubmissions[questionKey] && questionCodeSubmissions[questionKey].length > 0) ||
+                                      (questionCodeSubmissions[question.id] && questionCodeSubmissions[question.id].length > 0)
+                                    : answers[questionKey] &&
+                                      (typeof answers[questionKey] === "string"
+                                        ? (answers[questionKey] as string).trim() !== ""
+                                        : (answers[questionKey] as string[]).length > 0)
+                                  
+                                  // For coding questions, check if they have been visited but not executed
+                                  const isVisited = visitedQuestionKeys.has(questionKey)
+                                  const isCurrentQuestion = currentSection === sIndex && currentQuestion === qIndex
+                                  const hasCodeButNotExecuted = question.type === "Coding" && 
+                                    isVisited && !isCurrentQuestion &&
+                                    codes[questionKey] && codes[questionKey].trim() !== "" &&
+                                    !((questionCodeSubmissions[questionKey] && questionCodeSubmissions[questionKey].length > 0) ||
+                                      (questionCodeSubmissions[question.id] && questionCodeSubmissions[question.id].length > 0))
+                                  
+                                  // For MCQ and writing questions, check if they have been visited but not attempted
+                                  const hasVisitedButNotAttempted = (question.type === "Multiple Choice" || question.type === "Written Answer") && 
+                                    isVisited && !isCurrentQuestion && !isAnswered
+                                  
                                   return (
                                     <button
                                       key={question.id}
@@ -2420,13 +2447,15 @@ export default function TakeTestPage() {
                                         setCurrentSection(sIndex)
                                         setCurrentQuestion(qIndex)
                                       }}
-                                      className={`w-8 h-8 text-xs flex items-center justify-center rounded-md transition-colors ${
-                                        currentSection === sIndex && currentQuestion === qIndex
-                                          ? "bg-primary text-primary-foreground"
-                                          : isAnswered
-                                            ? "bg-green-100 text-green-800 hover:bg-green-200"
-                                            : "bg-muted hover:bg-muted/80"
-                                      }`}
+                                                                              className={`w-8 h-8 text-xs flex items-center justify-center rounded-md transition-colors ${
+                                          currentSection === sIndex && currentQuestion === qIndex
+                                            ? "bg-primary text-primary-foreground hover:bg-green-600 hover:text-black"
+                                            : isAnswered
+                                              ? "bg-green-100 text-green-800 hover:bg-green-600 hover:text-black"
+                                              : hasCodeButNotExecuted || hasVisitedButNotAttempted
+                                                ? "bg-red-100 text-red-800 hover:bg-red-200"
+                                                : "bg-muted hover:bg-green-600 hover:text-black"
+                                        }`}
                                     >
                                       {qIndex + 1}
                                     </button>
@@ -2731,7 +2760,7 @@ export default function TakeTestPage() {
                           <span>Fullscreen Mode</span>
                         </div>
                         {!systemChecks.fullscreenMode && (
-                          <Button size="sm" onClick={enableFullscreen}>
+                          <Button className="bg-black text-white hover:text-black hover:bg-green-600" size="sm" onClick={enableFullscreen}>
                             Enable
                           </Button>
                         )}
@@ -3027,7 +3056,7 @@ export default function TakeTestPage() {
             </DialogHeader>
             <div className="py-4">
               <p>You have switched tabs or left the test window. This activity is recorded and may affect your test.</p>
-              <p className="mt-2 font-medium">Tab switches detected: {tabSwitchCount}/4</p>
+              <p className="mt-2 font-medium">Tab switches detected: {tabSwitchCount}/3</p>
               {tabSwitchCount >= 3 && (
                 <p className="mt-2 text-red-600 font-medium">
                   Warning: One more violation will result in automatic test termination!
