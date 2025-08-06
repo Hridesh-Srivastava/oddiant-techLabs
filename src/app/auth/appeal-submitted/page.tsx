@@ -52,7 +52,7 @@ export default function AppealSubmittedPage() {
 
           <div className="flex justify-center pt-4">
             <Link href="/auth/employee/login">
-              <Button variant="outline">Return to Login</Button>
+              <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline">Return to Login</Button>
             </Link>
           </div>
 

@@ -1841,7 +1841,7 @@ export default function TakeTestPage() {
               <p className="text-sm text-muted-foreground mb-6">
                 Your current progress has been saved and submitted automatically.
               </p>
-              <Button onClick={() => router.push("/")}>Return to Home</Button>
+              <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => router.push("/")}>Return to Home</Button>
             </CardContent>
           </Card>
         </div>

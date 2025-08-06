@@ -32,7 +32,7 @@ export default function ApplicationSuccessPage() {
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Browse More Jobs
               </Button>
-              <Button variant="outline" onClick={() => router.push("/")} className="flex-1">
+              <Button variant="outline" onClick={() => router.push("/")} className="flex-1 bg-black text-white hover:text-black hover:bg-green-600">
                 <Search className="h-4 w-4 mr-2" />
                 Return to Home
               </Button>

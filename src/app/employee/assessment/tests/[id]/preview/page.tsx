@@ -1064,7 +1064,7 @@ export default function TestPreviewPage() {
                 <p className="text-sm text-muted-foreground mb-6">
                   Your current progress has been saved and submitted automatically.
                 </p>
-                <Button onClick={() => router.push(`/employee/assessment/tests/${testId}`)}>
+                <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => router.push(`/employee/assessment/tests/${testId}`)}>
                   Return to Test Overview
                 </Button>
               </CardContent>
