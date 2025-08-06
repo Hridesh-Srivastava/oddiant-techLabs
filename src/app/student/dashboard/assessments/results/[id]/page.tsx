@@ -230,41 +230,41 @@ export default function TestResultPage() {
 
           {/* Score Overview */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <Card className="border-l-4 border-l-green-500">
+            <Card className="bg-blue-600 text-white">
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Trophy className="h-5 w-5 text-yellow-500" />
+                <CardTitle className="text-lg flex items-center gap-2 text-white">
+                  <Trophy className="h-5 w-5 text-yellow-300" />
                   Final Score
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className={`text-3xl font-bold ${getScoreColor(result.score, result.passingScore)}`}>
+                <div className="text-3xl font-bold text-white">
                   {result.score}%
                 </div>
-                <div className={`text-lg font-semibold ${getGradeColor(result.grade)} mt-1`}>Grade: {result.grade}</div>
+                <div className="text-lg font-semibold text-white mt-1">Grade: {result.grade}</div>
                 <Progress value={result.score} className="mt-3 h-2" />
-                <p className="text-sm text-gray-500 mt-2">Passing Score: {result.passingScore}%</p>
+                <p className="text-sm text-white mt-2">Passing Score: {result.passingScore}%</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-green-600 text-white">
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Target className="h-5 w-5 text-blue-500" />
+                <CardTitle className="text-lg flex items-center gap-2 text-white">
+                  <Target className="h-5 w-5 text-green-300" />
                   Accuracy
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-2xl font-bold text-white">
                   {result.correctAnswers}/{result.totalQuestions}
                 </div>
-                <p className="text-sm text-gray-500 mt-1">Correct Answers</p>
+                <p className="text-sm text-white mt-1">Correct Answers</p>
                 <div className="flex gap-2 mt-3">
-                  <div className="flex items-center gap-1 text-green-600">
+                  <div className="flex items-center gap-1 text-white">
                     <CheckCircle className="h-4 w-4" />
                     <span className="text-sm">{result.correctAnswers}</span>
                   </div>
-                  <div className="flex items-center gap-1 text-red-600">
+                  <div className="flex items-center gap-1 text-white">
                     <XCircle className="h-4 w-4" />
                     <span className="text-sm">{result.incorrectAnswers}</span>
                   </div>
@@ -272,41 +272,41 @@ export default function TestResultPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-purple-600 text-white">
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-purple-500" />
+                <CardTitle className="text-lg flex items-center gap-2 text-white">
+                  <Clock className="h-5 w-5 text-purple-300" />
                   Time Taken
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-purple-600">{formatDuration(result.timeTaken)}</div>
-                <p className="text-sm text-gray-500 mt-1">of {formatDuration(result.duration)} allowed</p>
+                <div className="text-2xl font-bold text-white">{formatDuration(result.timeTaken)}</div>
+                <p className="text-sm text-white mt-1">of {formatDuration(result.duration)} allowed</p>
                 <Progress value={(result.timeTaken / result.duration) * 100} className="mt-3 h-2" />
               </CardContent>
             </Card>
 
             {/* Test Info Card (replace old fields) */}
-            <Card>
+            <Card className="bg-orange-600 text-white">
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-orange-500" />
+                <CardTitle className="text-lg flex items-center gap-2 text-white">
+                  <FileText className="h-5 w-5 text-orange-300" />
                   Test Info
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Result ID:</span>
-                    <span className="text-xs text-gray-500">{result.id}</span>
+                    <span className="text-sm text-white">Result ID:</span>
+                    <span className="text-xs text-white">{result.id}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Type:</span>
-                    <Badge variant="outline" className="text-xs">{result.type || "-"}</Badge>
+                    <span className="text-sm text-white">Type:</span>
+                    <Badge variant="outline" className="text-xs bg-white text-orange-600">{result.type || "-"}</Badge>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Result Published:</span>
-                    <span className="text-xs text-gray-500">{formatDate(result.publishedAt)}</span>
+                    <span className="text-sm text-white">Result Published:</span>
+                    <span className="text-xs text-white">{formatDate(result.publishedAt)}</span>
                   </div>
                 </div>
               </CardContent>

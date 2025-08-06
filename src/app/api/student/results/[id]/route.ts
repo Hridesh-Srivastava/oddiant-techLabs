@@ -13,7 +13,8 @@ export async function GET(request: Request, context: any) {
     }
 
     const studentId = authResult.userId
-    const resultId = context.params.id
+    const params = await context.params
+    const resultId = params.id
 
     // Connect to database
     const { db } = await connectToDatabase()

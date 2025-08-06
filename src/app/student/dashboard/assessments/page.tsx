@@ -172,10 +172,11 @@ export default function StudentAssessmentDashboard() {
   // Helper function to get full name
   const getFullName = (student: StudentData): string => {
     if (!student) return ""
+    const salutation = student.salutation || ""
     const firstName = student.firstName || ""
     const middleName = student.middleName || ""
     const lastName = student.lastName || ""
-    return `${firstName} ${middleName} ${lastName}`.trim()
+    return `${salutation} ${firstName} ${middleName} ${lastName}`.trim()
   }
 
   // Fetch student data
@@ -606,47 +607,47 @@ export default function StudentAssessmentDashboard() {
 
         {/* Dashboard Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
+          <Card className="bg-blue-600 text-white">
             <CardHeader>
-              <CardTitle className="text-lg">Available Tests</CardTitle>
-              <CardDescription>Tests you can take</CardDescription>
+              <CardTitle className="text-lg text-white">Available Tests</CardTitle>
+              <CardDescription className="text-white">Tests you can take</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{tests.length}</div>
-              <p className="text-sm text-gray-500 mt-2">Ready to start</p>
+              <div className="text-2xl font-bold text-white">{tests.length}</div>
+              <p className="text-sm text-white mt-2">Ready to start</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-green-600 text-white">
             <CardHeader>
-              <CardTitle className="text-lg">Invitations</CardTitle>
-              <CardDescription>Pending invitations</CardDescription>
+              <CardTitle className="text-lg text-white">Invitations</CardTitle>
+              <CardDescription className="text-white">Pending invitations</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{pendingInvitations.length}</div>
-              <p className="text-sm text-gray-500 mt-2">Awaiting response</p>
+              <div className="text-2xl font-bold text-white">{pendingInvitations.length}</div>
+              <p className="text-sm text-white mt-2">Awaiting response</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-purple-600 text-white">
             <CardHeader>
-              <CardTitle className="text-lg">Completed</CardTitle>
-              <CardDescription>Tests finished</CardDescription>
+              <CardTitle className="text-lg text-white">Completed</CardTitle>
+              <CardDescription className="text-white">Tests finished</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{completedTests.length}</div>
-              <p className="text-sm text-gray-500 mt-2">View results</p>
+              <div className="text-2xl font-bold text-white">{completedTests.length}</div>
+              <p className="text-sm text-white mt-2">View results</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-orange-600 text-white">
             <CardHeader>
-              <CardTitle className="text-lg">Results Published</CardTitle>
-              <CardDescription>Results available</CardDescription>
+              <CardTitle className="text-lg text-white">Results Published</CardTitle>
+              <CardDescription className="text-white">Results available</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-600">{publishedResults.length}</div>
-              <p className="text-sm text-gray-500 mt-2">Check your scores</p>
+              <div className="text-2xl font-bold text-white">{publishedResults.length}</div>
+              <p className="text-sm text-white mt-2">Check your scores</p>
             </CardContent>
           </Card>
         </div>
