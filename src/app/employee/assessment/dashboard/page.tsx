@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { toast, Toaster } from "sonner"
-import { FileText, Plus, RefreshCw, ChevronLeft, ChevronRight, LogOut } from "lucide-react"
+import { FileText, Plus, RefreshCw, ChevronLeft, ChevronRight, LogOut, Zap, Users, BarChart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -341,43 +341,35 @@ export default function AssessmentDashboard() {
             </>
           ) : (
             <>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Tests</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{dashboardStats.totalTests}</div>
-                  <p className="text-xs text-muted-foreground mt-1">+2 from last month</p>
+              <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+                <CardContent className="p-6 flex flex-col items-center justify-center">
+                  <FileText className="h-8 w-8 mb-2" />
+                  <p className="text-2xl font-bold">{dashboardStats.totalTests}</p>
+                  <p className="text-sm opacity-80">Total Tests</p>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Active Tests</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{dashboardStats.activeTests}</div>
-                  <p className="text-xs text-muted-foreground mt-1">+1 from last month</p>
+              <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
+                <CardContent className="p-6 flex flex-col items-center justify-center">
+                  <Zap className="h-8 w-8 mb-2" />
+                  <p className="text-2xl font-bold">{dashboardStats.activeTests}</p>
+                  <p className="text-sm opacity-80">Active Tests</p>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Candidates</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{dashboardStats.totalCandidates}</div>
-                  <p className="text-xs text-muted-foreground mt-1">+22 from last month</p>
+              <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+                <CardContent className="p-6 flex flex-col items-center justify-center">
+                  <Users className="h-8 w-8 mb-2" />
+                  <p className="text-2xl font-bold">{dashboardStats.totalCandidates}</p>
+                  <p className="text-sm opacity-80">Total Candidates</p>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Completion Rate</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{dashboardStats.completionRate}%</div>
-                  <p className="text-xs text-muted-foreground mt-1">+5% from last month</p>
+              <Card className="bg-gradient-to-br from-amber-500 to-amber-600 text-white">
+                <CardContent className="p-6 flex flex-col items-center justify-center">
+                  <BarChart className="h-8 w-8 mb-2" />
+                  <p className="text-2xl font-bold">{dashboardStats.completionRate}%</p>
+                  <p className="text-sm opacity-80">Completion Rate</p>
                 </CardContent>
               </Card>
             </>
