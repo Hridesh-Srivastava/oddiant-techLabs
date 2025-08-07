@@ -326,7 +326,7 @@ export default function InviteCandidateToJobsPage({
         </Button>
 
         {/* Candidate Info Header */}
-        <Card className="mb-6">
+        <Card className="mb-6 border-l-custom-golden" style={{ borderLeft: '4px solid #FFD700' }}>
           <CardContent className="p-6">
             <div className="flex items-center space-x-4">
               <Avatar className="h-16 w-16">
@@ -382,7 +382,7 @@ export default function InviteCandidateToJobsPage({
               <>
                 <div className="space-y-4">
                   {currentJobs.map((job) => (
-                    <Card key={job._id} className="border border-gray-200">
+                    <Card key={job._id} className="border border-gray-200 border-l-custom-orange" style={{ borderLeft: '4px solid #FF8C00' }}>
                       <CardContent className="p-6">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">

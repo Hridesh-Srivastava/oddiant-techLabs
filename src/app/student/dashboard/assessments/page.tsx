@@ -655,11 +655,31 @@ export default function StudentAssessmentDashboard() {
         {/* Tabs for different sections */}
         <Tabs defaultValue="available" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="available">Available Tests</TabsTrigger>
-            <TabsTrigger value="invitations">Invitations</TabsTrigger>
-            <TabsTrigger value="your-tests">Your Tests</TabsTrigger>
-            <TabsTrigger value="results">Results</TabsTrigger>
-          </TabsList>
+    <TabsTrigger
+      value="available"
+      className="data-[state=active]:bg-black data-[state=active]:text-white"
+    >
+      Available Tests
+    </TabsTrigger>
+    <TabsTrigger
+      value="invitations"
+      className="data-[state=active]:bg-black data-[state=active]:text-white"
+    >
+      Invitations
+    </TabsTrigger>
+    <TabsTrigger
+      value="your-tests"
+      className="data-[state=active]:bg-black data-[state=active]:text-white"
+    >
+      Your Tests
+    </TabsTrigger>
+    <TabsTrigger
+      value="results"
+      className="data-[state=active]:bg-black data-[state=active]:text-white"
+    >
+      Results
+    </TabsTrigger>
+  </TabsList>
 
           {/* Available Tests Tab */}
           <TabsContent value="available">

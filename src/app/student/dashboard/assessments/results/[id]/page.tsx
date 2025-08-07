@@ -314,7 +314,7 @@ export default function TestResultPage() {
           </div>
 
           {/* Category Breakdown */}
-          <Card className="mb-8">
+          <Card className="mb-8 border-l-4 border-l-purple-500">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
@@ -357,7 +357,7 @@ export default function TestResultPage() {
               {showAnswers ? (
                 <div className="space-y-6">
                   {result.questions.map((question, index) => (
-                    <div key={`${question.id}-${index}`} className="border rounded-lg p-4">
+                    <div key={`${question.id}-${index}`} className="border rounded-lg p-4 border-l-4 border-l-red-500">
                       <div className="flex items-start justify-between mb-3">
                         <h4 className="font-medium text-lg">Question {index + 1}</h4>
                         <div className="flex items-center gap-2">

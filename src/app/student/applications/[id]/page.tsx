@@ -227,7 +227,7 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Application Details - Takes 2/3 of the space */}
           <div className="lg:col-span-2">
-            <Card>
+            <Card className="border-l-4 border-l-green-500">
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
@@ -392,7 +392,7 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
                       {recentJobs.slice(0, 50).map((job) => (
                         <div
                           key={job._id}
-                          className="p-3 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                          className="p-3 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer border-l-4 border-l-yellow-400"
                           onClick={() => handleViewJobDetails(job._id)}
                         >
                           <div className="flex justify-between items-start mb-2">

@@ -367,7 +367,7 @@ export default function JobApplicantsPage({
                 </div>
 
                 {filteredApplicants.map((applicant) => (
-                  <div key={applicant._id} className="grid grid-cols-8 border-t p-3 items-center">
+                  <div key={applicant._id} className="grid grid-cols-8 border-t border-l-4 border-l-pink-500 p-3 items-center">
                     <div className="flex items-center">
                       <Checkbox
                         id={`select-${applicant._id}`}

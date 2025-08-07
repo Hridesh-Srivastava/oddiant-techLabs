@@ -2491,7 +2491,7 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                       <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
                         Cancel
                       </Button>
-                      <Button type="button" onClick={handleNextTab}>
+                      <Button className="bg-black text-white hover:text-black hover:bg-green-600" type="button" onClick={handleNextTab}>
                         Next
                       </Button>
                     </div>
@@ -2690,14 +2690,14 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                     </div>
                     <div className="flex justify-between mt-6">
                       <div className="flex space-x-3">
-                        <Button type="button" onClick={handlePreviousTab}>
+                        <Button className="bg-black text-white hover:text-black hover:bg-green-600" type="button" onClick={handlePreviousTab}>
                           Previous
                         </Button>
                         <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
                           Cancel
                         </Button>
                       </div>
-                      <Button type="button" onClick={handleNextTab}>
+                      <Button className="bg-black text-white hover:text-black hover:bg-green-600" type="button" onClick={handleNextTab}>
                         Next
                       </Button>
                     </div>
@@ -2890,6 +2890,7 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                           className="flex-1"
                         />
                         <Button
+                        className="bg-black text-white hover:text-black hover:bg-green-600"
                           type="button"
                           onClick={addPreferredCity}
                           disabled={!currentCity || formData.preferredCities.length >= 5}
@@ -2922,14 +2923,14 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                     </div>
                     <div className="flex justify-between mt-6">
                       <div className="flex space-x-3">
-                        <Button type="button" onClick={handlePreviousTab}>
+                        <Button className="bg-black text-white hover:text-black hover:bg-green-600" type="button" onClick={handlePreviousTab}>
                           Previous
                         </Button>
                         <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
                           Cancel
                         </Button>
                       </div>
-                      <Button type="button" onClick={handleNextTab}>
+                      <Button className="bg-black text-white hover:text-black hover:bg-green-600" type="button" onClick={handleNextTab}>
                         Next
                       </Button>
                     </div>
@@ -3020,14 +3021,14 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                     </div>
                     <div className="flex justify-between mt-6">
                       <div className="flex space-x-3">
-                        <Button type="button" onClick={handlePreviousTab}>
+                        <Button className="bg-black text-white hover:text-black hover:bg-green-600" type="button" onClick={handlePreviousTab}>
                           Previous
                         </Button>
                         <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
                           Cancel
                         </Button>
                       </div>
-                      <Button type="button" onClick={handleNextTab}>
+                      <Button className="bg-black text-white hover:text-black hover:bg-green-600" type="button" onClick={handleNextTab}>
                         Next
                       </Button>
                     </div>
@@ -3045,6 +3046,7 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                           className="flex-1"
                         />
                         <Button
+                        className="bg-black text-white hover:text-black hover:bg-green-600"
                           type="button"
                           onClick={addSkill}
                           disabled={!currentSkill || formData.skills.length >= 10}
@@ -3134,14 +3136,14 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                     </div>
                     <div className="flex justify-between mt-6">
                       <div className="flex space-x-3">
-                        <Button type="button" onClick={handlePreviousTab}>
+                        <Button className="bg-black text-white hover:text-black hover:bg-green-600" type="button" onClick={handlePreviousTab}>
                           Previous
                         </Button>
                         <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
                           Cancel
                         </Button>
                       </div>
-                      <Button type="button" onClick={handleNextTab}>
+                      <Button className="bg-black text-white hover:text-black hover:bg-green-600" type="button" onClick={handleNextTab}>
                         Next
                       </Button>
                     </div>
@@ -3164,6 +3166,7 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                             />
                             <Button
                               type="button"
+                              className="bg-black text-white hover:text-black hover:bg-green-600"
                               onClick={() => handleUploadFile("resume")}
                               disabled={!selectedFiles.resume || isUploading}
                             >
@@ -3195,6 +3198,7 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                             />
                             <Button
                               type="button"
+                              className="bg-black text-white hover:text-black hover:bg-green-600"
                               onClick={() => handleUploadFile("videoResume")}
                               disabled={!selectedFiles.videoResume || isUploading}
                             >
@@ -3225,6 +3229,7 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                             />
                             <Button
                               type="button"
+                              className="bg-black text-white hover:text-black hover:bg-green-600"
                               onClick={() => handleUploadFile("audioBiodata")}
                               disabled={!selectedFiles.audioBiodata || isUploading}
                             >
@@ -3255,6 +3260,7 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
                             />
                             <Button
                               type="button"
+                              className="bg-black text-white hover:text-black hover:bg-green-600"
                               onClick={() => handleUploadFile("photograph")}
                               disabled={!selectedFiles.photograph || isUploading}
                             >
@@ -3272,14 +3278,14 @@ export default function JobApplicationPage({ params }: { params: Promise<{ id: s
 
                     <div className="flex justify-between mt-6">
                       <div className="flex space-x-3">
-                        <Button type="button" onClick={handlePreviousTab}>
+                        <Button className="bg-black text-white hover:text-black hover:bg-green-600" type="button" onClick={handlePreviousTab}>
                           Previous
                         </Button>
                         <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
                           Cancel
                         </Button>
                       </div>
-                      <Button type="submit" disabled={isSubmitting || isUploading}>
+                      <Button className="bg-black text-white hover:text-black hover:bg-green-600" type="submit" disabled={isSubmitting || isUploading}>
                         {isSubmitting ? (
                           <>
                             <div className="animate-spin mr-2 h-4 w-4 border-2 border-t-transparent border-white rounded-full"></div>

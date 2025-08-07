@@ -141,7 +141,7 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
               <p className="text-gray-500 mb-6">
                 The job posting you are looking for does not exist or has been removed.
               </p>
-              <Button onClick={() => router.push("/")}>Go to Home</Button>
+              <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => router.push("/")}>Go to Home</Button>
             </CardContent>
           </Card>
         </div>
@@ -174,7 +174,7 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-6">
-            <Card>
+            <Card className="border-l-4 border-l-blue-500">
               <CardHeader>
                 <CardTitle className="text-2xl">{job.jobTitle}</CardTitle>
                 <div className="flex items-center mt-1">
@@ -378,7 +378,7 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
             </Card>
 
             {/* Company Information Card - Always display this card */}
-            <Card>
+            <Card className="border-l-4 border-l-blue-500">
               <CardHeader>
                 <CardTitle>About {job.companyName || "Company"}</CardTitle>
               </CardHeader>
@@ -405,7 +405,7 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
           </div>
 
           <div className="space-y-6">
-            <Card>
+            <Card className="border-l-4 border-l-green-500">
               <CardHeader>
                 <CardTitle>Apply Now</CardTitle>
                 {job.status !== "open" && (
@@ -443,7 +443,7 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-green-500">
               <CardHeader>
                 <CardTitle>Job Details</CardTitle>
               </CardHeader>
@@ -482,7 +482,7 @@ export default function PublicJobPage({ params }: { params: Promise<{ id: string
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-green-500">
               <CardHeader>
                 <CardTitle>Share This Job</CardTitle>
               </CardHeader>

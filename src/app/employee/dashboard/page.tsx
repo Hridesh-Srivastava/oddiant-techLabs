@@ -2311,7 +2311,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
 
           {activeTab === "overview" && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <Card className="lg:col-span-1 bg-gradient-to-br from-purple-50 to-purple-100">
+              <Card className="lg:col-span-1 bg-gradient-to-br from-purple-50 to-purple-100 border-l-4 border-l-purple-500">
                 <CardHeader>
                   <CardTitle>Company Profile</CardTitle>
                 </CardHeader>
@@ -2361,7 +2361,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                 </CardContent>
               </Card>
 
-              <Card className="lg:col-span-2">
+              <Card className="lg:col-span-2 border-l-4 border-l-blue-500">
                 <CardHeader>
                   <CardTitle>Recent Candidates</CardTitle>
                   <CardDescription>Latest candidates who applied to your jobs</CardDescription>
@@ -2433,7 +2433,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                 </CardContent>
               </Card>
 
-              <Card className="lg:col-span-2">
+              <Card className="lg:col-span-2 border-l-4 border-l-blue-500">
                 <CardHeader>
                   <CardTitle>Open Positions</CardTitle>
                   <CardDescription>Currently active job postings</CardDescription>
@@ -2497,7 +2497,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
+              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-l-4 border-l-purple-500">
                 <CardHeader>
                   <CardTitle>Upcoming Interviews</CardTitle>
                   <CardDescription>Scheduled interviews for this week</CardDescription>
@@ -2604,7 +2604,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                       {paginateItems(filteredCandidates, currentCandidatesPage).map((candidate, index) => (
                         <div
                           key={candidate._id}
-                          className={`grid grid-cols-8 border-t p-3 items-center ${
+                          className={`grid grid-cols-8 border-t p-3 items-center border-l-4 border-l-green-500 ${
                             index % 2 === 0 ? "bg-gray-200" : "bg-white"
                           }`}
                         >
@@ -2718,7 +2718,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                       {paginateItems(jobPostings, currentJobsPage).map((job, index) => (
                         <div
                           key={job._id}
-                          className={`border rounded-lg p-4 ${
+                          className={`border rounded-lg p-4 border-l-4 border-l-yellow-500 ${
                             index % 2 === 0 ? "bg-gray-200" : "bg-white"
                           }`}
                         >
@@ -2825,7 +2825,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                         .map((interview) => (
                           <div
                             key={interview._id}
-                            className="bg-white rounded-xl p-6 shadow-md border border-gray-200 hover:shadow-lg transition-all duration-200"
+                            className="bg-white rounded-xl p-6 shadow-md border border-gray-200 hover:shadow-lg transition-all duration-200 border-l-4 border-l-orange-500"
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-4">
@@ -2936,7 +2936,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                           .map((interview) => (
                             <div
                               key={interview._id}
-                              className="bg-white rounded-xl p-6 shadow-md border border-gray-200 hover:shadow-lg hover:border-purple-300 transition-all duration-200 cursor-pointer group"
+                              className="bg-white rounded-xl p-6 shadow-md border border-gray-200 hover:shadow-lg hover:border-purple-300 transition-all duration-200 cursor-pointer group border-l-4 border-l-violet-500"
                               onClick={() => router.push(`/employee/interviews/${interview._id}`)}
                             >
                               <div className="flex items-center justify-between">

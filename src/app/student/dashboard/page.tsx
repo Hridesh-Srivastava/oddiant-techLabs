@@ -2539,9 +2539,7 @@ export default function StudentDashboardPage() {
                     {currentJobs.map((job, index) => (
                       <Card
                         key={job._id}
-                        className={`overflow-hidden hover:shadow-md transition-shadow ${
-                          index % 2 === 0 ? 'bg-yellow-50/50' : 'bg-gray-50'
-                        }`}
+                        className="overflow-hidden hover:shadow-md transition-shadow bg-white border-l-4 border-l-yellow-500"
                       >
                         <CardContent className="p-0">
                           <div className="p-6">
@@ -2924,7 +2922,7 @@ export default function StudentDashboardPage() {
                     {applications.map((application) => (
                         <Card
                           key={application._id}
-                          className="overflow-hidden hover:shadow-md transition-shadow"
+                          className="overflow-hidden hover:shadow-md transition-shadow border-l-4 border-l-purple-500"
                         >
                           <CardContent className="p-6">
                             <div className="flex justify-between items-start">
@@ -3037,7 +3035,7 @@ export default function StudentDashboardPage() {
         {/* Profile Tab */}
         {activeTab === "profile" && (
           <div>
-            <Card>
+            <Card className="border-l-4 border-l-green-500">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>My Profile</CardTitle>
@@ -3856,7 +3854,7 @@ export default function StudentDashboardPage() {
         {/* Settings Tab */}
         {activeTab === "settings" && (
           <div>
-            <Card>
+            <Card className="border-l-4 border-l-blue-900">
               <CardHeader>
                 <CardTitle>Settings</CardTitle>
                 <CardDescription>

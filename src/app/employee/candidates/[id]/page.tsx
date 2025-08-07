@@ -534,7 +534,7 @@ export default function CandidateDetailsPage({
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-1">
-            <Card>
+            <Card className="border-l-custom-teal" style={{ borderLeft: '4px solid #3AA6B9' }}>
               <CardContent className="pt-6">
                 <div className="flex flex-col items-center text-center">
                   <Avatar className="h-24 w-24 mb-4">
@@ -590,7 +590,7 @@ export default function CandidateDetailsPage({
               </CardContent>
             </Card>
 
-            <Card className="mt-6">
+            <Card className="mt-6 border-l-custom-teal" style={{ borderLeft: '4px solid #3AA6B9' }}>
               <CardHeader>
                 <CardTitle>Contact Information</CardTitle>
               </CardHeader>
@@ -662,7 +662,7 @@ export default function CandidateDetailsPage({
             </Card>
 
             {candidate.availableAssets && candidate.availableAssets.length > 0 && (
-              <Card className="mt-6">
+              <Card className="mt-6 border-l-custom-teal" style={{ borderLeft: '4px solid #3AA6B9' }}>
                 <CardHeader>
                   <CardTitle>Available Assets</CardTitle>
                 </CardHeader>
@@ -680,7 +680,7 @@ export default function CandidateDetailsPage({
             )}
 
             {candidate.identityDocuments && candidate.identityDocuments.length > 0 && (
-              <Card className="mt-6">
+              <Card className="mt-6 border-l-custom-teal" style={{ borderLeft: '4px solid #3AA6B9' }}>
                 <CardHeader>
                   <CardTitle>Identity Documents</CardTitle>
                 </CardHeader>
@@ -699,7 +699,7 @@ export default function CandidateDetailsPage({
           </div>
 
           <div className="md:col-span-2 space-y-6">
-            <Card>
+            <Card className="border-l-custom-mint" style={{ borderLeft: '4px solid #C1ECE4' }}>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Candidate Profile</CardTitle>
                 <div className="flex space-x-2">
@@ -1040,7 +1040,7 @@ export default function CandidateDetailsPage({
             </Card>
 
             {/* Documents and Media */}
-            <Card>
+            <Card className="border-l-custom-mint" style={{ borderLeft: '4px solid #C1ECE4' }}>
               <CardHeader>
                 <CardTitle>Documents & Media</CardTitle>
               </CardHeader>
@@ -1105,7 +1105,7 @@ export default function CandidateDetailsPage({
             </Card>
 
             {/* Interview History */}
-            <Card>
+            <Card className="border-l-custom-mint" style={{ borderLeft: '4px solid #C1ECE4' }}>
               <CardHeader>
                 <CardTitle>Interview History</CardTitle>
               </CardHeader>

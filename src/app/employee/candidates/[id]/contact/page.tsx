@@ -223,7 +223,7 @@ export default function ContactCandidatePage({ params }: { params: Promise<{ id:
           Back to Candidate
         </Button>
 
-        <Card className="mb-6">
+        <Card className="mb-6 border-l-4 border-l-red-500">
           <CardHeader>
             <div className="flex items-center space-x-4">
               <Avatar className="h-12 w-12">
@@ -276,7 +276,7 @@ export default function ContactCandidatePage({ params }: { params: Promise<{ id:
             </TabsTrigger>
           </TabsList>
           <TabsContent value="email">
-            <Card>
+            <Card className="border-l-4 border-l-blue-900">
               <CardHeader>
                 <CardTitle>Send Email</CardTitle>
                 <CardDescription>Compose an email to send to the candidate</CardDescription>
@@ -322,7 +322,7 @@ export default function ContactCandidatePage({ params }: { params: Promise<{ id:
             </Card>
           </TabsContent>
           <TabsContent value="sms">
-            <Card>
+            <Card className="border-l-4 border-l-blue-900">
               <CardHeader>
                 <CardTitle>Send SMS</CardTitle>
                 <CardDescription>Send a text message to the candidate</CardDescription>

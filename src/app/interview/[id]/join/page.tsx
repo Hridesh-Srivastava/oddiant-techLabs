@@ -241,7 +241,7 @@ export default function PublicInterviewJoinPage({ params }: { params: Promise<{ 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Interview Card */}
           <div className="lg:col-span-2">
-            <Card className="shadow-lg border border-gray-200">
+            <Card className="shadow-lg border border-gray-200 border-l-4 border-l-green-500">
               <CardHeader className="bg-gray-50 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
@@ -403,7 +403,7 @@ export default function PublicInterviewJoinPage({ params }: { params: Promise<{ 
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Contact Information */}
-            <Card className="shadow-lg border border-gray-200">
+            <Card className="shadow-lg border border-gray-200 border-l-4 border-l-blue-500">
               <CardHeader>
                 <CardTitle className="text-lg text-gray-900 flex items-center">
                   <Phone className="h-5 w-5 mr-2 text-green-600" />
@@ -440,7 +440,7 @@ export default function PublicInterviewJoinPage({ params }: { params: Promise<{ 
             </Card>
 
             {/* Interview Guidelines */}
-            <Card className="shadow-lg border border-gray-200">
+            <Card className="shadow-lg border border-gray-200 border-l-4 border-l-blue-500">
               <CardHeader>
                 <CardTitle className="text-lg text-gray-900 flex items-center">
                   <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
@@ -490,7 +490,7 @@ export default function PublicInterviewJoinPage({ params }: { params: Promise<{ 
 
             {/* Post-Interview Feedback */}
             {interview.status === "completed" && (
-              <Card className="shadow-lg border border-gray-200">
+              <Card className="shadow-lg border border-gray-200 border-l-4 border-l-blue-500">
                 <CardHeader>
                   <CardTitle className="text-lg text-gray-900 flex items-center">
                     <Star className="h-5 w-5 mr-2 text-yellow-600" />

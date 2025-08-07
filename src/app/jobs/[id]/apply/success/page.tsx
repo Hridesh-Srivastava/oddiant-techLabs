@@ -87,7 +87,7 @@ export default function ApplicationSuccessPage({ params }: { params: Promise<{ i
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Job
               </Button>
-              <Button onClick={() => router.push("/")}>
+              <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => router.push("/")}>
                 <Home className="h-4 w-4 mr-2" />
                 Go to Home
               </Button>

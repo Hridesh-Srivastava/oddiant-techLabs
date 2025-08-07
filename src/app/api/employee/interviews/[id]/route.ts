@@ -101,7 +101,24 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           phone: candidate.phone || "",
           role: candidate.role || interview.position || "",
           status: candidate.status || "Applied",
-          avatar: candidate.avatar || null,
+          avatar: 
+            candidate.avatar ||
+            candidate.profilePicture ||
+            candidate.photographUrl ||
+            candidate.photograph ||
+            (candidate.documents && candidate.documents.photograph && candidate.documents.photograph.url) ||
+            "",
+          salutation: candidate.salutation || "",
+          firstName: candidate.firstName || "",
+          middleName: candidate.middleName || "",
+          lastName: candidate.lastName || "",
+          photographUrl: 
+            candidate.photographUrl ||
+            candidate.photograph ||
+            (candidate.documents && candidate.documents.photograph && candidate.documents.photograph.url) ||
+            candidate.profilePicture ||
+            candidate.avatar ||
+            "",
         }
       : {
           _id: interview.candidateId,
@@ -110,7 +127,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           phone: "",
           role: interview.position || "",
           status: "Applied",
-          avatar: null,
+          avatar: "",
+          salutation: "",
+          firstName: "",
+          middleName: "",
+          lastName: "",
+          photographUrl: "",
         }
 
     // Format the response

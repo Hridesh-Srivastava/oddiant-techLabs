@@ -1393,7 +1393,7 @@ const getFormattedName = () => {
             {/* Sidebar */}
             <div className="md:col-span-1">
               <div className="space-y-4">
-                <Card>
+                <Card className="border-l-4 border-l-violet-500">
                   <CardContent className="p-4 flex flex-col items-center">
                     <div className="relative mt-4">
                       <Avatar className="h-32 w-32 mb-4">
@@ -1467,7 +1467,7 @@ const getFormattedName = () => {
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="border-l-4 border-l-violet-500">
                   <CardContent className="p-4">
                     <nav className="space-y-1">
                       <Button

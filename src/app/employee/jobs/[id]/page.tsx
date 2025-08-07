@@ -295,7 +295,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-6">
-            <Card>
+            <Card className="border-l-4 border-l-yellow-500">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Job Details</CardTitle>
                 <select
@@ -469,7 +469,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
             </Card>
 
             {/* Company Information Card - Always display this card */}
-            <Card>
+            <Card className="border-l-4 border-l-yellow-500">
               <CardHeader>
                 <CardTitle>Company Information</CardTitle>
               </CardHeader>
@@ -501,7 +501,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           </div>
 
           <div className="space-y-6">
-            <Card>
+            <Card className="border-l-4 border-l-blue-900">
               <CardHeader>
                 <CardTitle>Job Stats</CardTitle>
               </CardHeader>
@@ -548,7 +548,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-blue-900">
               <CardHeader>
                 <CardTitle>Actions</CardTitle>
               </CardHeader>

@@ -419,4 +419,21 @@ mark {
     @apply bg-gray-200 border-gray-400 !important;
     transform: scale(0.98);
   }
+
+  /* Custom border colors for candidate profile */
+  .border-l-custom-teal {
+    border-left: 4px solid #3AA6B9 !important;
+  }
+  
+  .border-l-custom-mint {
+    border-left: 4px solid #C1ECE4 !important;
+  }
+
+  .border-l-custom-golden {
+    border-left: 4px solid #FFD700 !important;
+  }
+  
+  .border-l-custom-orange {
+    border-left: 4px solid #FF8C00 !important;
+  }
 }

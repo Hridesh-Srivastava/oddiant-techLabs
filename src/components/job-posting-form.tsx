@@ -1192,7 +1192,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
               }
             }}
           />
-          <Button type="button" size="sm" onClick={handleAddSkill} disabled={skills.length >= 10 || !newSkill.trim()}>
+          <Button className="bg-black text-white hover:text-black hover:bg-green-600" type="button" size="sm" onClick={handleAddSkill} disabled={skills.length >= 10 || !newSkill.trim()}>
             <Plus className="h-4 w-4 mr-1" /> Add
           </Button>
         </div>

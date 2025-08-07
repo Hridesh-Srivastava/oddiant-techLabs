@@ -100,7 +100,7 @@ export default function SignIn({ jobId, onCancel }: SignInProps) {
           </div>
 
           <div className="flex flex-col space-y-2">
-            <Button type="submit" disabled={isSubmitting} className="w-full">
+            <Button type="submit" disabled={isSubmitting} className="w-full bg-black text-white hover:text-black hover:bg-green-600">
               {isSubmitting ? (
                 <>
                   <div className="animate-spin mr-2 h-4 w-4 border-2 border-t-transparent border-white rounded-full"></div>
