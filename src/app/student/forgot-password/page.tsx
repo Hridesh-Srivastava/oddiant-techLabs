@@ -188,7 +188,7 @@ export default function ForgotPasswordPage() {
               </CardContent>
 
               <CardFooter>
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" className="w-full bg-black text-white hover:text-black hover:bg-green-600" disabled={isLoading}>
                   {isLoading ? "Sending OTP..." : "Send OTP"}
                 </Button>
               </CardFooter>

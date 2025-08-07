@@ -180,8 +180,8 @@ export default function TestResultPage() {
               <div className="flex space-x-2 border-b">
                 <button onClick={() => router.push('/student/dashboard?tab=jobs')} className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"><Briefcase className="h-4 w-4 inline mr-2" />Job Openings</button>
                 <button onClick={() => router.push('/student/dashboard?tab=applications')} className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"><FileText className="h-4 w-4 inline mr-2" />My Applications</button>
-                <button onClick={() => router.push('/student/dashboard?tab=profile')} className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"><User className="h-4 w-4 inline mr-2" />My Profile</button>
                 <button className="px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600"><Award className="h-4 w-4 inline mr-2" />Assessments</button>
+                <button onClick={() => router.push('/student/dashboard?tab=profile')} className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"><User className="h-4 w-4 inline mr-2" />My Profile</button>
                 <button onClick={() => router.push('/student/dashboard?tab=settings')} className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"><Settings className="h-4 w-4 inline mr-2" />Settings</button>
               </div>
             </div>
@@ -205,8 +205,8 @@ export default function TestResultPage() {
             <div className="flex space-x-2 border-b justify-center">
               <button onClick={() => router.push('/student/dashboard?tab=jobs')} className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"><Briefcase className="h-4 w-4 inline mr-2" />Job Openings</button>
               <button onClick={() => router.push('/student/dashboard?tab=applications')} className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"><FileText className="h-4 w-4 inline mr-2" />My Applications</button>
-              <button onClick={() => router.push('/student/dashboard?tab=profile')} className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"><User className="h-4 w-4 inline mr-2" />My Profile</button>
               <button className="px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600"><Award className="h-4 w-4 inline mr-2" />Assessments</button>
+              <button onClick={() => router.push('/student/dashboard?tab=profile')} className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"><User className="h-4 w-4 inline mr-2" />My Profile</button>
               <button onClick={() => router.push('/student/dashboard?tab=settings')} className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"><Settings className="h-4 w-4 inline mr-2" />Settings</button>
             </div>
           </div>

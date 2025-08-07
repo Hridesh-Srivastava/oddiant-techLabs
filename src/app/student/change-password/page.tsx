@@ -179,7 +179,7 @@ export default function ChangePasswordPage() {
             </CardContent>
 
             <CardFooter className="flex flex-col space-y-4">
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full bg-black text-white hover:text-black hover:bg-green-600" disabled={isLoading}>
                 {isLoading ? "Changing Password..." : "Change Password"}
               </Button>
 

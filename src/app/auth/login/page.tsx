@@ -70,7 +70,7 @@ export default function LoginPage() {
             type="button"
             variant="ghost"
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-black hover:text-black p-2"
+            className="flex items-center gap-2 text-black hover:text-black p-2 bg-white"
           >
             <ArrowLeft className="h-4 w-4" />
             Back

@@ -48,6 +48,7 @@ import {
   Laptop,
   PencilLine,
   Video,
+  Settings,
 } from "lucide-react";
 
 interface StudentData {
@@ -1341,21 +1342,28 @@ const getFormattedName = () => {
     <div className="min-h-screen bg-gray-50 pb-12">
       <Toaster position="top-center" />
 
-      {/* Header */}
-      <header className="bg-black shadow">
+      
+
+      {/* Student Dashboard Sub-Navbar */}
+      <div className="border-b bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex space-x-2 justify-center">
+            <button onClick={() => router.push('/student/dashboard?tab=jobs')} className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"><Briefcase className="h-4 w-4 inline mr-2" />Job Openings</button>
+            <button onClick={() => router.push('/student/dashboard?tab=applications')} className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"><FileText className="h-4 w-4 inline mr-2" />My Applications</button>
+            <button onClick={() => router.push('/student/dashboard/assessments')} className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"><Award className="h-4 w-4 inline mr-2" />Assessments</button>
+            <button className="px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600"><User className="h-4 w-4 inline mr-2" />My Profile</button>
+            <button onClick={() => router.push('/student/dashboard?tab=settings')} className="px-4 py-2 font-medium text-gray-500 hover:text-gray-700"><Settings className="h-4 w-4 inline mr-2" />Settings</button>
+          </div>
+        </div>
+      </div>
+
+     {/* Header */}
+      <header>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-semibold text-white">Edit Profile</h1>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push("/student/dashboard?tab=profile")}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Button>
+          <h1 className="text-xl font-semibold text-black">Edit Your Candidate Profile</h1>
         </div>
       </header>
-
+      
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
@@ -2072,7 +2080,7 @@ const getFormattedName = () => {
                       <Button
                         type="button"
                         onClick={handleAddEducation}
-                        className="w-full"
+                        className="w-full bg-black text-white hover:text-black hover:bg-green-600"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add Education
@@ -2368,7 +2376,7 @@ const getFormattedName = () => {
                       <Button
                         type="button"
                         onClick={handleAddExperience}
-                        className="w-full"
+                        className="w-full bg-black text-white hover:text-black hover:bg-green-600"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add Work Experience
@@ -2420,7 +2428,7 @@ const getFormattedName = () => {
                               }
                             }}
                           />
-                          <Button type="button" onClick={handleAddSkill}>
+                          <Button className="bg-black text-white hover:text-black hover:bg-green-600" type="button" onClick={handleAddSkill}>
                             Add
                           </Button>
                         </div>
@@ -2477,6 +2485,7 @@ const getFormattedName = () => {
                             }}
                           />
                           <Button
+                          className="bg-black text-white hover:text-black hover:bg-green-600"
                             type="button"
                             onClick={handleAddCertification}
                           >
@@ -2592,6 +2601,7 @@ const getFormattedName = () => {
                             }}
                           />
                           <Button
+                          className="bg-black text-white hover:text-black hover:bg-green-600"
                             type="button"
                             onClick={handleAddPreferenceCity}
                           >
@@ -2728,7 +2738,7 @@ const getFormattedName = () => {
 
                           {formData.documents?.resume?.url ? (
                             <div className="flex items-center space-x-2">
-                              <Button variant="outline" size="sm" asChild>
+                              <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" asChild>
                                 <a
                                   href={formData.documents.resume.url}
                                   target="_blank"
@@ -2824,7 +2834,7 @@ const getFormattedName = () => {
 
                           {formData.documents?.videoResume?.url ? (
                             <div className="flex items-center space-x-2">
-                              <Button variant="outline" size="sm" asChild>
+                              <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" asChild>
                                 <a
                                   href={formData.documents.videoResume.url}
                                   target="_blank"
@@ -2919,7 +2929,7 @@ const getFormattedName = () => {
 
                           {formData.documents?.audioBiodata?.url ? (
                             <div className="flex items-center space-x-2">
-                              <Button variant="outline" size="sm" asChild>
+                              <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" asChild>
                                 <a
                                   href={formData.documents.audioBiodata.url}
                                   target="_blank"
@@ -3042,7 +3052,7 @@ const getFormattedName = () => {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={isSaving || formSubmitted}>
+                  <Button className="bg-black text-white hover:text-black hover:bg-green-600" type="submit" disabled={isSaving || formSubmitted}>
                     {isSaving ? (
                       <>
                         <RefreshCw className="h-4 w-4 mr-2 animate-spin" />

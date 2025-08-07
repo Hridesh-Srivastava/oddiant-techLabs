@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast, Toaster } from "sonner";
+import StudentAvatarUpload from "@/components/student-avatar-upload";
 import {
   User,
   FileText,
@@ -1893,6 +1894,11 @@ export default function StudentDashboardPage() {
     }
   };
 
+  const handleAvatarUpdate = (avatarUrl: string) => {
+    // Update the student state with the new avatar URL
+    setStudent(prev => prev ? { ...prev, avatar: avatarUrl } : null);
+  };
+
   const handleApplyToJob = async (jobId: string) => {
     try {
       const response = await fetch("/api/student/applications", {
@@ -2404,18 +2410,7 @@ export default function StudentDashboardPage() {
               <FileText className="h-4 w-4 inline mr-2" />
               My Applications
             </button>
-            <button
-              onClick={() => handleTabChange("profile")}
-              className={`px-4 py-2 font-medium ${
-                activeTab === "profile"
-                  ? "text-blue-600 border-b-2 border-blue-600"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              <User className="h-4 w-4 inline mr-2" />
-              My Profile
-            </button>
-            {/* New Assessments Tab */}
+            {/* Assessments Tab - Moved to 3rd position */}
             <button
               onClick={handleAssessmentsClick}
               className={`px-4 py-2 font-medium text-gray-500 hover:text-gray-700 flex items-center`}
@@ -2426,6 +2421,17 @@ export default function StudentDashboardPage() {
                 <Award className="h-4 w-4 inline mr-2" />
               )}
               Assessments
+            </button>
+            <button
+              onClick={() => handleTabChange("profile")}
+              className={`px-4 py-2 font-medium ${
+                activeTab === "profile"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <User className="h-4 w-4 inline mr-2" />
+              My Profile
             </button>
             <button
               onClick={() => handleTabChange("settings")}
@@ -3170,6 +3176,16 @@ export default function StudentDashboardPage() {
                     </Button>
                   </div>
 
+                  {/* Vertical Partition Line - Hidden on mobile, visible on md+ screens */}
+                  <div className="hidden md:block">
+                    <div className="w-0.5 h-full bg-gray-300"></div>
+                  </div>
+
+                  {/* Horizontal Partition Line for mobile - Hidden on md+ screens */}
+                  <div className="block md:hidden">
+                    <div className="h-0.5 w-full bg-gray-300 my-6"></div>
+                  </div>
+
                   <div className="md:w-2/3 relative" ref={pdfContentRef}>
                     <div className="space-y-6">
                       <div>
@@ -3849,6 +3865,18 @@ export default function StudentDashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
+                  {/* Profile Picture Section */}
+                  <div>
+                    <StudentAvatarUpload
+                      initialAvatarUrl={student?.avatar || student?.documents?.photograph?.url}
+                      studentId={student?._id || ''}
+                      studentName={`${student?.firstName || ''} ${student?.lastName || ''}`.trim()}
+                      onAvatarUpdate={handleAvatarUpdate}
+                    />
+                  </div>
+
+                  <Separator />
+
                   {/* Email Settings */}
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-3">
