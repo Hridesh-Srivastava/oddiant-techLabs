@@ -40,6 +40,12 @@ interface Interview {
     name: string
     email: string
     phone?: string
+    avatar?: string
+    salutation?: string
+    firstName?: string
+    middleName?: string
+    lastName?: string
+    photographUrl?: string
   }
   position: string
   date: string
@@ -64,6 +70,36 @@ export default function PublicInterviewJoinPage({ params }: { params: Promise<{ 
   const [feedback, setFeedback] = useState("")
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
+
+  // Function to format full name with salutation and middle name
+  const formatFullName = (candidate: Interview['candidate']) => {
+    if (!candidate) return "Unknown Candidate"
+
+    const parts = []
+
+    // Add salutation if available
+    if (candidate.salutation) {
+      parts.push(candidate.salutation)
+    }
+
+    // Add first name if available
+    if (candidate.firstName) {
+      parts.push(candidate.firstName)
+    }
+
+    // Add middle name if available
+    if (candidate.middleName) {
+      parts.push(candidate.middleName)
+    }
+
+    // Add last name if available
+    if (candidate.lastName) {
+      parts.push(candidate.lastName)
+    }
+
+    // Return formatted name or fallback to the name field
+    return parts.length > 0 ? parts.join(' ') : candidate.name || "Unknown Candidate"
+  }
 
   useEffect(() => {
     const fetchInterview = async () => {
@@ -275,14 +311,17 @@ export default function PublicInterviewJoinPage({ params }: { params: Promise<{ 
                     <div className="space-y-3">
                       <div className="flex items-center space-x-3">
                         <Avatar className="h-12 w-12">
-                          <AvatarImage src="/placeholder.svg" alt={interview.candidate?.name} />
+                          <AvatarImage 
+                            src={interview.candidate?.avatar || interview.candidate?.photographUrl || "/placeholder.svg"} 
+                            alt={formatFullName(interview.candidate)} 
+                          />
                           <AvatarFallback className="bg-gray-600 text-white">
-                            {interview.candidate?.name?.charAt(0) || "?"}
+                            {formatFullName(interview.candidate).charAt(0)}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <p className="font-semibold text-gray-900">
-                            {interview.candidate?.name || "Unknown Candidate"}
+                            {formatFullName(interview.candidate)}
                           </p>
                           <p className="text-sm text-gray-600">
                             {interview.candidate?.email || "No email provided"}

@@ -61,12 +61,36 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             candidate.name || `${candidate.firstName || ""} ${candidate.lastName || ""}`.trim() || "Unknown Candidate",
           email: candidate.email || "",
           phone: candidate.phone || "",
+          avatar: 
+            candidate.avatar ||
+            candidate.profilePicture ||
+            candidate.photographUrl ||
+            candidate.photograph ||
+            (candidate.documents && candidate.documents.photograph && candidate.documents.photograph.url) ||
+            "",
+          salutation: candidate.salutation || "",
+          firstName: candidate.firstName || "",
+          middleName: candidate.middleName || "",
+          lastName: candidate.lastName || "",
+          photographUrl: 
+            candidate.photographUrl ||
+            candidate.photograph ||
+            (candidate.documents && candidate.documents.photograph && candidate.documents.photograph.url) ||
+            candidate.profilePicture ||
+            candidate.avatar ||
+            "",
         }
       : {
           _id: interview.candidateId,
           name: "Unknown Candidate",
           email: "",
           phone: "",
+          avatar: "",
+          salutation: "",
+          firstName: "",
+          middleName: "",
+          lastName: "",
+          photographUrl: "",
         }
 
     // Format the public response (limited information)
