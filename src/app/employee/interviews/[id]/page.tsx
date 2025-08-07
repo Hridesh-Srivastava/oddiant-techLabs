@@ -42,6 +42,11 @@ interface Interview {
     role?: string
     status?: string
     avatar?: string
+    salutation?: string
+    firstName?: string
+    middleName?: string
+    lastName?: string
+    photographUrl?: string
   }
   job?: {
     _id: string
@@ -89,6 +94,36 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
     notes: "",
     status: "scheduled",
   })
+
+  // Function to format full name with salutation and middle name
+  const formatFullName = (candidate: Interview['candidate']) => {
+    if (!candidate) return "Unknown Candidate"
+
+    const parts = []
+
+    // Add salutation if available
+    if (candidate.salutation) {
+      parts.push(candidate.salutation)
+    }
+
+    // Add first name if available
+    if (candidate.firstName) {
+      parts.push(candidate.firstName)
+    }
+
+    // Add middle name if available
+    if (candidate.middleName) {
+      parts.push(candidate.middleName)
+    }
+
+    // Add last name if available
+    if (candidate.lastName) {
+      parts.push(candidate.lastName)
+    }
+
+    // Return formatted name or fallback to the name field
+    return parts.length > 0 ? parts.join(' ') : candidate.name || "Unknown Candidate"
+  }
 
   useEffect(() => {
     const fetchInterview = async () => {
@@ -333,12 +368,12 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Interview Details Card */}
-            <Card>
+            <Card className="border-l-4 border-l-green-500">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-2xl">{interview.position}</CardTitle>
                   <p className="text-gray-500 mt-1">
-                    Interview with {interview.candidate?.name || "Unknown Candidate"}
+                    Interview with {formatFullName(interview.candidate)}
                   </p>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -517,7 +552,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
 
             {/* Feedback Section - FIXED: Only show for completed interviews */}
             {interview.status === "completed" && interview.feedback && interview.feedback.length > 0 && (
-              <Card>
+              <Card className="border-l-4 border-l-green-500">
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <MessageSquare className="h-5 w-5 mr-2" />
@@ -551,7 +586,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Candidate Information */}
-            <Card>
+            <Card className="border-l-4 border-l-blue-400">
               <CardHeader>
                 <CardTitle>Candidate Information</CardTitle>
               </CardHeader>
@@ -561,13 +596,13 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
                     <div className="flex items-center space-x-3">
                       <Avatar className="h-12 w-12">
                         <AvatarImage
-                          src={interview.candidate.avatar || "/placeholder.svg"}
-                          alt={interview.candidate.name}
+                          src={interview.candidate.avatar || interview.candidate.photographUrl || "/placeholder.svg"}
+                          alt={formatFullName(interview.candidate)}
                         />
-                        <AvatarFallback>{interview.candidate.name.charAt(0)}</AvatarFallback>
+                        <AvatarFallback>{formatFullName(interview.candidate).charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <h3 className="font-medium">{interview.candidate.name}</h3>
+                        <h3 className="font-medium">{formatFullName(interview.candidate)}</h3>
                         <p className="text-sm text-gray-500">{interview.candidate.role}</p>
                       </div>
                     </div>
@@ -608,7 +643,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
 
             {/* Job Information */}
             {interview.job && (
-              <Card>
+              <Card className="border-l-4 border-l-blue-400">
                 <CardHeader>
                   <CardTitle>Job Information</CardTitle>
                 </CardHeader>
@@ -631,7 +666,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
             )}
 
             {/* Quick Actions */}
-            <Card>
+            <Card className="border-l-4 border-l-blue-400">
               <CardHeader>
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
@@ -662,7 +697,7 @@ export default function InterviewDetailsPage({ params }: { params: Promise<{ id:
             </Card>
 
             {/* Interview Timeline */}
-            <Card>
+            <Card className="border-l-4 border-l-blue-400">
               <CardHeader>
                 <CardTitle>Timeline</CardTitle>
               </CardHeader>
