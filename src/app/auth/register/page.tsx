@@ -1,6 +1,8 @@
 "use client"
 import { useRouter } from "next/navigation"
 import { Toaster } from "sonner"
+import { Button } from "@/components/ui/button"
+import { ArrowLeft } from "lucide-react"
 import RegisterForm from "@/components/auth/register-form"
 
 export default function RegisterPage() {
@@ -9,7 +11,21 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <Toaster position="top-center" />
-      <div className="w-full max-w-4xl bg-white rounded-xl shadow-xl overflow-hidden">
+      <div className="w-full max-w-4xl">
+        {/* Back button */}
+        <div className="mb-4">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-black hover:text-black p-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-xl overflow-hidden">
         <div className="md:flex">
           <div className="hidden md:block md:w-1/3 bg-gradient-to-br from-blue-900 to-purple-900 p-8 text-white">
             <h2 className="text-2xl font-bold mb-6 text-white">Join Our Community</h2>
@@ -73,6 +89,7 @@ export default function RegisterPage() {
             </div>
             <RegisterForm />
           </div>
+        </div>
         </div>
       </div>
     </div>

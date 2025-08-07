@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { KeyRound } from "lucide-react"
+import { KeyRound, ArrowLeft } from "lucide-react"
 
 export default function EmployeeForgotPasswordPage() {
   const router = useRouter()
@@ -48,7 +48,21 @@ export default function EmployeeForgotPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <Toaster position="top-center" />
-      <Card className="w-full max-w-md">
+      <div className="w-full max-w-md">
+        {/* Back button */}
+        <div className="mb-4">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-black hover:text-black p-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+        </div>
+        
+        <Card className="w-full">
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
             <div className="bg-purple-100 p-3 rounded-full">
@@ -88,6 +102,7 @@ export default function EmployeeForgotPasswordPage() {
           </p>
         </CardFooter>
       </Card>
+      </div>
     </div>
   )
 }

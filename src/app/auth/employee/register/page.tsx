@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { toast, Toaster } from "sonner"
-import { Check, Briefcase } from "lucide-react"
+import { Check, Briefcase, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -162,7 +162,21 @@ export default function EmployeeRegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 py-16">
       <Toaster position="top-center" />
-      <Card className="w-full max-w-5xl overflow-hidden flex flex-col md:flex-row">
+      <div className="w-full max-w-5xl">
+        {/* Back button */}
+        <div className="mb-4">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-black hover:text-black p-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+        </div>
+        
+        <Card className="w-full overflow-hidden flex flex-col md:flex-row">
         {/* Purple gradient card on the left */}
         <div className="w-full md:w-2/5 bg-gradient-to-br from-purple-700 to-purple-900 text-white p-8 flex flex-col justify-center">
           <div className="space-y-6">
@@ -266,6 +280,7 @@ export default function EmployeeRegisterPage() {
           </CardFooter>
         </div>
       </Card>
+      </div>
     </div>
   )
 }
