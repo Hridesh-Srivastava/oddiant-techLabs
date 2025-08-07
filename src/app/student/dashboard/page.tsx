@@ -2530,10 +2530,12 @@ export default function StudentDashboardPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {currentJobs.map((job) => (
+                    {currentJobs.map((job, index) => (
                       <Card
                         key={job._id}
-                        className="overflow-hidden hover:shadow-md transition-shadow"
+                        className={`overflow-hidden hover:shadow-md transition-shadow ${
+                          index % 2 === 0 ? 'bg-yellow-50/50' : 'bg-gray-50'
+                        }`}
                       >
                         <CardContent className="p-0">
                           <div className="p-6">

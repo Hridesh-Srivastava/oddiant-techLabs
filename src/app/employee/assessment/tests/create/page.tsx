@@ -43,6 +43,7 @@ export default function CreateTestPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [showInstructionsEditor, setShowInstructionsEditor] = useState(false)
   const [showAddQuestionForm, setShowAddQuestionForm] = useState<string | null>(null)
+  const [editingQuestion, setEditingQuestion] = useState<{ sectionId: string; questionId: string } | null>(null)
   const [newQuestion, setNewQuestion] = useState({
     text: "",
     type: "Multiple Choice",
@@ -329,6 +330,144 @@ function solution() {
     },
     [newQuestion],
   )
+
+  const handleEditQuestion = useCallback(
+    (sectionId: string, questionId: string) => {
+      const section = sections.find((s) => s.id === sectionId)
+      const question = section?.questions.find((q: any) => q.id === questionId)
+      
+      if (question) {
+        setNewQuestion({
+          text: question.text || "",
+          type: question.type || "Multiple Choice",
+          options: question.options || ["", ""],
+          correctAnswer: question.correctAnswer || "",
+          points: question.points || 10,
+          codeLanguage: question.codeLanguage || "javascript",
+          codeTemplate: question.codeTemplate || "",
+          testCases: question.testCases || [],
+          maxWords: question.maxWords || 500,
+          instructions: question.instructions || "",
+        })
+        setEditingQuestion({ sectionId, questionId })
+        setShowAddQuestionForm(sectionId)
+      }
+    },
+    [sections],
+  )
+
+  const handleUpdateQuestion = useCallback(
+    (sectionId: string, questionId: string) => {
+      if (!newQuestion.text.trim()) {
+        toast.error("Question text is required")
+        return
+      }
+
+      if (newQuestion.type === "Multiple Choice") {
+        const filledOptions = newQuestion.options.filter((opt) => opt.trim() !== "")
+        if (filledOptions.length < 2) {
+          toast.error("At least 2 options are required")
+          return
+        }
+
+        if (!newQuestion.correctAnswer || !newQuestion.correctAnswer.trim()) {
+          toast.error("Please select a correct answer by clicking the radio button")
+          return
+        }
+
+        if (!filledOptions.includes(newQuestion.correctAnswer)) {
+          toast.error("The selected correct answer is not valid. Please select from the available options.")
+          return
+        }
+      }
+
+      if (newQuestion.type === "Coding") {
+        if (!newQuestion.codeTemplate.trim()) {
+          toast.error("Code template is required for coding questions")
+          return
+        }
+
+        if (newQuestion.testCases.length === 0) {
+          toast.error("At least one test case is required for coding questions")
+          return
+        }
+      }
+
+      if (newQuestion.type === "Written Answer") {
+        if (!newQuestion.maxWords || newQuestion.maxWords < 50) {
+          toast.error("Maximum words must be at least 50")
+          return
+        }
+      }
+
+      setSections((prev: any) =>
+        prev.map((section: any) => {
+          if (section.id === sectionId) {
+            return {
+              ...section,
+              questions: section.questions.map((q: any) => {
+                if (q.id === questionId) {
+                  return {
+                    ...q,
+                    ...newQuestion,
+                    options:
+                      newQuestion.type === "Multiple Choice"
+                        ? newQuestion.options.filter((opt) => opt.trim() !== "")
+                        : newQuestion.options,
+                    correctAnswer:
+                      newQuestion.type === "Multiple Choice" ? newQuestion.correctAnswer : newQuestion.correctAnswer || "",
+                    codeTemplate: newQuestion.type === "Coding" ? newQuestion.codeTemplate : undefined,
+                  }
+                }
+                return q
+              }),
+            }
+          }
+          return section
+        }),
+      )
+
+      setShowAddQuestionForm(null)
+      setEditingQuestion(null)
+      toast.success("Question updated successfully")
+    },
+    [newQuestion],
+  )
+
+  const handleDeleteQuestion = useCallback(
+    (sectionId: string, questionId: string) => {
+      setSections((prev: any) =>
+        prev.map((section: any) => {
+          if (section.id === sectionId) {
+            return {
+              ...section,
+              questions: section.questions.filter((q: any) => q.id !== questionId),
+            }
+          }
+          return section
+        }),
+      )
+      toast.success("Question deleted successfully")
+    },
+    [],
+  )
+
+  const handleCancelEdit = useCallback(() => {
+    setShowAddQuestionForm(null)
+    setEditingQuestion(null)
+    setNewQuestion({
+      text: "",
+      type: "Multiple Choice",
+      options: ["", ""],
+      correctAnswer: "",
+      points: 10,
+      codeLanguage: "javascript",
+      codeTemplate: "",
+      testCases: [] as any[],
+      maxWords: 500,
+      instructions: "",
+    })
+  }, [])
 
   const handleSaveTest = useCallback(async () => {
     try {
@@ -648,19 +787,39 @@ function solution() {
                         <div className="space-y-2">
                           {section.questions.map((question: any, qIndex: number) => (
                             <div key={question.id} className="p-3 border rounded-md bg-gray-50">
-                              <div className="font-medium break-words max-h-40 overflow-auto whitespace-pre-line">
-                                {qIndex + 1}. {question.text}
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <div className="font-medium break-words max-h-40 overflow-auto whitespace-pre-line">
+                                    {qIndex + 1}. {question.text}
+                                  </div>
+                                  <p className="text-sm text-gray-500 mt-1">
+                                    {question.type} • {question.points} points
+                                    {question.type === "Multiple Choice" && ` • ${question.options?.length || 0} options`}
+                                    {question.type === "Multiple Choice" &&
+                                      question.correctAnswer &&
+                                      ` • Correct: "${question.correctAnswer}"`}
+                                    {question.type === "Coding" &&
+                                      ` • ${question.codeLanguage} • ${question.testCases?.length || 0} test cases`}
+                                    {question.type === "Written Answer" && ` • Max ${question.maxWords || 500} words`}
+                                  </p>
+                                </div>
+                                <div className="flex gap-2 ml-4">
+                                  <button
+                                    onClick={() => handleEditQuestion(section.id, question.id)}
+                                    className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded"
+                                    title="Edit Question"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteQuestion(section.id, question.id)}
+                                    className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded"
+                                    title="Delete Question"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
                               </div>
-                              <p className="text-sm text-gray-500 mt-1">
-                                {question.type} • {question.points} points
-                                {question.type === "Multiple Choice" && ` • ${question.options?.length || 0} options`}
-                                {question.type === "Multiple Choice" &&
-                                  question.correctAnswer &&
-                                  ` • Correct: "${question.correctAnswer}"`}
-                                {question.type === "Coding" &&
-                                  ` • ${question.codeLanguage} • ${question.testCases?.length || 0} test cases`}
-                                {question.type === "Written Answer" && ` • Max ${question.maxWords || 500} words`}
-                              </p>
                             </div>
                           ))}
                         </div>
@@ -669,7 +828,9 @@ function solution() {
 
                     {showAddQuestionForm === section.id ? (
                       <div className="mt-4 p-4 border rounded-md bg-gray-50">
-                        <h4 className="text-sm font-medium text-gray-700 mb-3">Add New Question</h4>
+                        <h4 className="text-sm font-medium text-gray-700 mb-3">
+                          {editingQuestion ? "Edit Question" : "Add New Question"}
+                        </h4>
                         <div className="space-y-4">
                           <div className="space-y-2">
                             <label className="block text-sm font-medium text-gray-700">Question Text</label>
@@ -918,16 +1079,19 @@ function solution() {
 
                           <div className="flex justify-end gap-2 mt-4">
                             <button
-                              onClick={() => setShowAddQuestionForm(null)}
+                              onClick={handleCancelEdit}
                               className="px-3 py-1 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
                             >
                               Cancel
                             </button>
                             <button
-                              onClick={() => handleSaveQuestion(section.id)}
+                              onClick={() => editingQuestion 
+                                ? handleUpdateQuestion(editingQuestion.sectionId, editingQuestion.questionId)
+                                : handleSaveQuestion(section.id)
+                              }
                               className="px-3 py-1 text-sm font-medium bg-black text-white hover:text-black hover:bg-green-600 rounded-md"
                             >
-                              Save Question
+                              {editingQuestion ? "Update Question" : "Save Question"}
                             </button>
                           </div>
                         </div>
