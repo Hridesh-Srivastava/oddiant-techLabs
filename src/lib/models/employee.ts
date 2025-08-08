@@ -4,6 +4,7 @@ export interface Employee {
   _id?: string | ObjectId
   firstName: string
   lastName: string
+  middleName?: string
   email: string
   alternativeEmail?: string 
   password: string

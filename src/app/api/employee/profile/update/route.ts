@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json()
-    const { firstName, lastName, phone, designation, alternativeEmail, email } = body
+    const { firstName, lastName, middleName, phone, designation, alternativeEmail, email } = body
 
     // Connect to database
     const { db } = await connectToDatabase()
@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
     const updateFields: any = {
       firstName,
       lastName,
+      middleName: middleName || "", // Allow empty string for optional middle name
       phone,
       designation,
       alternativeEmail,

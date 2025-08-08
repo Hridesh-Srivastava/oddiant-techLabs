@@ -37,10 +37,10 @@ export function AssessmentSidebar() {
   const pathname = usePathname()
 
   return (
-    <div className="w-64 h-screen bg-background border-r border-border overflow-y-auto fixed left-0 top-0 pt-16">
-      <div className="p-4 border-b border-border">
-        <h2 className="text-xl font-bold flex items-center">
-          <FileText className="mr-2 h-5 w-5" />
+    <div className="w-64 h-screen bg-gradient-to-b from-emerald-50/80 to-emerald-100/70 backdrop-blur-sm border-r border-emerald-200/30 overflow-y-auto fixed left-0 top-0 pt-16">
+      <div className="p-4 border-b border-emerald-200/30 bg-emerald-100/20">
+        <h2 className="text-xl font-bold flex items-center text-emerald-800">
+          <FileText className="mr-2 h-5 w-5 text-emerald-600" />
           Assessment Dashboard
         </h2>
       </div>
@@ -53,10 +53,10 @@ export function AssessmentSidebar() {
                 <Link
                   href={item.href}
                   className={cn(
-                    "flex items-center px-4 py-2 text-sm rounded-md",
+                    "flex items-center px-4 py-2 text-sm rounded-md transition-colors",
                     isActive
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      ? "bg-black text-white font-medium shadow-sm"
+                      : "text-emerald-700/80 hover:bg-emerald-100/50 hover:text-emerald-800",
                   )}
                 >
                   <item.icon className="mr-3 h-5 w-5" />

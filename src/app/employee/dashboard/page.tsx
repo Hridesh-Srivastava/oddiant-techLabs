@@ -53,6 +53,7 @@ interface EmployeeData {
   _id: string
   firstName: string
   lastName: string
+  middleName?: string
   email: string
   alternativeEmail?: string
   designation?: string
@@ -191,6 +192,22 @@ const formatCandidateFullName = (candidate: Candidate | { name?: string; firstNa
   return candidate.name || "Unknown Candidate"
 }
 
+// Utility function to format employee full name
+const formatEmployeeFullName = (employee: EmployeeData | null): string => {
+  if (!employee) return "Unknown Employee"
+  
+  const firstName = employee.firstName || ""
+  const middleName = employee.middleName || ""
+  const lastName = employee.lastName || ""
+  
+  // Construct full name from individual components
+  const nameParts = [firstName, middleName, lastName]
+    .filter(part => part && part.trim())
+    .map(part => part.trim())
+  
+  return nameParts.length > 0 ? nameParts.join(" ") : "Unknown Employee"
+}
+
 // Main component with typed props
 function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
   const router = useRouter()
@@ -262,9 +279,9 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
   // Enhanced debugging and monitoring
   useEffect(() => {
     if (employee && employee._id) {
-      console.log("👤 Employer loaded:", {
+      console.log(" Employer loaded:", {
         id: employee._id,
-        name: `${employee.firstName} ${employee.lastName}`,
+        name: formatEmployeeFullName(employee),
         email: employee.email,
         companyId: employee.companyId,
       })
@@ -296,6 +313,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
   const [personalInfo, setPersonalInfo] = useState({
     firstName: "",
     lastName: "",
+    middleName: "",
     email: "",
     alternativeEmail: "",
     phone: "",
@@ -983,6 +1001,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
           setPersonalInfo({
             firstName: userData.firstName || "",
             lastName: userData.lastName || "",
+            middleName: userData.middleName || "",
             email: userData.email || "",
             alternativeEmail: userData.alternativeEmail || "",
             phone: userData.phone || "",
@@ -1022,6 +1041,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
           setPersonalInfo({
             firstName: data.employee.firstName || "",
             lastName: data.employee.lastName || "",
+            middleName: data.employee.middleName || "",
             email: data.employee.email || "",
             alternativeEmail: data.employee.alternativeEmail || "",
             phone: data.employee.phone || "",
@@ -1196,6 +1216,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
         body: JSON.stringify({
           firstName: personalInfo.firstName,
           lastName: personalInfo.lastName,
+          middleName: personalInfo.middleName,
           phone: personalInfo.phone,
           alternativeEmail: personalInfo.alternativeEmail,
           designation: employee?.designation,
@@ -1215,6 +1236,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
           ...prev,
           firstName: personalInfo.firstName,
           lastName: personalInfo.lastName,
+          middleName: personalInfo.middleName,
           phone: personalInfo.phone,
           alternativeEmail: personalInfo.alternativeEmail,
           email: personalInfo.email, // Update primary email in state
@@ -2190,13 +2212,13 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
           {/* Right side - Welcome message and logout button */}
           <div className="flex items-center space-x-4">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={employee.avatar} alt={`${employee.firstName} ${employee.lastName}`} />
+              <AvatarImage src={employee.avatar} alt={formatEmployeeFullName(employee)} />
               <AvatarFallback className="bg-gray-200 text-gray-600 text-sm font-medium">
                 {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
               </AvatarFallback>
             </Avatar>
             <span className="text-sm">
-              Welcome, {employee.firstName} {employee.lastName}
+              Welcome, {formatEmployeeFullName(employee)}
             </span>
             <Button
               variant="outline"
@@ -2360,7 +2382,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                       onAvatarUpdate={handleAvatarUpdate}
                     />
                     <h3 className="mt-4 font-medium text-lg">
-                      {employee.firstName} {employee.lastName}
+                      {formatEmployeeFullName(employee)}
                     </h3>
                     <p className="text-sm text-gray-500">{employee.email}</p>
                     {employee.alternativeEmail && <p className="text-sm text-gray-500">{employee.alternativeEmail}</p>}
@@ -3074,7 +3096,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                       onAvatarUpdate={handleAvatarUpdate}
                     />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name</Label>
                       <Input
@@ -3086,6 +3108,20 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                             firstName: e.target.value,
                           })
                         }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="middleName">Middle Name</Label>
+                      <Input
+                        id="middleName"
+                        value={personalInfo.middleName}
+                        onChange={(e) =>
+                          setPersonalInfo({
+                            ...personalInfo,
+                            middleName: e.target.value,
+                          })
+                        }
+                        placeholder="Optional"
                       />
                     </div>
                     <div className="space-y-2">

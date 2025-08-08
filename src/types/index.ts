@@ -3,6 +3,7 @@ export interface Employee {
   _id: string
   firstName: string
   lastName: string
+  middleName?: string
   email: string
   alternativeEmail?: string
   designation?: string
