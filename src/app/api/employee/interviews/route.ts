@@ -14,6 +14,15 @@ interface CandidateData {
   salutation?: string
   title?: string
   email?: string
+  avatar?: string
+  photograph?: string
+  photographUrl?: string
+  documents?: {
+    photograph?: {
+      url?: string
+    } | string
+    [key: string]: unknown
+  }
   [key: string]: unknown
 }
 
@@ -91,6 +100,7 @@ export async function GET(request: NextRequest) {
       interviews.map(async (interview) => {
         let candidateName = "Unknown Candidate"
         let candidateEmail = ""
+        let candidateAvatar = ""
 
         try {
           if (interview.candidateId) {
@@ -128,8 +138,39 @@ export async function GET(request: NextRequest) {
                 return nameParts.length > 0 ? nameParts.join(" ") : "Unknown Candidate"
               }
 
+              // Helper function to get avatar URL from different possible fields
+              const getAvatarUrl = (candidateData: CandidateData): string => {
+                // Check various possible avatar fields
+                if (candidateData.avatar) {
+                  return candidateData.avatar
+                }
+                
+                // For students collection, check documents.photograph
+                if (candidateData.documents?.photograph) {
+                  const photograph = candidateData.documents.photograph
+                  if (typeof photograph === 'string') {
+                    return photograph
+                  } else if (photograph && typeof photograph === 'object' && 'url' in photograph) {
+                    return photograph.url || ""
+                  }
+                }
+                
+                // Check direct photograph field
+                if (candidateData.photograph) {
+                  return candidateData.photograph
+                }
+                
+                // Check photographUrl field 
+                if (candidateData.photographUrl) {
+                  return candidateData.photographUrl
+                }
+                
+                return ""
+              }
+
               candidateName = formatFullName(candidate)
               candidateEmail = candidate.email || ""
+              candidateAvatar = getAvatarUrl(candidate)
             }
           }
         } catch (error) {
@@ -179,6 +220,7 @@ export async function GET(request: NextRequest) {
           candidate: {
             name: candidateName,
             email: candidateEmail,
+            avatar: candidateAvatar,
           },
           position: interview.position,
           date: interview.date,

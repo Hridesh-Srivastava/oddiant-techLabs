@@ -130,6 +130,7 @@ interface Interview {
   candidate: {
     name: string
     email: string
+    avatar?: string
     firstName?: string
     middleName?: string
     lastName?: string
@@ -2865,8 +2866,21 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-4">
-                                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                                  <span className="text-white font-semibold text-lg">
+                                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center overflow-hidden">
+                                  {interview.candidate?.avatar ? (
+                                    <img 
+                                      src={interview.candidate.avatar} 
+                                      alt={interview.candidate.name}
+                                      className="w-full h-full object-cover rounded-full"
+                                      onError={(e) => {
+                                        // Fallback to initials if image fails to load
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                        target.nextElementSibling?.classList.remove('hidden');
+                                      }}
+                                    />
+                                  ) : null}
+                                  <span className={`text-white font-semibold text-lg ${interview.candidate?.avatar ? 'hidden' : ''}`}>
                                     {interview.candidate?.name?.charAt(0)?.toUpperCase() || "U"}
                                   </span>
                                 </div>
@@ -2977,8 +2991,21 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-4">
-                                  <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
-                                    <span className="text-white font-semibold text-lg">
+                                  <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center group-hover:scale-105 transition-transform duration-200 overflow-hidden">
+                                    {interview.candidate?.avatar ? (
+                                      <img 
+                                        src={interview.candidate.avatar} 
+                                        alt={interview.candidate.name}
+                                        className="w-full h-full object-cover rounded-full"
+                                        onError={(e) => {
+                                          // Fallback to initials if image fails to load
+                                          const target = e.target as HTMLImageElement;
+                                          target.style.display = 'none';
+                                          target.nextElementSibling?.classList.remove('hidden');
+                                        }}
+                                      />
+                                    ) : null}
+                                    <span className={`text-white font-semibold text-lg ${interview.candidate?.avatar ? 'hidden' : ''}`}>
                                       {interview.candidate?.name?.charAt(0)?.toUpperCase() || "U"}
                                     </span>
                                   </div>
