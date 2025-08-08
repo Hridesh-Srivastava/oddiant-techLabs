@@ -130,6 +130,11 @@ interface Interview {
   candidate: {
     name: string
     email: string
+    firstName?: string
+    middleName?: string
+    lastName?: string
+    salutation?: string
+    title?: string
   }
   position: string
   date: string
@@ -152,6 +157,37 @@ interface DashboardStats {
 // Define props interface for EmployeeDashboard
 interface EmployeeDashboardProps {
   userData?: Employee | null
+}
+
+// Utility function to format candidate full name
+const formatCandidateFullName = (candidate: Candidate | { name?: string; firstName?: string; middleName?: string; lastName?: string; salutation?: string; title?: string } | null): string => {
+  if (!candidate) return "Unknown Candidate"
+  
+  // If name already exists and looks properly formatted (contains spaces or proper structure)
+  if (candidate.name && candidate.name.trim()) {
+    const nameParts = candidate.name.trim().split(' ')
+    // If name has multiple parts or no individual name fields available, use it as is
+    if (nameParts.length > 1 || (!candidate.firstName && !candidate.lastName)) {
+      return candidate.name.trim()
+    }
+  }
+  
+  // Construct full name from individual components
+  const salutation = ('salutation' in candidate ? candidate.salutation : '') || ('title' in candidate ? candidate.title : '') || ""
+  const firstName = candidate.firstName || ""
+  const middleName = candidate.middleName || ""
+  const lastName = candidate.lastName || ""
+  
+  const nameParts = [salutation, firstName, middleName, lastName]
+    .filter(part => part && part.trim())
+    .map(part => part.trim())
+  
+  if (nameParts.length > 0) {
+    return nameParts.join(" ")
+  }
+  
+  // Final fallback
+  return candidate.name || "Unknown Candidate"
 }
 
 // Main component with typed props

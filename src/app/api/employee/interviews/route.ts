@@ -4,6 +4,19 @@ import { getUserFromRequest } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 import { sendEmail } from "@/lib/email"
 
+// Interface for candidate data with name fields
+interface CandidateData {
+  _id?: string | ObjectId
+  name?: string
+  firstName?: string
+  middleName?: string
+  lastName?: string
+  salutation?: string
+  title?: string
+  email?: string
+  [key: string]: unknown
+}
+
 // IST helper functions
 function getISTDate(): Date {
   const now = new Date()
@@ -92,10 +105,30 @@ export async function GET(request: NextRequest) {
             }
 
             if (candidate) {
-              candidateName =
-                candidate.name ||
-                `${candidate.firstName || ""} ${candidate.lastName || ""}`.trim() ||
-                "Unknown Candidate"
+              // Helper function to format full name properly
+              const formatFullName = (candidateData: CandidateData): string => {
+                const salutation = candidateData.salutation || candidateData.title || ""
+                const firstName = candidateData.firstName || ""
+                const middleName = candidateData.middleName || ""
+                const lastName = candidateData.lastName || ""
+                
+                // If name field exists and is not empty, use it as fallback
+                if (candidateData.name && candidateData.name.trim()) {
+                  // Check if name already contains proper formatting
+                  if (!firstName && !lastName) {
+                    return candidateData.name.trim()
+                  }
+                }
+                
+                // Construct full name from individual components
+                const nameParts = [salutation, firstName, middleName, lastName]
+                  .filter(part => part && part.trim())
+                  .map(part => part.trim())
+                
+                return nameParts.length > 0 ? nameParts.join(" ") : "Unknown Candidate"
+              }
+
+              candidateName = formatFullName(candidate)
               candidateEmail = candidate.email || ""
             }
           }
