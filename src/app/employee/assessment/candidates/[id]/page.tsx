@@ -136,6 +136,10 @@ export default function CandidateDetailsPage() {
       setIsLoading(true)
       console.log("Fetching candidate details for ID:", candidateId)
 
+      // Get email from URL params if available
+      const searchParams = new URLSearchParams(window.location.search)
+      const emailFromUrl = searchParams.get('email')
+
       const response = await fetch(`/api/assessment/candidates/${candidateId}`, {
         method: "GET",
         headers: {
@@ -147,6 +151,56 @@ export default function CandidateDetailsPage() {
 
       console.log("Response status:", response.status)
       console.log("Response ok:", response.ok)
+
+      // If candidate not found by ID and we have email, try to create/find by email
+      if (!response.ok && response.status === 404 && emailFromUrl) {
+        console.log("Candidate not found by ID, trying to find by email:", emailFromUrl)
+        
+        // Try to find student by email
+        const studentResponse = await fetch(`/api/students?email=${emailFromUrl}`, {
+          method: "GET",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache", 
+            Expires: "0",
+          },
+        })
+
+        if (studentResponse.ok) {
+          const studentData = await studentResponse.json()
+          if (studentData.success && studentData.students && studentData.students.length > 0) {
+            const student = studentData.students[0]
+            // Create a candidate object from student data
+            setCandidate({
+              _id: student._id,
+              name: `${student.firstName || ''} ${student.lastName || ''}`.trim() || student.email.split('@')[0],
+              email: student.email,
+              phone: student.phone,
+              status: 'Student',
+              createdAt: student.createdAt || new Date().toISOString(),
+              testsAssigned: 0,
+              testsCompleted: 0,
+              averageScore: 0
+            })
+            console.log("Candidate created from student data:", student)
+            return
+          }
+        }
+        
+        // If no student found, create a basic candidate object
+        setCandidate({
+          _id: candidateId,
+          name: emailFromUrl.split('@')[0],
+          email: emailFromUrl,
+          status: 'Unknown',
+          createdAt: new Date().toISOString(),
+          testsAssigned: 0,
+          testsCompleted: 0,
+          averageScore: 0
+        })
+        console.log("Created basic candidate from email:", emailFromUrl)
+        return
+      }
 
       if (!response.ok) {
         if (response.status === 404) {

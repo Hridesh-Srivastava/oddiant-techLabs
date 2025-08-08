@@ -396,12 +396,15 @@ export default function TestDetailsPage() {
       if (res.ok) {
         const { students } = await res.json();
         
-        // Update existing candidates with proper names from student data
+        // Update existing candidates with proper names and IDs from student data
         for (const student of students) {
           if (candidateMap.has(student.email)) {
             const candidateData = candidateMap.get(student.email);
             // Update the name with proper full name construction
             candidateData.name = constructFullName(student, candidateData.name);
+            // Use the actual student ID instead of synthetic ID
+            candidateData._id = student._id;
+            console.log(`Updated candidate ${student.email} with student ID: ${student._id}`);
           }
         }
         
@@ -1307,7 +1310,7 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
                                 <div className="flex gap-2">
                                   {/* View candidate details */}
                                   <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" asChild>
-                                    <Link href={`/employee/assessment/candidates?email=${candidate.email}`}>
+                                    <Link href={`/employee/assessment/candidates/${candidate._id}?email=${candidate.email}`}>
                                       <Eye className="h-4 w-4 mr-2" />
                                       View
                                     </Link>
