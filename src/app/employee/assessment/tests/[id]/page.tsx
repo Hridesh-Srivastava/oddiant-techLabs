@@ -1308,13 +1308,6 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
                               </td>
                               <td className="py-3 px-4">
                                 <div className="flex gap-2">
-                                  {/* View candidate details */}
-                                  <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" asChild>
-                                    <Link href={`/employee/assessment/candidates/${candidate._id}?email=${candidate.email}`}>
-                                      <Eye className="h-4 w-4 mr-2" />
-                                      View
-                                    </Link>
-                                  </Button>
 
                                   {/* Declare individual result if completed but not declared */}
                                   {candidate.status === "Completed" && !candidate.resultsDeclared && (

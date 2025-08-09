@@ -3,15 +3,17 @@ import type React from "react"
 import { useState, useRef } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { motion, useInView } from "framer-motion"
+import { motion, useInView, useReducedMotion } from "framer-motion"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { Linkedin, Facebook, Youtube, Mail, Phone, MapPin, Clock, ArrowRight, Sparkles } from 'lucide-react'
 import { FaWhatsapp } from "react-icons/fa"
+import CanvasStarfield from "@/components/visuals/CanvasStarfield"
 
 export function Footer() {
+  const prefersReducedMotion = useReducedMotion()
   const [email, setEmail] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
@@ -75,28 +77,12 @@ export function Footer() {
     </svg>
   )
   const socialLinks = [
-    {
-      icon: <Linkedin className="w-5 h-5" />,
-      href: "https://linkedin.com",
-      label: "LinkedIn",
-    },
-    { icon: <XIcon />, href: "https://twitter.com", label: "X" },
-    {
-      icon: <Facebook className="w-5 h-5" />,
-      href: "https://facebook.com",
-      label: "Facebook",
-    },
-    {
-      icon: <Youtube className="w-5 h-5" />,
-      href: "https://youtube.com",
-      label: "YouTube",
-    },
-    {
-      icon: <FaWhatsapp className="w-5 h-5" />,
-      href: "https://whatsapp.com",
-      label: "WhatsApp",
-    },
-  ]
+    { icon: <Linkedin className="w-5 h-5" />, href: "https://linkedin.com", label: "LinkedIn", color: "#0A66C2" },
+    { icon: <XIcon />, href: "https://twitter.com", label: "X", color: "#A0A0A0" },
+    { icon: <Facebook className="w-5 h-5" />, href: "https://facebook.com", label: "Facebook", color: "#1877F2" },
+    { icon: <Youtube className="w-5 h-5" />, href: "https://youtube.com", label: "YouTube", color: "#FF0000" },
+    { icon: <FaWhatsapp className="w-5 h-5" />, href: "https://whatsapp.com", label: "WhatsApp", color: "#25D366" },
+  ] as const
   const quickLinks = [
     { href: "/", label: "Home" },
     { href: "/company", label: "Company" },
@@ -116,6 +102,7 @@ export function Footer() {
         initial="hidden"
         animate={isInView ? "visible" : "hidden"}
         className="relative bg-gradient-to-b from-black to-zinc-900 text-white pt-20 pb-8 overflow-hidden z-10"
+        style={{ contentVisibility: "auto", containIntrinsicSize: "800px" }}
       >
       {/* Enhanced Background Elements */}
       <div className="absolute inset-0 z-0 overflow-hidden">
@@ -163,32 +150,8 @@ export function Footer() {
             delay: 5,
           }}
         />
-        {/* Colorful stars */}
-        {Array.from({ length: 50 }).map((_, i) => (
-          <motion.div
-            key={`footer-star-${i}`}
-            className="absolute rounded-full"
-            style={{
-              width: Math.random() * 2 + 1,
-              height: Math.random() * 2 + 1,
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              background: ["#3B82F6", "#8B5CF6", "#10B981", "#F59E0B", "#EC4899", "#06B6D4"][
-                Math.floor(Math.random() * 6)
-              ],
-              boxShadow: `0 0 ${Math.random() * 5 + 2}px currentColor`,
-            }}
-            animate={{
-              opacity: [0, 0.8, 0],
-              scale: [0, 1, 0],
-            }}
-            transition={{
-              duration: Math.random() * 3 + 2,
-              repeat: Number.POSITIVE_INFINITY,
-              delay: Math.random() * 5,
-            }}
-          />
-        ))}
+  {/* Starfield (SSR-safe) */}
+  <CanvasStarfield className="absolute inset-0" count={prefersReducedMotion ? 40 : 80} opacity={0.6} maxFPS={28} quality={prefersReducedMotion ? "battery" : "balanced"} />
         {/* Orbital rings */}
         <div className="absolute inset-0 flex items-center justify-center">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -244,12 +207,7 @@ export function Footer() {
           style={{
             background: "radial-gradient(circle, rgba(59,130,246,0.4) 0%, rgba(139,92,246,0.2) 50%, transparent 80%)",
           }}
-          animate={{
-            scale: [1, 1.3, 1],
-            opacity: [0.1, 0.15, 0.1],
-            x: [0, 50, 0],
-            y: [0, -30, 0],
-          }}
+          animate={isInView ? { scale: [1, 1.3, 1], opacity: [0.1, 0.15, 0.1], x: [0, 50, 0], y: [0, -30, 0] } : {}}
           transition={{
             duration: 15,
             repeat: Number.POSITIVE_INFINITY,
@@ -261,12 +219,7 @@ export function Footer() {
           style={{
             background: "radial-gradient(circle, rgba(16,185,129,0.4) 0%, rgba(245,158,11,0.2) 50%, transparent 80%)",
           }}
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.1, 0.15, 0.1],
-            x: [0, -40, 0],
-            y: [0, 40, 0],
-          }}
+          animate={isInView ? { scale: [1, 1.2, 1], opacity: [0.1, 0.15, 0.1], x: [0, -40, 0], y: [0, 40, 0] } : {}}
           transition={{
             duration: 18,
             repeat: Number.POSITIVE_INFINITY,
@@ -393,42 +346,31 @@ export function Footer() {
             </p>
             <p className="text-md font-bold text-white mb-4">Follow Us:</p>
             <div className="flex space-x-3">
-              {socialLinks.map((link) => {
-                let hoverColor = ""
-                switch (link.label) {
-                  case "WhatsApp":
-                    hoverColor = "hover:bg-green-500"
-                    break
-                  case "Facebook":
-                    hoverColor = "hover:bg-blue-600"
-                    break
-                  case "LinkedIn":
-                    hoverColor = "hover:bg-blue-500"
-                    break
-                  case "X":
-                    hoverColor = "hover:bg-gray-500"
-                    break
-                  case "YouTube":
-                    hoverColor = "hover:bg-red-600"
-                    break
-                  default:
-                    hoverColor = "hover:bg-white/20"
-                }
-                return (
-                  <motion.a
-                    key={link.label}
-                    href={link.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={link.label}
-                    whileHover={{ scale: 1.1, y: -3 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                    className={`w-10 h-10 rounded-full bg-white/10 flex items-center justify-center transition-all duration-300 ${hoverColor} hover:shadow-lg hover:shadow-${link.label.toLowerCase()}-500/20`}
-                  >
-                    {link.icon}
-                  </motion.a>
-                )
-              })}
+              {socialLinks.map((link) => (
+                <motion.a
+                  key={link.label}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={link.label}
+                  whileHover={{ scale: 1.1, y: -3 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                  className="w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-300 shadow-lg hover:shadow-xl"
+                  style={{ color: link.color, backgroundColor: `${link.color}20`, border: `1px solid ${link.color}4D` }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = link.color
+                    e.currentTarget.style.border = `1px solid ${link.color}`
+                    e.currentTarget.style.color = "#FFFFFF"
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = `${link.color}20`
+                    e.currentTarget.style.border = `1px solid ${link.color}4D`
+                    e.currentTarget.style.color = link.color
+                  }}
+                >
+                  {link.icon}
+                </motion.a>
+              ))}
             </div>
           </motion.div>
           {/* Quick Links */}

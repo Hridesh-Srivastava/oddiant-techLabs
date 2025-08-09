@@ -2,13 +2,66 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
+import { motion, useInView, useReducedMotion } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { Toaster, toast } from "sonner"
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faXTwitter, faFacebookF, faYoutube, faWhatsapp } from "@fortawesome/free-brands-svg-icons"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
+import {
+  Mail,
+  Phone,
+  MapPin,
+  Clock,
+  Send,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  MessageSquare,
+  User,
+  AtSign,
+  Briefcase,
+  ListFilter,
+  Linkedin,
+  Facebook,
+  Youtube,
+  Sparkles,
+  Zap,
+  Globe,
+  ArrowRight,
+} from "lucide-react"
+import { FaXTwitter } from "react-icons/fa6"
+import { FaWhatsapp } from "react-icons/fa"
+import CanvasStarfield from "@/components/visuals/CanvasStarfield"
+
+// Define more specific types to fix the TypeScript error
+interface ContactDetailWithLink {
+  text: string
+  link: string
+}
+
+interface ContactDetailWithoutLink {
+  text: string
+}
+
+// Use a discriminated union type
+type ContactDetail = ContactDetailWithLink | ContactDetailWithoutLink
+
+// Type guard function to check if a detail has a link
+function hasLink(detail: ContactDetail): detail is ContactDetailWithLink {
+  return "link" in detail
+}
+
+interface ContactInfo {
+  icon: React.ReactNode
+  title: string
+  details: ContactDetail[]
+  color: string
+}
 
 export default function ContactPage() {
+  const prefersReducedMotion = useReducedMotion()
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -17,18 +70,42 @@ export default function ContactPage() {
     service: "it-consulting",
     message: "",
   })
-
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [useEmailFallback, setUseEmailFallback] = useState(false)
+  const [formStatus, setFormStatus] = useState<{
+    success: boolean
+    message: string
+    visible: boolean
+  } | null>(null)
+
+  const heroRef = useRef<HTMLDivElement>(null)
+  const isHeroInView = useInView(heroRef, { once: true, amount: 0.25 })
+
+  const formRef = useRef<HTMLDivElement>(null)
+  const isFormInView = useInView(formRef, { once: true, amount: 0.3 })
+
+  const infoRef = useRef<HTMLDivElement>(null)
+  const isInfoInView = useInView(infoRef, { once: true, amount: 0.25 })
+
+  // New: map visibility for lazy loading iframe
+  const mapRef = useRef<HTMLDivElement>(null)
+  const isMapInView = useInView(mapRef, { once: true, amount: 0.2 })
+
+  // New: gated counts to avoid initial heavy animation cost before in view
+  const heroOrbitCount = isHeroInView ? (prefersReducedMotion ? 3 : 6) : 0
+  const heroParticlesBase = prefersReducedMotion ? 2 : 4
+  const spiralLayerCount = isFormInView ? (prefersReducedMotion ? 4 : 8) : 0
+  const spiralParticlesPerLayer = prefersReducedMotion ? 8 : 12
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    setFormStatus(null)
 
     // If we're using the email fallback, use the fallback form
     if (useEmailFallback) {
@@ -52,6 +129,12 @@ ${formData.message}
         // Open email client
         window.location.href = mailtoLink
 
+        // Show success message
+        setFormStatus({
+          success: true,
+          message: "Email client opened. Please send the email to complete your submission.",
+          visible: true,
+        })
         toast.success("Email client opened. Please send the email to complete your submission.")
 
         // Reset form
@@ -63,9 +146,24 @@ ${formData.message}
           service: "it-consulting",
           message: "",
         })
+
+        // Hide the message after 5 seconds
+        setTimeout(() => {
+          setFormStatus((prev) => (prev ? { ...prev, visible: false } : null))
+        }, 5000)
       } catch (error) {
         console.error("Error with fallback form:", error)
+        setFormStatus({
+          success: false,
+          message: "Could not open email client. Please contact us directly at hi@oddiant.com",
+          visible: true,
+        })
         toast.error("Could not open email client. Please contact us directly at hi@oddiant.com")
+
+        // Hide the message after 5 seconds
+        setTimeout(() => {
+          setFormStatus((prev) => (prev ? { ...prev, visible: false } : null))
+        }, 5000)
       } finally {
         setIsSubmitting(false)
       }
@@ -73,12 +171,8 @@ ${formData.message}
     }
 
     try {
-      console.log("Submitting form data:", formData)
-
       // Use absolute URL for API endpoint to avoid path issues
       const apiUrl = "/api/contact"
-
-      console.log("Submitting to API URL:", apiUrl)
 
       // Use fetch with improved error handling
       const controller = new AbortController()
@@ -94,8 +188,6 @@ ${formData.message}
       })
 
       clearTimeout(timeoutId)
-
-      console.log("Response status:", response.status)
 
       // Check if response is ok first
       if (!response.ok) {
@@ -118,7 +210,12 @@ ${formData.message}
 
         // If we get a 405 error, offer to use the email fallback
         if (response.status === 405) {
-          toast.error("The contact form is currently unavailable. Would you like to use your email client instead?", {
+          setFormStatus({
+            success: false,
+            message: "The contact form is currently unavailable. Would you like to use your email client instead?",
+            visible: true,
+          })
+          toast.error("The contact form is currently unavailable.", {
             action: {
               label: "Use Email",
               onClick: () => setUseEmailFallback(true),
@@ -135,12 +232,17 @@ ${formData.message}
       let data
       try {
         data = await response.json()
-        console.log("Response data:", data)
       } catch (jsonError) {
         console.error("Error parsing JSON response:", jsonError)
         throw new Error("Received invalid response from server. Please try again.")
       }
 
+      // Show success message
+      setFormStatus({
+        success: true,
+        message: data?.message || "Message sent successfully! We'll get back to you soon.",
+        visible: true,
+      })
       toast.success(data?.message || "Message sent successfully! We'll get back to you soon.")
 
       // Reset form
@@ -152,923 +254,934 @@ ${formData.message}
         service: "it-consulting",
         message: "",
       })
-    } catch (error) {
+
+      // Hide the message after 5 seconds
+      setTimeout(() => {
+        setFormStatus((prev) => (prev ? { ...prev, visible: false } : null))
+      }, 5000)
+    } catch (error: unknown) {
       console.error("Error submitting form:", error)
 
-      // More specific error messages with proper type checking
-      if (error instanceof Error) {
-        if (error.name === "AbortError") {
-          toast.error("Request timed out. Please check your connection and try again.")
-        } else if (error instanceof TypeError && error.message.includes("fetch")) {
-          toast.error("Network error. Please check your connection and try again.")
-          toast.error("Would you like to use your email client instead?", {
-            action: {
-              label: "Use Email",
-              onClick: () => setUseEmailFallback(true),
-            },
-            duration: 10000,
-          })
-        } else {
-          toast.error(error.message || "Failed to send message. Please try again.")
-        }
+      // More specific error messages
+      if ((error as { name?: string })?.name === "AbortError") {
+        setFormStatus({
+          success: false,
+          message: "Request timed out. Please check your connection and try again.",
+          visible: true,
+        })
+        toast.error("Request timed out. Please check your connection and try again.")
+      } else if (error instanceof TypeError && (error as TypeError).message.includes("fetch")) {
+        setFormStatus({
+          success: false,
+          message: "Network error. Please check your connection and try again.",
+          visible: true,
+        })
+        toast.error("Network error. Please check your connection and try again.")
+        toast.error("Would you like to use your email client instead?", {
+          action: {
+            label: "Use Email",
+            onClick: () => setUseEmailFallback(true),
+          },
+          duration: 10000,
+        })
       } else {
-        toast.error("Failed to send message. Please try again.")
+        setFormStatus({
+          success: false,
+          message: error instanceof Error ? error.message : "Failed to send message. Please try again.",
+          visible: true,
+        })
+        toast.error(error instanceof Error ? error.message : "Failed to send message. Please try again.")
       }
+
+      // Hide the message after 5 seconds
+      setTimeout(() => {
+        setFormStatus((prev) => (prev ? { ...prev, visible: false } : null))
+      }, 5000)
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  const fadeInUpVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6,
+        ease: "easeOut",
+      },
+    },
+  }
+
+  const staggerContainerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.1,
+      },
+    },
+  }
+
+  const contactInfo: ContactInfo[] = [
+    {
+      icon: <MapPin className="w-5 h-5" />,
+      title: "Office Locations",
+      details: [
+        {
+          text: "D.D Puram Bareilly, Uttar Pradesh",
+          link: "https://maps.app.goo.gl/BBFMKuiDnabN2rPE6",
+        },
+        {
+          text: "Sector-63 Noida, Uttar Pradesh",
+          link: "https://maps.app.goo.gl/bMVpmZkageHxXuc76",
+        },
+      ],
+      color: "blue",
+    },
+    {
+      icon: <Mail className="w-5 h-5" />,
+      title: "Email",
+      details: [
+        {
+          text: "hi@oddiant.com",
+          link: "mailto:hi@oddiant.com",
+        },
+      ],
+      color: "green",
+    },
+    {
+      icon: <Phone className="w-5 h-5" />,
+      title: "Phone",
+      details: [
+        {
+          text: "+91 7300875549",
+          link: "tel:+917300875549",
+        },
+        {
+          text: "+91 8755498866",
+          link: "tel:+918755498866",
+        },
+      ],
+      color: "purple",
+    },
+    {
+      icon: <Clock className="w-5 h-5" />,
+      title: "Business Hours",
+      details: [
+        {
+          text: "Mon-Fri: 9:30 AM - 6:30 PM IST",
+        },
+        {
+          text: "Sat-Sun: Closed",
+        },
+      ],
+      color: "amber",
+    },
+  ]
+
   return (
-    <div className="min-h-screen bg-black text-white relative overflow-hidden">
-      <Toaster position="top-center" />
-
-      {/* Balanced Epic Galaxy Background */}
-      <div className="absolute inset-0 overflow-hidden">
-        {/* Nebula Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-blue-900/10 to-black"></div>
-
-        {/* Balanced Colorful Moving Stars */}
-        <div className="stars-container">
-          {[...Array(90)].map((_, i) => (
-            <div
-              key={i}
-              className={`star star-${(i % 6) + 1}`}
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 20}s`,
-                animationDuration: `${3 + Math.random() * 5}s`,
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Balanced Shooting Stars */}
-        <div className="shooting-stars">
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              className="shooting-star"
-              style={{
-                top: `${Math.random() * 60}%`,
-                animationDelay: `${Math.random() * 12}s`,
-                animationDuration: `${2 + Math.random() * 3}s`,
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Balanced Floating Particles */}
-        <div className="particles">
-          {[...Array(40)].map((_, i) => (
-            <div
-              key={i}
-              className="particle"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 18}s`,
-                animationDuration: `${12 + Math.random() * 10}s`,
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Balanced Floating Orbits */}
-        <div className="floating-orbits">
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              className={`floating-orbit orbit-${(i % 4) + 1}`}
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 20}s`,
-                animationDuration: `${18 + Math.random() * 15}s`,
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
+    <div className="bg-black text-white overflow-hidden">
       {/* Hero Section */}
-      <section className="relative pt-24 pb-16 md:pt-32 md:pb-24 z-10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-pulse-glow">
+      <section
+        ref={heroRef}
+        className="relative pt-32 pb-20 overflow-hidden"
+        style={{ contentVisibility: "auto", containIntrinsicSize: "720px" }}
+      >
+        {/* Enhanced Cosmic Background */}
+        <div className="absolute inset-0 z-0" style={{ pointerEvents: "none" }}>
+          {/* Base gradient */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black via-zinc-900 to-black" />
+
+          {/* GPU-friendly starfield (SSR-safe) */}
+          <CanvasStarfield className="absolute inset-0" count={120} opacity={0.85} maxFPS={28} quality="balanced" />
+
+          {/* Enhanced orbital rings */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            {Array.from({ length: heroOrbitCount }).map((_, i) => (
+              <motion.div
+                key={`hero-orbit-${i}`}
+                className="absolute border border-white/8 rounded-full"
+                style={{
+                  width: 200 + i * 180,
+                  height: 200 + i * 180,
+                }}
+                animate={isHeroInView ? { rotate: 360 } : { rotate: 0 }}
+                transition={{
+                  duration: (prefersReducedMotion ? 35 : 25) + i * (prefersReducedMotion ? 20 : 15),
+                  repeat: Number.POSITIVE_INFINITY,
+                  ease: "linear",
+                }}
+              >
+                {/* Enhanced orbital particles */}
+                {Array.from({ length: heroParticlesBase + i }).map((_, j) => (
+                  <motion.div
+                    key={`hero-orbital-particle-${i}-${j}`}
+                    className="absolute w-2 h-2 rounded-full"
+                    style={{
+                      background: `linear-gradient(45deg, ${
+                        ["#3B82F6", "#8B5CF6", "#10B981", "#F59E0B", "#EF4444", "#EC4899"][i]
+                      }, ${["#8B5CF6", "#10B981", "#F59E0B", "#EF4444", "#EC4899", "#06B6D4"][i]})`,
+                      top: "50%",
+                      left: "50%",
+                      transformOrigin: `${100 + i * 90}px 0`,
+                      boxShadow: `0 0 12px ${["#3B82F6", "#8B5CF6", "#10B981", "#F59E0B", "#EF4444", "#EC4899"][i]}`,
+                    }}
+                    animate={isHeroInView ? { rotate: -360 } : { rotate: 0 }}
+                    transition={{
+                      duration: (prefersReducedMotion ? 24 : 18) + j * (prefersReducedMotion ? 8 : 6),
+                      repeat: Number.POSITIVE_INFINITY,
+                      ease: "linear",
+                      delay: j * 3,
+                    }}
+                  />
+                ))}
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Enhanced massive gradient orbs */}
+          <motion.div
+            className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full filter blur-3xl"
+            style={{
+              background:
+                "radial-gradient(circle, rgba(59,130,246,0.4) 0%, rgba(139,92,246,0.3) 50%, transparent 100%)",
+            }}
+            animate={{
+              scale: [1, 1.4, 1],
+              opacity: [0.3, 0.7, 0.3],
+              x: [0, 60, 0],
+              y: [0, -40, 0],
+            }}
+            transition={{
+              duration: 16,
+              repeat: Number.POSITIVE_INFINITY,
+              repeatType: "reverse",
+            }}
+          />
+          <motion.div
+            className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] rounded-full filter blur-3xl"
+            style={{
+              background:
+                "radial-gradient(circle, rgba(16,185,129,0.4) 0%, rgba(245,158,11,0.3) 50%, transparent 100%)",
+            }}
+            animate={{
+              scale: [1, 1.3, 1],
+              opacity: [0.3, 0.6, 0.3],
+              x: [0, -50, 0],
+              y: [0, 50, 0],
+            }}
+            transition={{
+              duration: 20,
+              repeat: Number.POSITIVE_INFINITY,
+              repeatType: "reverse",
+              delay: 3,
+            }}
+          />
+          <motion.div
+            className="absolute top-1/2 right-1/3 w-[400px] h-[400px] rounded-full filter blur-2xl"
+            style={{
+              background: "radial-gradient(circle, rgba(236,72,153,0.5) 0%, rgba(6,182,212,0.3) 50%, transparent 100%)",
+            }}
+            animate={{
+              scale: [1, 1.5, 1],
+              opacity: [0.2, 0.8, 0.2],
+              rotate: [0, 180, 360],
+            }}
+            transition={{
+              duration: 22,
+              repeat: Number.POSITIVE_INFINITY,
+              ease: "linear",
+            }}
+          />
+
+          {/* Secondary subtle starfield for depth */}
+          <CanvasStarfield
+            className="absolute inset-0"
+            count={isHeroInView ? 55 : 0}
+            opacity={0.55}
+            maxFPS={26}
+            quality="battery"
+            speedX={{ min: -0.03, max: 0.03 }}
+            speedY={{ min: -0.08, max: -0.03 }}
+          />
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10">
+          <motion.div
+            initial="hidden"
+            animate={isHeroInView ? "visible" : "hidden"}
+            variants={fadeInUpVariants}
+            className="max-w-4xl mx-auto text-center"
+          >
+            <div className="inline-block mb-6">
+              <div className="flex items-center justify-center space-x-2 bg-white/10 backdrop-blur-sm px-6 py-3 rounded-full border border-white/20">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                >
+                  <MessageSquare className="h-5 w-5 text-blue-400" />
+                </motion.div>
+                <span className="text-sm font-medium text-blue-400">Get In Touch</span>
+              </div>
+            </div>
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-200 to-purple-200 leading-tight mb-6">
               Contact Us
             </h1>
-            <p className="text-xl md:text-2xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
-              Get in touch with our team to discuss how we can help your business reach the stars
+            <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto">
+              Get in touch with our team to discuss how we can help your business grow and achieve extraordinary results
             </p>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Contact Form and Info Section */}
-      <section className="py-16 relative z-10">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-7xl mx-auto">
-            {/* Contact Form - BEAST MODERN DYNAMIC BORDER */}
-            <div className="order-2 lg:order-1">
-              <div className="relative group">
-                {/* KILLER PROFESSIONAL ANIMATED BORDER */}
-                <div className="absolute -inset-1 rounded-3xl overflow-hidden">
-                  <div className="beast-border"></div>
-                </div>
+      <section
+        className="py-16 relative overflow-hidden"
+        style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }}
+      >
+        {/* Enhanced cosmic background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-zinc-900 to-black" />
 
-                {/* Premium Glassmorphism Container */}
-                <div className="relative bg-gray-900/90 backdrop-blur-xl rounded-3xl p-8 border border-gray-700/30 shadow-2xl">
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-4 mb-8">
-                      <div className="w-12 h-12 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/25">
-                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                          ></path>
-                        </svg>
-                      </div>
-                      <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                        Send us a message
-                      </h2>
-                    </div>
+        {/* Spiral galaxy effect */}
+        <div className="absolute inset-0 flex items-center justify-center" style={{ pointerEvents: "none" }}>
+          {Array.from({ length: spiralLayerCount }).map((_, i) => (
+            <motion.div
+              key={`contact-spiral-${i}`}
+              className="absolute"
+              style={{
+                width: 300 + i * 120,
+                height: 300 + i * 120,
+              }}
+              animate={isFormInView ? { rotate: 360 } : { rotate: 0 }}
+              transition={{
+                duration: (prefersReducedMotion ? 45 : 35) + i * (prefersReducedMotion ? 16 : 12),
+                repeat: Number.POSITIVE_INFINITY,
+                ease: "linear",
+              }}
+            >
+              {Array.from({ length: spiralParticlesPerLayer }).map((_, j) => (
+                <motion.div
+                  key={`contact-spiral-particle-${i}-${j}`}
+                  className="absolute w-1.5 h-1.5 rounded-full"
+                  style={{
+                    background: [
+                      "#3B82F6",
+                      "#8B5CF6",
+                      "#10B981",
+                      "#F59E0B",
+                      "#EF4444",
+                      "#EC4899",
+                      "#06B6D4",
+                      "#84CC16",
+                    ][i],
+                    top: "50%",
+                    left: "50%",
+                    transformOrigin: `${150 + i * 60}px 0`,
+                    transform: `rotate(${j * 30}deg)`,
+                    boxShadow: `0 0 8px ${["#3B82F6", "#8B5CF6", "#10B981", "#F59E0B", "#EF4444", "#EC4899", "#06B6D4", "#84CC16"][i]}`,
+                  }}
+                  animate={{
+                    opacity: isFormInView ? [0, 1, 0] : [0],
+                    scale: isFormInView ? [0.5, 1.2, 0.5] : [0.5],
+                  }}
+                  transition={{
+                    duration: prefersReducedMotion ? 6.5 : 5,
+                    repeat: Number.POSITIVE_INFINITY,
+                    delay: j * 0.4,
+                  }}
+                />
+              ))}
+            </motion.div>
+          ))}
+        </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <label htmlFor="name" className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                            <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
-                            Your Name <span className="text-pink-400">*</span>
-                          </label>
-                          <div className="relative group">
-                            <input
-                              type="text"
-                              id="name"
-                              name="name"
-                              value={formData.name}
-                              onChange={handleChange}
-                              required
-                              className="w-full px-4 py-4 bg-gray-800/60 backdrop-blur-sm border border-gray-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-300 hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10"
-                              placeholder="Enter Your Name"
-                            />
-                            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                          </div>
-                        </div>
+        {/* Enhanced floating elements */}
+        <motion.div
+          className="absolute top-20 left-20 w-32 h-32 border border-blue-500/20 rounded-full"
+          animate={{
+            rotate: 360,
+            scale: [1, 1.3, 1],
+          }}
+          transition={{
+            rotate: { duration: 25, repeat: Number.POSITIVE_INFINITY, ease: "linear" },
+            scale: { duration: 8, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse" },
+          }}
+        />
+        <motion.div
+          className="absolute bottom-20 right-20 w-28 h-28 border border-purple-500/20"
+          style={{ clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)" }}
+          animate={{
+            rotate: -360,
+            y: [0, -25, 0],
+          }}
+          transition={{
+            rotate: { duration: 30, repeat: Number.POSITIVE_INFINITY, ease: "linear" },
+            y: { duration: 6, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse" },
+          }}
+        />
 
-                        <div className="space-y-2">
-                          <label htmlFor="email" className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                            <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
-                            Email Address <span className="text-pink-400">*</span>
-                          </label>
-                          <div className="relative group">
-                            <input
-                              type="email"
-                              id="email"
-                              name="email"
-                              value={formData.email}
-                              onChange={handleChange}
-                              required
-                              className="w-full px-4 py-4 bg-gray-800/60 backdrop-blur-sm border border-gray-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-300 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10"
-                              placeholder="user@oddiant.com"
-                            />
-                            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                          </div>
-                        </div>
-                      </div>
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+            {/* Enhanced Contact Form */}
+            <motion.div
+              ref={formRef}
+              initial="hidden"
+              animate={isFormInView ? "visible" : "hidden"}
+              variants={fadeInUpVariants}
+              className="relative"
+            >
+              {/* Professional background with subtle patterns */}
+              <div className="absolute inset-0 -z-10 rounded-3xl overflow-hidden">
+                {/* Subtle grid pattern */}
+                <div
+                  className="absolute inset-0 opacity-5"
+                  style={{
+                    backgroundImage:
+                      "linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)",
+                    backgroundSize: "20px 20px",
+                  }}
+                />
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <label htmlFor="phone" className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                            Phone Number
-                          </label>
-                          <div className="relative group">
-                            <input
-                              type="tel"
-                              id="phone"
-                              name="phone"
-                              value={formData.phone}
-                              onChange={handleChange}
-                              className="w-full px-4 py-4 bg-gray-800/60 backdrop-blur-sm border border-gray-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-300 hover:border-green-500/50 hover:shadow-lg hover:shadow-green-500/10"
-                              placeholder="+91 1234567890"
-                            />
-                            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                          </div>
-                        </div>
+                {/* Professional gradient orbs */}
+                <motion.div
+                  className="absolute top-0 right-0 w-32 h-32 rounded-full filter blur-2xl opacity-20"
+                  style={{
+                    background: "radial-gradient(circle, rgba(59,130,246,0.6) 0%, transparent 70%)",
+                  }}
+                  animate={{
+                    scale: [1, 1.2, 1],
+                    opacity: [0.2, 0.3, 0.2],
+                  }}
+                  transition={{
+                    duration: 8,
+                    repeat: Number.POSITIVE_INFINITY,
+                    repeatType: "reverse",
+                  }}
+                />
+                <motion.div
+                  className="absolute bottom-0 left-0 w-40 h-40 rounded-full filter blur-2xl opacity-20"
+                  style={{
+                    background: "radial-gradient(circle, rgba(139,92,246,0.6) 0%, transparent 70%)",
+                  }}
+                  animate={{
+                    scale: [1, 1.3, 1],
+                    opacity: [0.2, 0.3, 0.2],
+                  }}
+                  transition={{
+                    duration: 10,
+                    repeat: Number.POSITIVE_INFINITY,
+                    repeatType: "reverse",
+                    delay: 2,
+                  }}
+                />
 
-                        <div className="space-y-2">
-                          <label
-                            htmlFor="company"
-                            className="text-sm font-medium text-gray-300 flex items-center gap-2"
-                          >
-                            <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-                            Company Name
-                          </label>
-                          <div className="relative group">
-                            <input
-                              type="text"
-                              id="company"
-                              name="company"
-                              value={formData.company}
-                              onChange={handleChange}
-                              className="w-full px-4 py-4 bg-gray-800/60 backdrop-blur-sm border border-gray-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-300 hover:border-yellow-500/50 hover:shadow-lg hover:shadow-yellow-500/10"
-                              placeholder="Your Company"
-                            />
-                            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                          </div>
-                        </div>
-                      </div>
+                {/* Subtle client-only dots via canvas to avoid SSR mismatch */}
+                <CanvasStarfield
+                  className="absolute inset-0"
+                  count={24}
+                  opacity={0.4}
+                  maxFPS={28}
+                  quality="battery"
+                  speedX={{ min: -0.02, max: 0.02 }}
+                  speedY={{ min: -0.05, max: -0.02 }}
+                  size={{ min: 0.8, max: 1.6 }}
+                />
+              </div>
 
-                      <div className="space-y-2">
-                        <label htmlFor="service" className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                          Service of Interest <span className="text-pink-400">*</span>
-                        </label>
-                        <div className="relative group">
-                          <select
-                            id="service"
-                            name="service"
-                            value={formData.service}
-                            onChange={handleChange}
-                            required
-                            className="w-full px-4 py-4 bg-gray-800/60 backdrop-blur-sm border border-gray-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white transition-all duration-300 hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10 appearance-none cursor-pointer"
-                          >
-                            <option value="it-consulting" className="bg-gray-800">
-                              IT Consulting
-                            </option>
-                            <option value="hr-services" className="bg-gray-800">
-                              HR Services
-                            </option>
-                            <option value="recruitment" className="bg-gray-800">
-                              Recruitment
-                            </option>
-                            <option value="staffing" className="bg-gray-800">
-                              Staffing
-                            </option>
-                            <option value="other" className="bg-gray-800">
-                              Other
-                            </option>
-                          </select>
-                          <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                            <svg
-                              className="w-5 h-5 text-gray-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M19 9l-7 7-7-7"
-                              ></path>
-                            </svg>
-                          </div>
-                          <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                        </div>
-                      </div>
+              <div className="bg-white/8 backdrop-blur-xl border border-zinc-700/30 rounded-3xl p-10 shadow-2xl hover:shadow-3xl hover:shadow-blue-500/5 transition-all duration-500 relative">
+                {/* Enhanced sparkle effects */}
+                <motion.div
+                  className="absolute top-6 left-6"
+                  animate={{
+                    scale: [1, 1.5, 1],
+                    opacity: [0.5, 1, 0.5],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Number.POSITIVE_INFINITY,
+                    repeatType: "reverse",
+                  }}
+                >
+                  <Sparkles className="h-6 w-6 text-blue-400" />
+                </motion.div>
 
-                      <div className="space-y-2">
-                        <label htmlFor="message" className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                          <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse"></div>
-                          Your Message <span className="text-pink-400">*</span>
-                        </label>
-                        <div className="relative group">
-                          <textarea
-                            id="message"
-                            name="message"
-                            value={formData.message}
-                            onChange={handleChange}
-                            required
-                            rows={5}
-                            className="w-full px-4 py-4 bg-gray-800/60 backdrop-blur-sm border border-gray-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-300 hover:border-pink-500/50 hover:shadow-lg hover:shadow-pink-500/10 resize-none"
-                            placeholder="Tell us about your project or inquiry..."
-                          ></textarea>
-                          <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-pink-500/10 to-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                        </div>
-                      </div>
+                <motion.div
+                  className="absolute bottom-6 right-6"
+                  animate={{
+                    scale: [1, 1.5, 1],
+                    opacity: [0.5, 1, 0.5],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Number.POSITIVE_INFINITY,
+                    repeatType: "reverse",
+                    delay: 1.5,
+                  }}
+                >
+                  <Sparkles className="h-6 w-6 text-purple-400" />
+                </motion.div>
 
+                <h2 className="text-3xl font-bold mb-8 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent flex items-center">
+                  <motion.div
+                    animate={{ rotate: [0, 10, -10, 0] }}
+                    transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+                  >
+                    <MessageSquare className="mr-3 h-8 w-8 text-blue-400" />
+                  </motion.div>
+                  Send Us a Message
+                </h2>
+
+                <form onSubmit={handleSubmit} className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                      <Label htmlFor="name" className="text-white flex items-center text-sm font-medium">
+                        <User className="mr-2 h-4 w-4 text-gray-400" />
+                        Your Name <span className="text-red-500 ml-1">*</span>
+                      </Label>
                       <div className="relative group">
-                        <Button
-                          type="submit"
-                          disabled={isSubmitting}
-                          className="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 hover:from-cyan-600 hover:via-purple-600 hover:to-pink-600 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none border-0 text-lg relative overflow-hidden"
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-                          {isSubmitting ? (
-                            <div className="flex items-center justify-center gap-3 relative z-10">
-                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                              Sending...
-                            </div>
-                          ) : useEmailFallback ? (
-                            <span className="relative z-10">Send via Email Client</span>
-                          ) : (
-                            <div className="flex items-center justify-center gap-2 relative z-10">
-                              <span>Send Message</span>
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                                ></path>
-                              </svg>
-                            </div>
-                          )}
-                        </Button>
-                      </div>
-
-                      {!useEmailFallback && (
-                        <p className="text-xs text-center text-gray-400 mt-4">
-                          Having trouble with the form?{" "}
-                          <button
-                            type="button"
-                            onClick={() => setUseEmailFallback(true)}
-                            className="text-cyan-400 hover:text-cyan-300 underline transition-colors"
-                          >
-                            Use email client instead
-                          </button>
-                        </p>
-                      )}
-                    </form>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Contact Information */}
-            <div className="order-1 lg:order-2">
-              <div className="space-y-8">
-                <div>
-                  <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-                    Contact Information
-                  </h2>
-                  <p className="text-gray-300 mb-8 text-lg leading-relaxed">
-                    Get in touch with us for any inquiries about our services, partnerships, or career opportunities.
-                  </p>
-
-                  <div className="space-y-6">
-                    <div className="flex items-start gap-4 group">
-                      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center text-white flex-shrink-0 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-blue-500/25">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="w-6 h-6"
-                        >
-                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-semibold text-white mb-2">Phone</h3>
-                        <a
-                          href="tel:+917300875549"
-                          className="text-gray-300 hover:text-cyan-400 transition-colors text-lg block"
-                        >
-                          +91 7300875549
-                        </a>
-                        <a
-                          href="tel:+918755498866"
-                          className="text-gray-300 hover:text-cyan-400 transition-colors text-lg block"
-                        >
-                          +91 8755498866
-                        </a>
+                        <Input
+                          id="name"
+                          name="name"
+                          value={formData.name}
+                          onChange={handleChange}
+                          placeholder="Write Your Name"
+                          className="bg-white/10 border-zinc-700/50 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 rounded-xl py-4 px-5 transition-all duration-300 group-hover:bg-white/15"
+                          required
+                        />
+                        <motion.span
+                          initial={{ width: "0%" }}
+                          animate={{ width: formData.name ? "100%" : "0%" }}
+                          transition={{ duration: 0.3 }}
+                          className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                        />
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-4 group">
-                      <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-white flex-shrink-0 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-purple-500/25">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="w-6 h-6"
-                        >
-                          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                          <polyline points="22,6 12,13 2,6" />
-                        </svg>
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-semibold text-white mb-2">Email</h3>
-                        <a
-                          href="mailto:hi@oddiant.com"
-                          className="text-gray-300 hover:text-purple-400 transition-colors text-lg"
-                        >
-                          hi@oddiant.com
-                        </a>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-4 group">
-                      <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center text-white flex-shrink-0 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-green-500/25">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="w-6 h-6"
-                        >
-                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                          <circle cx="12" cy="10" r="3" />
-                        </svg>
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-semibold text-white mb-2">Office Locations</h3>
-                        <a
-                          className="text-gray-300 hover:text-green-400 transition-colors text-lg block mb-1"
-                          href="https://maps.app.goo.gl/BBFMKuiDnabN2rPE6"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          D.D Puram Bareilly, Uttar Pradesh, India
-                        </a>
-                        <a
-                          className="text-gray-300 hover:text-green-400 transition-colors text-lg block"
-                          href="https://maps.app.goo.gl/bMVpmZkageHxXuc76"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Sector-63 Noida, Uttar Pradesh, India
-                        </a>
+                    <div className="space-y-3">
+                      <Label htmlFor="email" className="text-white flex items-center text-sm font-medium">
+                        <AtSign className="mr-2 h-4 w-4 text-gray-400" />
+                        Your Email <span className="text-red-500 ml-1">*</span>
+                      </Label>
+                      <div className="relative group">
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={handleChange}
+                          placeholder="client@oddiant.com"
+                          className="bg-white/10 border-zinc-700/50 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 rounded-xl py-4 px-5 transition-all duration-300 group-hover:bg-white/15"
+                          required
+                        />
+                        <motion.span
+                          initial={{ width: "0%" }}
+                          animate={{ width: formData.email ? "100%" : "0%" }}
+                          transition={{ duration: 0.3 }}
+                          className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                        />
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="bg-gray-900/60 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 shadow-xl">
-                  <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                    Business Hours
-                  </h3>
-                  <div className="space-y-3 text-gray-300">
-                    <p className="flex justify-between items-center">
-                      <span>Monday - Friday:</span>
-                      <span className="text-cyan-400 font-medium">9:30 AM - 6:30 PM IST</span>
-                    </p>
-                    <p className="flex justify-between items-center">
-                      <span>Saturday:</span>
-                      <span className="text-red-400 font-medium">Closed</span>
-                    </p>
-                    <p className="flex justify-between items-center">
-                      <span>Sunday:</span>
-                      <span className="text-red-400 font-medium">Closed</span>
-                    </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                      <Label htmlFor="phone" className="text-white flex items-center text-sm font-medium">
+                        <Phone className="mr-2 h-4 w-4 text-gray-400" />
+                        Phone Number
+                      </Label>
+                      <div className="relative group">
+                        <Input
+                          id="phone"
+                          name="phone"
+                          type="tel"
+                          value={formData.phone}
+                          onChange={handleChange}
+                          placeholder="+91 1234567890"
+                          className="bg-white/10 border-zinc-700/50 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 rounded-xl py-4 px-5 transition-all duration-300 group-hover:bg-white/15"
+                        />
+                        <motion.span
+                          initial={{ width: "0%" }}
+                          animate={{ width: formData.phone ? "100%" : "0%" }}
+                          transition={{ duration: 0.3 }}
+                          className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label htmlFor="company" className="text-white flex items-center text-sm font-medium">
+                        <Briefcase className="mr-2 h-4 w-4 text-gray-400" />
+                        Company Name
+                      </Label>
+                      <div className="relative group">
+                        <Input
+                          id="company"
+                          name="company"
+                          value={formData.company}
+                          onChange={handleChange}
+                          placeholder="Your Company"
+                          className="bg-white/10 border-zinc-700/50 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 rounded-xl py-4 px-5 transition-all duration-300 group-hover:bg-white/15"
+                        />
+                        <motion.span
+                          initial={{ width: "0%" }}
+                          animate={{ width: formData.company ? "100%" : "0%" }}
+                          transition={{ duration: 0.3 }}
+                          className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <h3 className="text-xl font-semibold text-white mb-4">Follow Us</h3>
-                  <div className="flex space-x-3">
-                    <a
-                      href="https://linkedin.com"
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label="LinkedIn"
-                      className="w-10 h-10 bg-gray-800/80 hover:bg-blue-600 rounded-lg flex items-center justify-center text-gray-400 hover:text-white transition-all duration-200 hover:scale-110 hover:shadow-lg hover:shadow-blue-500/25"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        className="w-5 h-5"
+                  <div className="space-y-3">
+                    <Label htmlFor="service" className="text-white flex items-center text-sm font-medium">
+                      <ListFilter className="mr-2 h-4 w-4 text-gray-400" />
+                      Service of Interest <span className="text-red-500 ml-1">*</span>
+                    </Label>
+                    <div className="relative">
+                      <select
+                        id="service"
+                        name="service"
+                        value={formData.service}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-5 py-4 bg-white/10 border border-zinc-700/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-white transition-all duration-300 hover:bg-white/15"
                       >
-                        <path d="M20.5 2h-17A1.5 1.5 0 002 3.5v17A1.5 1.5 0 003.5 22h17a1.5 1.5 0 001.5-1.5v-17A1.5 1.5 0 0020.5 2zM8 19H5v-9h3zM6.5 8.25A1.75 1.75 0 118.3 6.5a1.78 1.78 0 01-1.8 1.75zM19 19h-3v-4.74c0-1.42-.6-1.93-1.38-1.93A1.74 1.74 0 0013 14.19a.66.66 0 000 .14V19h-3v-9h2.9v1.3a3.11 3.11 0 012.7-1.4c1.55 0 3.36.86 3.36 3.66z" />
-                      </svg>
-                    </a>
-                    <a
-                      href="https://twitter.com"
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label="Twitter"
-                      className="w-10 h-10 bg-gray-800/80 hover:bg-gray-700 rounded-lg flex items-center justify-center text-gray-400 hover:text-white transition-all duration-200 hover:scale-110"
+                        <option className="text-black bg-white" value="it-consulting">
+                          IT Consulting
+                        </option>
+                        <option className="text-black bg-white" value="hr-services">
+                          HR Services
+                        </option>
+                        <option className="text-black bg-white" value="recruitment">
+                          Recruitment
+                        </option>
+                        <option className="text-black bg-white" value="staffing">
+                          Staffing
+                        </option>
+                        <option className="text-black bg-white" value="other">
+                          Other
+                        </option>
+                      </select>
+                      <motion.span
+                        initial={{ width: "0%" }}
+                        animate={{ width: formData.service ? "100%" : "0%" }}
+                        transition={{ duration: 0.3 }}
+                        className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label htmlFor="message" className="text-white flex items-center text-sm font-medium">
+                      <MessageSquare className="mr-2 h-4 w-4 text-gray-400" />
+                      Your Message <span className="text-red-500 ml-1">*</span>
+                    </Label>
+                    <div className="relative group">
+                      <Textarea
+                        id="message"
+                        name="message"
+                        value={formData.message}
+                        onChange={handleChange}
+                        placeholder="Please describe how we can help you..."
+                        className="min-h-[180px] bg-white/10 border-zinc-700/50 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 rounded-xl py-4 px-5 transition-all duration-300 group-hover:bg-white/15 resize-none"
+                        required
+                      />
+                      <motion.span
+                        initial={{ width: "0%" }}
+                        animate={{ width: formData.message ? "100%" : "0%" }}
+                        transition={{ duration: 0.3 }}
+                        className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                      />
+                    </div>
+                  </div>
+
+                  {formStatus && formStatus.visible && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                      className={`p-4 rounded-xl flex items-center gap-3 ${
+                        formStatus.success
+                          ? "bg-green-900/30 text-green-300 border border-green-800/50"
+                          : "bg-red-900/30 text-red-300 border border-red-800/50"
+                      }`}
                     >
-                      <FontAwesomeIcon icon={faXTwitter} className="w-5 h-5" />
-                    </a>
-                    <a
-                      href="https://facebook.com"
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label="Facebook"
-                      className="w-10 h-10 bg-gray-800/80 hover:bg-blue-600 rounded-lg flex items-center justify-center text-gray-400 hover:text-white transition-all duration-200 hover:scale-110 hover:shadow-lg hover:shadow-blue-500/25"
+                      {formStatus.success ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-400" />
+                      ) : (
+                        <AlertCircle className="h-5 w-5 text-red-400" />
+                      )}
+                      <span className="text-sm font-medium">{formStatus.message}</span>
+                      {!formStatus.success && !useEmailFallback && formStatus.message.includes("unavailable") && (
+                        <Button
+                          type="button"
+                          variant="link"
+                          className="text-blue-400 hover:text-blue-300 p-0 h-auto"
+                          onClick={() => setUseEmailFallback(true)}
+                        >
+                          Use Email Client
+                        </Button>
+                      )}
+                    </motion.div>
+                  )}
+
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium transition-all duration-300 rounded-xl py-6 text-lg shadow-lg hover:shadow-xl hover:shadow-purple-500/25"
                     >
-                      <FontAwesomeIcon icon={faFacebookF} className="w-5 h-5" />
-                    </a>
-                    <a
-                      href="https://youtube.com"
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label="YouTube"
-                      className="w-10 h-10 bg-gray-800/80 hover:bg-red-600 rounded-lg flex items-center justify-center text-gray-400 hover:text-white transition-all duration-200 hover:scale-110 hover:shadow-lg hover:shadow-red-500/25"
-                    >
-                      <FontAwesomeIcon icon={faYoutube} className="w-5 h-5" />
-                    </a>
-                    <a
-                      href="https://wa.me/your-number"
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label="WhatsApp"
-                      className="w-10 h-10 bg-gray-800/80 hover:bg-green-600 rounded-lg flex items-center justify-center text-gray-400 hover:text-white transition-all duration-200 hover:scale-110 hover:shadow-lg hover:shadow-green-500/25"
-                    >
-                      <FontAwesomeIcon icon={faWhatsapp} className="w-5 h-5" />
-                    </a>
+                      {isSubmitting ? (
+                        <span className="flex items-center justify-center">
+                          <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                          {useEmailFallback ? "Opening Email Client..." : "Sending..."}
+                        </span>
+                      ) : (
+                        <span className="flex items-center justify-center">
+                          {useEmailFallback ? "Send via Email Client" : "Send Message"}
+                          <motion.span initial={{ x: 0 }} whileHover={{ x: 5 }} transition={{ duration: 0.2 }}>
+                            <Send className="ml-3 h-5 w-5" />
+                          </motion.span>
+                        </span>
+                      )}
+                    </Button>
+                  </motion.div>
+
+                  {!useEmailFallback && (
+                    <p className="text-xs text-center text-gray-400 mt-4">
+                      Having trouble with the form?{" "}
+                      <button
+                        type="button"
+                        onClick={() => setUseEmailFallback(true)}
+                        className="text-blue-400 hover:text-blue-300 hover:underline transition-colors duration-200"
+                      >
+                        Use email client instead
+                      </button>
+                    </p>
+                  )}
+                </form>
+              </div>
+
+              {/* Subtle decorative elements */}
+              <motion.div
+                className="absolute -top-6 -right-6 w-16 h-16 bg-blue-500/10 rounded-full filter blur-xl"
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.3, 0.5, 0.3],
+                }}
+                transition={{
+                  duration: 6,
+                  repeat: Number.POSITIVE_INFINITY,
+                  repeatType: "reverse",
+                }}
+              />
+              <motion.div
+                className="absolute -bottom-6 -left-6 w-20 h-20 bg-purple-500/10 rounded-full filter blur-xl"
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.3, 0.5, 0.3],
+                }}
+                transition={{
+                  duration: 6,
+                  repeat: Number.POSITIVE_INFINITY,
+                  repeatType: "reverse",
+                  delay: 1,
+                }}
+              />
+            </motion.div>
+
+            {/* Enhanced Contact Information */}
+            <motion.div
+              ref={infoRef}
+              initial="hidden"
+              animate={isInfoInView ? "visible" : "hidden"}
+              variants={staggerContainerVariants}
+              className="space-y-8"
+            >
+              <motion.div variants={fadeInUpVariants}>
+                <div className="inline-block mb-6">
+                  <div className="flex items-center justify-center space-x-2 bg-white/10 backdrop-blur-sm px-6 py-3 rounded-full border border-white/20">
+                    <Globe className="h-5 w-5 text-green-400" />
+                    <span className="text-sm font-medium text-green-400">Contact Information</span>
                   </div>
                 </div>
+                <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                  Contact Information
+                </h2>
+                <p className="text-gray-300 mb-8 text-lg">
+                  We'd love to hear from you. Reach out to us through any of the following channels or fill out the
+                  contact form.
+                </p>
+              </motion.div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {contactInfo.map((info, index) => {
+                  const colorClasses = {
+                    blue: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+                    green: "bg-green-500/20 text-green-400 border-green-500/30",
+                    purple: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+                    amber: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+                  }
+
+                  return (
+                    <motion.div
+                      key={info.title}
+                      variants={fadeInUpVariants}
+                      whileHover={{ scale: 1.05, y: -5 }}
+                      className="bg-white/5 backdrop-blur-lg border border-zinc-800/50 rounded-2xl p-8 hover:bg-white/10 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 group"
+                    >
+                      <div className="flex items-start gap-5">
+                        <div
+                          className={`w-14 h-14 rounded-2xl ${
+                            colorClasses[info.color as keyof typeof colorClasses]
+                          } flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300 border shadow-lg`}
+                        >
+                          {info.icon}
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-bold text-white mb-3 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-gray-300 transition-all duration-300">
+                            {info.title}
+                          </h3>
+                          <div className="space-y-2">
+                            {info.details.map((detail, idx) => (
+                              <div key={idx}>
+                                {hasLink(detail) ? (
+                                  <a
+                                    href={detail.link}
+                                    target={detail.link.startsWith("http") ? "_blank" : undefined}
+                                    rel={detail.link.startsWith("http") ? "noopener noreferrer" : undefined}
+                                    className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group-hover:text-gray-300"
+                                  >
+                                    {detail.text}
+                                    {detail.link.startsWith("http") && (
+                                      <ArrowRight className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                    )}
+                                  </a>
+                                ) : (
+                                  <p className="text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
+                                    {detail.text}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )
+                })}
               </div>
-            </div>
+
+              {/* Enhanced Map */}
+              <motion.div variants={fadeInUpVariants} className="mt-12" ref={mapRef}>
+                <div className="bg-white/5 backdrop-blur-lg border border-zinc-800/50 rounded-3xl p-8 overflow-hidden shadow-2xl">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
+                      <MapPin className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white">Find Us</h3>
+                  </div>
+                  <div className="relative h-[350px] rounded-2xl overflow-hidden">
+                    {isMapInView ? (
+                      <iframe
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3502.0011089455!2d77.3772!3d28.6273!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390ce5f25ac323e5%3A0x9e06f1aaca9e8e4a!2sSector%2063%2C%20Noida%2C%20Uttar%20Pradesh!5e0!3m2!1sen!2sin!4v1621234567890!5m2!1sen!2sin"
+                        width="100%"
+                        height="100%"
+                        style={{ border: 0 }}
+                        allowFullScreen={false}
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        title="Google Maps showing Oddiant Techlabs location"
+                        className="grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-700 rounded-2xl"
+                      ></iframe>
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/40 animate-pulse text-sm text-gray-400">
+                        Loading map...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Enhanced Social Media */}
+              <motion.div variants={fadeInUpVariants} className="mt-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center border border-purple-500/30">
+                    <Zap className="w-4 h-4 text-purple-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white">Connect With Us</h3>
+                </div>
+                <div className="flex space-x-4">
+                  {([
+                    {
+                      icon: <Linkedin className="w-5 h-5" />,
+                      href: "https://linkedin.com",
+                      label: "LinkedIn",
+                      color: "#0A66C2",
+                    },
+                    {
+                      icon: <FaXTwitter className="w-5 h-5" />,
+                      href: "https://twitter.com",
+                      label: "X",
+                      color: "#A0A0A0",
+                    },
+                    {
+                      icon: <Facebook className="w-5 h-5" />,
+                      href: "https://facebook.com",
+                      label: "Facebook",
+                      color: "#1877F2",
+                    },
+                    {
+                      icon: <Youtube className="w-5 h-5" />,
+                      href: "https://youtube.com",
+                      label: "YouTube",
+                      color: "#FF0000",
+                    },
+                    {
+                      icon: <FaWhatsapp className="w-5 h-5" />,
+                      href: "https://wa.me/919876xxxxxx",
+                      label: "WhatsApp",
+                      color: "#25D366",
+                    },
+                  ] as const).map((social) => (
+                    <motion.a
+                      key={social.label}
+                      href={social.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={social.label}
+                      whileHover={{ scale: 1.1, y: -2 }}
+                      whileTap={{ scale: 0.95 }}
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center backdrop-blur-sm transition-all duration-300 shadow-lg hover:shadow-xl`}
+                      style={{
+                        color: social.color,
+                        backgroundColor: `${social.color}20`,
+                        border: `1px solid ${social.color}4D`,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = social.color
+                        e.currentTarget.style.border = `1px solid ${social.color}`
+                        e.currentTarget.style.color = "#FFFFFF"
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = `${social.color}20`
+                        e.currentTarget.style.border = `1px solid ${social.color}4D`
+                        e.currentTarget.style.color = social.color
+                      }}
+                    >
+                      {social.icon}
+                    </motion.a>
+                  ))}
+                </div>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
       </section>
-
-      <style jsx>{`
-        /* Balanced Galaxy Background Animations */
-        .stars-container {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          overflow: hidden;
-        }
-
-        .star {
-          position: absolute;
-          border-radius: 50%;
-          animation: twinkle-enhanced linear infinite;
-        }
-
-        .star-1 {
-          width: 2px;
-          height: 2px;
-          background: #00ffff;
-          box-shadow: 0 0 8px #00ffff;
-        }
-
-        .star-2 {
-          width: 3px;
-          height: 3px;
-          background: #ff00ff;
-          box-shadow: 0 0 10px #ff00ff;
-        }
-
-        .star-3 {
-          width: 1px;
-          height: 1px;
-          background: #ffff00;
-          box-shadow: 0 0 6px #ffff00;
-        }
-
-        .star-4 {
-          width: 2px;
-          height: 2px;
-          background: #00ff00;
-          box-shadow: 0 0 8px #00ff00;
-        }
-
-        .star-5 {
-          width: 3px;
-          height: 3px;
-          background: #ff6600;
-          box-shadow: 0 0 10px #ff6600;
-        }
-
-        .star-6 {
-          width: 1px;
-          height: 1px;
-          background: #6600ff;
-          box-shadow: 0 0 6px #6600ff;
-        }
-
-        @keyframes twinkle-enhanced {
-          0%, 100% {
-            opacity: 0;
-            transform: scale(0.5) rotate(0deg);
-          }
-          25% {
-            opacity: 0.7;
-            transform: scale(1.1) rotate(90deg);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1.3) rotate(180deg);
-          }
-          75% {
-            opacity: 0.8;
-            transform: scale(1.1) rotate(270deg);
-          }
-        }
-
-        /* Balanced Shooting Stars */
-        .shooting-stars {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          overflow: hidden;
-        }
-
-        .shooting-star {
-          position: absolute;
-          left: -100px;
-          width: 3px;
-          height: 3px;
-          background: linear-gradient(45deg, #fff, #00ffff, transparent);
-          border-radius: 50%;
-          animation: shoot-enhanced linear infinite;
-          box-shadow: 0 0 10px #fff, 0 0 20px #00ffff;
-        }
-
-        @keyframes shoot-enhanced {
-          0% {
-            transform: translateX(-100px) translateY(0px) scale(0);
-            opacity: 1;
-          }
-          10% {
-            transform: translateX(0px) translateY(-20px) scale(1);
-            opacity: 1;
-          }
-          90% {
-            transform: translateX(calc(100vw - 100px)) translateY(-180px) scale(1);
-            opacity: 1;
-          }
-          100% {
-            transform: translateX(calc(100vw + 100px)) translateY(-200px) scale(0);
-            opacity: 0;
-          }
-        }
-
-        .shooting-star::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 80px;
-          height: 2px;
-          background: linear-gradient(45deg, rgba(255,255,255,0.9), rgba(0,255,255,0.6), transparent);
-        }
-
-        /* Balanced Floating Particles */
-        .particles {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          overflow: hidden;
-        }
-
-        .particle {
-          position: absolute;
-          width: 2px;
-          height: 2px;
-          background: rgba(255, 255, 255, 0.7);
-          border-radius: 50%;
-          animation: float-particle-enhanced linear infinite;
-          box-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
-        }
-
-        @keyframes float-particle-enhanced {
-          0% {
-            opacity: 0;
-            transform: translateY(100vh) translateX(0px) scale(0);
-          }
-          10% {
-            opacity: 1;
-            transform: translateY(90vh) translateX(10px) scale(1);
-          }
-          50% {
-            opacity: 1;
-            transform: translateY(50vh) translateX(-20px) scale(1.2);
-          }
-          90% {
-            opacity: 1;
-            transform: translateY(10vh) translateX(15px) scale(1);
-          }
-          100% {
-            opacity: 0;
-            transform: translateY(-10vh) translateX(0px) scale(0);
-          }
-        }
-
-        /* Balanced Floating Orbits */
-        .floating-orbits {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          overflow: hidden;
-        }
-
-        .floating-orbit {
-          position: absolute;
-          border-radius: 50%;
-          animation: orbit-float ease-in-out infinite;
-        }
-
-        .orbit-1 {
-          width: 40px;
-          height: 40px;
-          background: radial-gradient(circle, rgba(34, 211, 238, 0.2) 0%, transparent 70%);
-          border: 1px solid rgba(34, 211, 238, 0.3);
-        }
-
-        .orbit-2 {
-          width: 60px;
-          height: 60px;
-          background: radial-gradient(circle, rgba(168, 85, 247, 0.2) 0%, transparent 70%);
-          border: 1px solid rgba(168, 85, 247, 0.3);
-        }
-
-        .orbit-3 {
-          width: 30px;
-          height: 30px;
-          background: radial-gradient(circle, rgba(236, 72, 153, 0.2) 0%, transparent 70%);
-          border: 1px solid rgba(236, 72, 153, 0.3);
-        }
-
-        .orbit-4 {
-          width: 50px;
-          height: 50px;
-          background: radial-gradient(circle, rgba(34, 197, 94, 0.2) 0%, transparent 70%);
-          border: 1px solid rgba(34, 197, 94, 0.3);
-        }
-
-        @keyframes orbit-float {
-          0%, 100% {
-            transform: translate(0, 0) scale(1) rotate(0deg);
-            opacity: 0.3;
-          }
-          25% {
-            transform: translate(50px, -30px) scale(1.1) rotate(90deg);
-            opacity: 0.6;
-          }
-          50% {
-            transform: translate(20px, -60px) scale(1.2) rotate(180deg);
-            opacity: 0.8;
-          }
-          75% {
-            transform: translate(-30px, -40px) scale(1.1) rotate(270deg);
-            opacity: 0.6;
-          }
-        }
-
-        /* Pulse Glow Animation */
-        @keyframes pulse-glow {
-          0%, 100% {
-            text-shadow: 0 0 20px rgba(34, 211, 238, 0.5);
-          }
-          50% {
-            text-shadow: 0 0 40px rgba(168, 85, 247, 0.8), 0 0 60px rgba(236, 72, 153, 0.6);
-          }
-        }
-
-        .animate-pulse-glow {
-          animation: pulse-glow 3s ease-in-out infinite;
-        }
-
-        /* 🔥 BEAST MODERN DYNAMIC BORDER - KILLER PROFESSIONAL 🔥 */
-        .beast-border {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          border-radius: 24px;
-          background: linear-gradient(
-            45deg,
-            transparent 30%,
-            rgba(6, 182, 212, 0.6) 35%,
-            rgba(168, 85, 247, 0.8) 40%,
-            rgba(236, 72, 153, 0.6) 45%,
-            rgba(59, 130, 246, 0.7) 50%,
-            rgba(16, 185, 129, 0.6) 55%,
-            rgba(245, 158, 11, 0.7) 60%,
-            rgba(239, 68, 68, 0.6) 65%,
-            transparent 70%
-          );
-          background-size: 400% 400%;
-          animation: beast-flow 8s ease-in-out infinite;
-          filter: blur(1px);
-        }
-
-        .beast-border::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          border-radius: 24px;
-          background: conic-gradient(
-            from 0deg,
-            transparent,
-            rgba(6, 182, 212, 0.4),
-            rgba(168, 85, 247, 0.6),
-            rgba(236, 72, 153, 0.4),
-            rgba(59, 130, 246, 0.5),
-            rgba(16, 185, 129, 0.4),
-            rgba(245, 158, 11, 0.5),
-            rgba(239, 68, 68, 0.4),
-            transparent
-          );
-          animation: beast-rotate 12s linear infinite;
-          filter: blur(0.5px);
-        }
-
-        .beast-border::after {
-          content: '';
-          position: absolute;
-          top: 1px;
-          left: 1px;
-          right: 1px;
-          bottom: 1px;
-          background: rgba(17, 24, 39, 0.95);
-          border-radius: 23px;
-          z-index: 1;
-        }
-
-        @keyframes beast-flow {
-          0%, 100% {
-            background-position: 0% 50%;
-            transform: scale(1);
-          }
-          25% {
-            background-position: 100% 0%;
-            transform: scale(1.01);
-          }
-          50% {
-            background-position: 100% 100%;
-            transform: scale(1.02);
-          }
-          75% {
-            background-position: 0% 100%;
-            transform: scale(1.01);
-          }
-        }
-
-        @keyframes beast-rotate {
-          0% {
-            transform: rotate(0deg) scale(1);
-          }
-          25% {
-            transform: rotate(90deg) scale(1.02);
-          }
-          50% {
-            transform: rotate(180deg) scale(1.05);
-          }
-          75% {
-            transform: rotate(270deg) scale(1.02);
-          }
-          100% {
-            transform: rotate(360deg) scale(1);
-          }
-        }
-
-        /* Interactive Hover Enhancement */
-        .group:hover .beast-border {
-          background: linear-gradient(
-            45deg,
-            transparent 25%,
-            rgba(6, 182, 212, 0.8) 30%,
-            rgba(168, 85, 247, 1) 35%,
-            rgba(236, 72, 153, 0.8) 40%,
-            rgba(59, 130, 246, 0.9) 45%,
-            rgba(16, 185, 129, 0.8) 50%,
-            rgba(245, 158, 11, 0.9) 55%,
-            rgba(239, 68, 68, 0.8) 60%,
-            transparent 65%
-          );
-          background-size: 300% 300%;
-          animation: beast-flow-intense 4s ease-in-out infinite;
-        }
-
-        @keyframes beast-flow-intense {
-          0%, 100% {
-            background-position: 0% 50%;
-            transform: scale(1.02);
-          }
-          50% {
-            background-position: 100% 50%;
-            transform: scale(1.05);
-          }
-        }
-      `}</style>
     </div>
   )
 }

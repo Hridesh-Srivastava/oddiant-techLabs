@@ -1,9 +1,15 @@
 "use client"
+
 import type React from "react"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
+import { motion } from "framer-motion"
+import { User, AtSign, Phone, Briefcase, ListFilter, MessageSquare, Send, Loader2, Mail, Sparkles } from "lucide-react"
 
 interface FallbackFormProps {
   onSuccess?: () => void
@@ -74,285 +80,307 @@ ${formData.message}
   }
 
   return (
-    <div className="relative group">
-      {/* Epic Animated Border */}
-      <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 rounded-3xl blur-sm opacity-75 group-hover:opacity-100 transition duration-1000 animate-gradient-xy"></div>
+    <div className="relative">
+      {/* Enhanced cosmic background for fallback form */}
+      <div className="absolute inset-0 -z-10 overflow-hidden rounded-3xl">
+        {/* Animated gradient orbs */}
+        <motion.div
+          className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full opacity-20 filter blur-3xl"
+          style={{
+            background: "radial-gradient(circle, rgba(59,130,246,0.4) 0%, rgba(139,92,246,0.3) 50%, transparent 80%)",
+          }}
+          animate={{
+            scale: [1, 1.3, 1],
+            x: [0, 30, 0],
+            y: [0, -20, 0],
+          }}
+          transition={{
+            duration: 15,
+            repeat: Number.POSITIVE_INFINITY,
+            repeatType: "reverse",
+          }}
+        />
+        <motion.div
+          className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full opacity-20 filter blur-3xl"
+          style={{
+            background: "radial-gradient(circle, rgba(16,185,129,0.4) 0%, rgba(245,158,11,0.3) 50%, transparent 80%)",
+          }}
+          animate={{
+            scale: [1, 1.2, 1],
+            x: [0, -30, 0],
+            y: [0, 25, 0],
+          }}
+          transition={{
+            duration: 18,
+            repeat: Number.POSITIVE_INFINITY,
+            repeatType: "reverse",
+            delay: 2,
+          }}
+        />
 
-      {/* Glassmorphism Container */}
-      <div className="relative bg-gray-900/80 backdrop-blur-xl rounded-3xl p-8 border border-gray-700/50 shadow-2xl overflow-hidden">
-        {/* Animated Background Mesh */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="mesh-gradient"></div>
-        </div>
-
-        {/* Floating Orbs Inside Form */}
-        <div className="absolute inset-0 overflow-hidden rounded-3xl">
-          <div className="floating-orb orb-1"></div>
-          <div className="floating-orb orb-2"></div>
-          <div className="floating-orb orb-3"></div>
-        </div>
-
-        <div className="relative z-10">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label htmlFor="fallback-name" className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
-                  Your Name <span className="text-pink-400">*</span>
-                </label>
-                <div className="relative group">
-                  <input
-                    type="text"
-                    id="fallback-name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-4 bg-gray-800/60 backdrop-blur-sm border border-gray-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-300 hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10"
-                    placeholder="Enter Your Name"
-                  />
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="fallback-email" className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
-                  Email Address <span className="text-pink-400">*</span>
-                </label>
-                <div className="relative group">
-                  <input
-                    type="email"
-                    id="fallback-email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-4 bg-gray-800/60 backdrop-blur-sm border border-gray-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-300 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10"
-                    placeholder="user@oddiant.com"
-                  />
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label htmlFor="fallback-phone" className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  Phone Number
-                </label>
-                <div className="relative group">
-                  <input
-                    type="tel"
-                    id="fallback-phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className="w-full px-4 py-4 bg-gray-800/60 backdrop-blur-sm border border-gray-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-300 hover:border-green-500/50 hover:shadow-lg hover:shadow-green-500/10"
-                    placeholder="+91 1234567890"
-                  />
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="fallback-company" className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-                  Company Name
-                </label>
-                <div className="relative group">
-                  <input
-                    type="text"
-                    id="fallback-company"
-                    name="company"
-                    value={formData.company}
-                    onChange={handleChange}
-                    className="w-full px-4 py-4 bg-gray-800/60 backdrop-blur-sm border border-gray-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-300 hover:border-yellow-500/50 hover:shadow-lg hover:shadow-yellow-500/10"
-                    placeholder="Your Company"
-                  />
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="fallback-service" className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                Service of Interest <span className="text-pink-400">*</span>
-              </label>
-              <div className="relative group">
-                <select
-                  id="fallback-service"
-                  name="service"
-                  value={formData.service}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-4 bg-gray-800/60 backdrop-blur-sm border border-gray-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white transition-all duration-300 hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10 appearance-none cursor-pointer"
-                >
-                  <option value="it-consulting" className="bg-gray-800">
-                    IT Consulting
-                  </option>
-                  <option value="hr-services" className="bg-gray-800">
-                    HR Services
-                  </option>
-                  <option value="recruitment" className="bg-gray-800">
-                    Recruitment
-                  </option>
-                  <option value="staffing" className="bg-gray-800">
-                    Staffing
-                  </option>
-                  <option value="other" className="bg-gray-800">
-                    Other
-                  </option>
-                </select>
-                <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                  </svg>
-                </div>
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="fallback-message" className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse"></div>
-                Your Message <span className="text-pink-400">*</span>
-              </label>
-              <div className="relative group">
-                <textarea
-                  id="fallback-message"
-                  name="message"
-                  value={formData.message}
-                  onChange={handleChange}
-                  required
-                  rows={5}
-                  className="w-full px-4 py-4 bg-gray-800/60 backdrop-blur-sm border border-gray-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-300 hover:border-pink-500/50 hover:shadow-lg hover:shadow-pink-500/10 resize-none"
-                  placeholder="Tell us about your project or inquiry..."
-                ></textarea>
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-pink-500/10 to-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-              </div>
-            </div>
-
-            <div className="relative group">
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 hover:from-cyan-600 hover:via-purple-600 hover:to-pink-600 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none border-0 text-lg relative overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-                {isSubmitting ? (
-                  <div className="flex items-center justify-center gap-3 relative z-10">
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    Opening Email Client...
-                  </div>
-                ) : (
-                  <span className="relative z-10">Send via Email Client</span>
-                )}
-              </Button>
-            </div>
-
-            <p className="text-xs text-center text-gray-400">
-              This will open your default email client with a pre-filled message.
-            </p>
-          </form>
-        </div>
+        {/* Floating particles */}
+        {Array.from({ length: 20 }).map((_, i) => (
+          <motion.div
+            key={`fallback-particle-${i}`}
+            className="absolute rounded-full"
+            style={{
+              width: Math.random() * 3 + 1,
+              height: Math.random() * 3 + 1,
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+              background: ["#3B82F6", "#8B5CF6", "#10B981", "#F59E0B", "#EC4899"][Math.floor(Math.random() * 5)],
+              boxShadow: `0 0 ${Math.random() * 6 + 3}px currentColor`,
+            }}
+            animate={{
+              y: [0, Math.random() * -50 - 20],
+              opacity: [0, 0.7, 0],
+              scale: [0, 1, 0],
+            }}
+            transition={{
+              duration: Math.random() * 8 + 6,
+              repeat: Number.POSITIVE_INFINITY,
+              delay: Math.random() * 5,
+            }}
+          />
+        ))}
       </div>
 
-      <style jsx>{`
-        /* Gradient Animations */
-        @keyframes gradient-xy {
-          0%, 100% {
-            transform: translate(0%, 0%) rotate(0deg);
-          }
-          25% {
-            transform: translate(10%, 10%) rotate(90deg);
-          }
-          50% {
-            transform: translate(0%, 20%) rotate(180deg);
-          }
-          75% {
-            transform: translate(-10%, 10%) rotate(270deg);
-          }
-        }
+      <div className="bg-white/10 backdrop-blur-lg border border-zinc-700/50 rounded-3xl p-8 shadow-2xl">
+        {/* Enhanced sparkle effects */}
+        <motion.div
+          className="absolute top-4 left-4"
+          animate={{
+            scale: [1, 1.5, 1],
+            opacity: [0.5, 1, 0.5],
+          }}
+          transition={{
+            duration: 3,
+            repeat: Number.POSITIVE_INFINITY,
+            repeatType: "reverse",
+          }}
+        >
+          <Sparkles className="h-5 w-5 text-blue-400" />
+        </motion.div>
 
-        .animate-gradient-xy {
-          animation: gradient-xy 6s ease infinite;
-        }
+        <motion.div
+          className="absolute bottom-4 right-4"
+          animate={{
+            scale: [1, 1.5, 1],
+            opacity: [0.5, 1, 0.5],
+          }}
+          transition={{
+            duration: 3,
+            repeat: Number.POSITIVE_INFINITY,
+            repeatType: "reverse",
+            delay: 1.5,
+          }}
+        >
+          <Sparkles className="h-5 w-5 text-purple-400" />
+        </motion.div>
 
-        /* Mesh Gradient Background */
-        .mesh-gradient {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 200%;
-          height: 200%;
-          background: radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
-                      radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
-                      radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
-          animation: mesh-move 20s ease-in-out infinite;
-        }
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
+            <Mail className="w-5 h-5 text-blue-400" />
+          </div>
+          <h3 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+            Email Client Form
+          </h3>
+        </div>
 
-        @keyframes mesh-move {
-          0%, 100% {
-            transform: translate(-50%, -50%) rotate(0deg);
-          }
-          33% {
-            transform: translate(-40%, -60%) rotate(120deg);
-          }
-          66% {
-            transform: translate(-60%, -40%) rotate(240deg);
-          }
-        }
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="fallback-name" className="text-sm font-medium text-white flex items-center">
+                <User className="mr-2 h-4 w-4 text-gray-400" />
+                Your Name <span className="text-red-500">*</span>
+              </Label>
+              <div className="relative group">
+                <Input
+                  type="text"
+                  id="fallback-name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 bg-white/10 border border-zinc-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-white placeholder:text-gray-500 transition-all duration-300 group-hover:bg-white/15"
+                  placeholder="Enter Your Name"
+                />
+                <motion.span
+                  initial={{ width: "0%" }}
+                  animate={{ width: formData.name ? "100%" : "0%" }}
+                  transition={{ duration: 0.3 }}
+                  className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                />
+              </div>
+            </div>
 
-        /* Floating Orbs */
-        .floating-orb {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(1px);
-          animation: float-orb 15s ease-in-out infinite;
-        }
+            <div className="space-y-2">
+              <Label htmlFor="fallback-email" className="text-sm font-medium text-white flex items-center">
+                <AtSign className="mr-2 h-4 w-4 text-gray-400" />
+                Email Address <span className="text-red-500">*</span>
+              </Label>
+              <div className="relative group">
+                <Input
+                  type="email"
+                  id="fallback-email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 bg-white/10 border border-zinc-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-white placeholder:text-gray-500 transition-all duration-300 group-hover:bg-white/15"
+                  placeholder="user@oddiant.com"
+                />
+                <motion.span
+                  initial={{ width: "0%" }}
+                  animate={{ width: formData.email ? "100%" : "0%" }}
+                  transition={{ duration: 0.3 }}
+                  className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                />
+              </div>
+            </div>
+          </div>
 
-        .orb-1 {
-          width: 60px;
-          height: 60px;
-          background: radial-gradient(circle, rgba(34, 211, 238, 0.3) 0%, transparent 70%);
-          top: 20%;
-          left: 10%;
-          animation-delay: 0s;
-        }
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="fallback-phone" className="text-sm font-medium text-white flex items-center">
+                <Phone className="mr-2 h-4 w-4 text-gray-400" />
+                Phone Number
+              </Label>
+              <div className="relative group">
+                <Input
+                  type="tel"
+                  id="fallback-phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-white/10 border border-zinc-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-white placeholder:text-gray-500 transition-all duration-300 group-hover:bg-white/15"
+                  placeholder="+91 1234567890"
+                />
+                <motion.span
+                  initial={{ width: "0%" }}
+                  animate={{ width: formData.phone ? "100%" : "0%" }}
+                  transition={{ duration: 0.3 }}
+                  className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                />
+              </div>
+            </div>
 
-        .orb-2 {
-          width: 40px;
-          height: 40px;
-          background: radial-gradient(circle, rgba(168, 85, 247, 0.3) 0%, transparent 70%);
-          top: 60%;
-          right: 15%;
-          animation-delay: 5s;
-        }
+            <div className="space-y-2">
+              <Label htmlFor="fallback-company" className="text-sm font-medium text-white flex items-center">
+                <Briefcase className="mr-2 h-4 w-4 text-gray-400" />
+                Company Name
+              </Label>
+              <div className="relative group">
+                <Input
+                  type="text"
+                  id="fallback-company"
+                  name="company"
+                  value={formData.company}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-white/10 border border-zinc-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-white placeholder:text-gray-500 transition-all duration-300 group-hover:bg-white/15"
+                  placeholder="Your Company"
+                />
+                <motion.span
+                  initial={{ width: "0%" }}
+                  animate={{ width: formData.company ? "100%" : "0%" }}
+                  transition={{ duration: 0.3 }}
+                  className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                />
+              </div>
+            </div>
+          </div>
 
-        .orb-3 {
-          width: 80px;
-          height: 80px;
-          background: radial-gradient(circle, rgba(236, 72, 153, 0.2) 0%, transparent 70%);
-          bottom: 20%;
-          left: 20%;
-          animation-delay: 10s;
-        }
+          <div className="space-y-2">
+            <Label htmlFor="fallback-service" className="text-sm font-medium text-white flex items-center">
+              <ListFilter className="mr-2 h-4 w-4 text-gray-400" />
+              Service of Interest <span className="text-red-500">*</span>
+            </Label>
+            <div className="relative">
+              <select
+                id="fallback-service"
+                name="service"
+                value={formData.service}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-3 bg-white/10 border border-zinc-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-white transition-all duration-300 hover:bg-white/15"
+              >
+                <option className="text-black bg-white" value="it-consulting">
+                  IT Consulting
+                </option>
+                <option className="text-black bg-white" value="hr-services">
+                  HR Services
+                </option>
+                <option className="text-black bg-white" value="recruitment">
+                  Recruitment
+                </option>
+                <option className="text-black bg-white" value="staffing">
+                  Staffing
+                </option>
+                <option className="text-black bg-white" value="other">
+                  Other
+                </option>
+              </select>
+              <motion.span
+                initial={{ width: "0%" }}
+                animate={{ width: formData.service ? "100%" : "0%" }}
+                transition={{ duration: 0.3 }}
+                className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+              />
+            </div>
+          </div>
 
-        @keyframes float-orb {
-          0%, 100% {
-            transform: translate(0, 0) scale(1);
-          }
-          33% {
-            transform: translate(30px, -30px) scale(1.1);
-          }
-          66% {
-            transform: translate(-20px, 20px) scale(0.9);
-          }
-        }
-      `}</style>
+          <div className="space-y-2">
+            <Label htmlFor="fallback-message" className="text-sm font-medium text-white flex items-center">
+              <MessageSquare className="mr-2 h-4 w-4 text-gray-400" />
+              Your Message <span className="text-red-500">*</span>
+            </Label>
+            <div className="relative group">
+              <Textarea
+                id="fallback-message"
+                name="message"
+                value={formData.message}
+                onChange={handleChange}
+                required
+                rows={5}
+                className="w-full px-4 py-3 bg-white/10 border border-zinc-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-white placeholder:text-gray-500 transition-all duration-300 group-hover:bg-white/15 resize-none"
+                placeholder="Tell us about your project or inquiry..."
+              />
+              <motion.span
+                initial={{ width: "0%" }}
+                animate={{ width: formData.message ? "100%" : "0%" }}
+                transition={{ duration: 0.3 }}
+                className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+              />
+            </div>
+          </div>
+
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full py-6 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-purple-500/25"
+            >
+              {isSubmitting ? (
+                <span className="flex items-center justify-center">
+                  <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                  Opening Email Client...
+                </span>
+              ) : (
+                <span className="flex items-center justify-center">
+                  Send via Email Client
+                  <motion.span initial={{ x: 0 }} whileHover={{ x: 5 }} transition={{ duration: 0.2 }}>
+                    <Send className="ml-3 h-5 w-5" />
+                  </motion.span>
+                </span>
+              )}
+            </Button>
+          </motion.div>
+
+          <p className="text-xs text-center text-gray-400 mt-4">
+            This will open your default email client with a pre-filled message.
+          </p>
+        </form>
+      </div>
     </div>
   )
 }
