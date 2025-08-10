@@ -191,7 +191,7 @@ export default function Home() {
                 typeSpeed={70} /* slower (ms per char) for readable pace */
                 backSpeed={40}
                 backDelay={1200}
-                loop={false} /* only type once since single string */
+                loop={true}
                 showCursor={true}
                 className="text-white"
               />
@@ -205,7 +205,7 @@ export default function Home() {
                 asChild
                 className="bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white rounded-full px-8 py-7 text-lg group transition-all duration-300"
               >
-                <Link href="/solutions" className="flex items-center">
+                <Link href="/solutions" className="flex items-center hover:text-white">
                   Explore Solutions
                   <motion.span initial={{ x: 0 }} whileHover={{ x: 5 }} transition={{ duration: 0.2 }}>
                     <ArrowRight className="ml-2 h-5 w-5" />
@@ -214,7 +214,7 @@ export default function Home() {
               </Button>
               <Button
                 asChild
-                className="rounded-full px-8 py-7 text-lg bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 border border-white/20 transition-all duration-300"
+                className="rounded-full px-8 py-7 text-lg bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 border border-white/20 transition-all duration-300 hover:text-white"
               >
                 <Link href="/contact">Contact Us</Link>
               </Button>
@@ -349,7 +349,7 @@ export default function Home() {
                   asChild
                   className="rounded-full px-8 py-6 text-lg bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white transition-all duration-300"
                 >
-                  <Link href="/company" className="flex items-center">
+                  <Link href="/company" className="flex items-center hover:text-white">
                     Learn More
                     <motion.span initial={{ x: 0 }} whileHover={{ x: 5 }} transition={{ duration: 0.2 }}>
                       <ArrowRight className="ml-2 h-5 w-5" />
@@ -575,7 +575,7 @@ export default function Home() {
               asChild
               className="rounded-full px-8 py-7 text-lg bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white transition-all duration-300"
             >
-              <Link href="/contact" className="flex items-center">
+              <Link href="/contact" className="flex items-center hover:text-white">
                 Get Started
                 <motion.span initial={{ x: 0 }} whileHover={{ x: 5 }} transition={{ duration: 0.2 }}>
                   <ArrowRight className="ml-2 h-5 w-5" />

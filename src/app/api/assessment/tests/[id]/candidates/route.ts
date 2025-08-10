@@ -60,14 +60,34 @@ const  testId = param.id
     const url = new URL(request.url)
     const status = url.searchParams.get("status")
     const score = url.searchParams.get("score")
+    const search = (url.searchParams.get("search") || "").trim()
+    const page = parseInt(url.searchParams.get("page") || "1", 10)
+    const limit = Math.min(parseInt(url.searchParams.get("limit") || "20", 10), 200)
 
     // Get invitations for this specific test
+    // Support both ObjectId and string stored testId for invitations
+    const invitationQuery: any = { createdBy: new ObjectId(userId) }
+    const invTestOr = [ { testId: new ObjectId(testId) }, { testId: testId } ]
+    // Inject test condition
+    invitationQuery.$or = invTestOr
+    // Optional search conditions (email or candidateName)
+    if (search) {
+      const regex = { $regex: search, $options: "i" }
+      const searchOr = [ { email: regex }, { candidateName: regex } ]
+      invitationQuery.$and = [ { $or: invTestOr }, { $or: searchOr } ]
+      delete invitationQuery.$or
+    }
+    if (search) {
+      const regex = { $regex: search, $options: "i" }
+      invitationQuery.$or = [
+        { email: regex },
+        { candidateName: regex },
+      ]
+    }
     const invitations = await db
       .collection("assessment_invitations")
-      .find({
-        testId: new ObjectId(testId),
-        createdBy: new ObjectId(userId),
-      })
+      .find(invitationQuery)
+      .sort({ invitedAt: -1, createdAt: -1 })
       .toArray()
 
     // Create a map of email to candidate data
@@ -78,6 +98,16 @@ const  testId = param.id
       const email = invitation.email
 
       if (!candidateMap.has(email)) {
+        // Determine candidate status from the most recent invitation
+        let candidateStatus = "Invited"
+        if (invitation.status === "Completed") {
+          candidateStatus = "Completed"
+        } else if (invitation.status === "Expired") {
+          candidateStatus = "Expired"
+        } else if (invitation.status === "Cancelled") {
+          candidateStatus = "Cancelled"
+        }
+
         // Initialize candidate data
         candidateMap.set(email, {
           email,
@@ -87,15 +117,18 @@ const  testId = param.id
           totalScore: 0,
           averageScore: 0,
           score: "N/A",
-          status: "Invited",
+          status: candidateStatus,
           createdAt: invitation.createdAt,
           completionDate: null,
           formattedCompletionDate: "N/A",
           resultsDeclared: false,
+          invitationId: invitation._id?.toString(),
         })
       }
 
       const candidateData = candidateMap.get(email)
+      // Keep the latest invitation id if available
+      candidateData.invitationId = invitation._id?.toString() || candidateData.invitationId
       candidateData.testsAssigned++
 
       if (invitation.status === "Completed") {
@@ -116,12 +149,27 @@ const  testId = param.id
     }
 
     // Get results for this specific test
+    const resultQuery: any = { createdBy: new ObjectId(userId) }
+    const resTestOr = [ { testId: new ObjectId(testId) }, { testId: testId } ]
+    if (search) {
+      const regex = { $regex: search, $options: "i" }
+      const searchOr = [ { candidateEmail: regex }, { candidateName: regex } ]
+      resultQuery.$and = [ { $or: resTestOr }, { $or: searchOr } ]
+    } else {
+      resultQuery.$or = resTestOr
+    }
+    if (search) {
+      const regex = { $regex: search, $options: "i" }
+      resultQuery.$or = [
+        { candidateEmail: regex },
+        { candidateName: regex },
+      ]
+    }
+    // Get results for this specific test, most recent first (support string or ObjectId testId)
     const results = await db
       .collection("assessment_results")
-      .find({
-        testId: new ObjectId(testId),
-        createdBy: new ObjectId(userId),
-      })
+      .find(resultQuery)
+      .sort({ completionDate: -1, createdAt: -1 })
       .toArray()
 
     // Update candidate data with results
@@ -134,6 +182,8 @@ const  testId = param.id
           candidateData.testsCompleted > 0 ? Math.round(candidateData.totalScore / candidateData.testsCompleted) : 0
         candidateData.score = result.score ? `${result.score}%` : "N/A"
         candidateData.resultsDeclared = result.resultsDeclared || false
+        // Use actual result id so frontend declare action can work
+        candidateData._id = result._id?.toString()
 
         if (result.completionDate) {
           candidateData.completionDate = new Date(result.completionDate)
@@ -146,11 +196,15 @@ const  testId = param.id
           })
         }
 
-        // Update status based on most recent completion
-        if (result.resultsDeclared) {
-          candidateData.status = result.status // Passed or Failed
-        } else if (result.score !== undefined) {
-          candidateData.status = "Completed" // Completed but not declared
+        // Update status only if this result is the most recent for that candidate
+        // Since we sorted by completionDate desc, first result encountered is latest
+        if (!candidateData._latestResultSeen) {
+          if (result.resultsDeclared) {
+            candidateData.status = result.status // Passed or Failed
+          } else if (result.score !== undefined) {
+            candidateData.status = "Completed" // Completed but not declared
+          }
+          candidateData._latestResultSeen = true
         }
       } else {
         // If candidate not found in invitations, add from result
@@ -176,6 +230,8 @@ const  testId = param.id
           completionDate,
           formattedCompletionDate,
           resultsDeclared: result.resultsDeclared || false,
+          _id: result._id?.toString(),
+          _latestResultSeen: true,
         })
       }
     }
@@ -218,11 +274,16 @@ const  testId = param.id
       }
     }
 
-    // Convert map to array and add IDs
+    // Convert map to array and add fallback IDs
     let candidates = Array.from(candidateMap.values()).map((candidate, index) => ({
       ...candidate,
-      _id: `candidate-${index}`,
+      _id: candidate._id || `candidate-${index}`,
     }))
+    // Clean internal markers
+    candidates = candidates.map((c: any) => {
+      const { _latestResultSeen, ...rest } = c
+      return rest
+    })
 
     // Apply filters from query
     if (status) {
@@ -240,6 +301,40 @@ const  testId = param.id
       })
     }
 
+    // Apply search filter at the end as a safety net (for student-enriched names)
+    if (search) {
+      const s = search.toLowerCase()
+      candidates = candidates.filter((c: any) =>
+        (c.name && String(c.name).toLowerCase().includes(s)) || (c.email && String(c.email).toLowerCase().includes(s)),
+      )
+    }
+
+    // Attach assessment_candidates document IDs by matching emails (single query)
+    if (candidates.length > 0) {
+      const emails = candidates.map((c: any) => c.email).filter(Boolean)
+      if (emails.length > 0) {
+        const candidateDocs = await db
+          .collection("assessment_candidates")
+          .find({ createdBy: new ObjectId(userId), email: { $in: emails } })
+          .project({ _id: 1, email: 1 })
+          .toArray()
+        const emailToAssessmentId = new Map(candidateDocs.map((d: any) => [d.email, d._id.toString()]))
+        candidates = candidates.map((c: any) => ({
+          ...c,
+          assessmentCandidateId: emailToAssessmentId.get(c.email) || null,
+        }))
+      }
+    }
+
+    // Total before pagination
+    const total = candidates.length
+
+    // Pagination (slice on the aggregated array)
+    const safePage = Number.isFinite(page) && page > 0 ? page : 1
+    const safeLimit = Number.isFinite(limit) && limit > 0 ? limit : 25
+    const start = (safePage - 1) * safeLimit
+    const pagedCandidates = candidates.slice(start, start + safeLimit)
+
     // Add cache control headers to prevent caching
     const headers = new Headers()
     headers.append("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
@@ -249,9 +344,12 @@ const  testId = param.id
     return NextResponse.json(
       {
         success: true,
-        candidates,
+        candidates: pagedCandidates,
         testName: test.name,
         lastUpdated: new Date().toISOString(),
+        total,
+        page: safePage,
+        limit: safeLimit,
       },
       {
         status: 200,

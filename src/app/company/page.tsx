@@ -283,7 +283,7 @@ export default function CompanyPage() {
                   asChild
                   className="rounded-full px-8 py-6 text-lg bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white transition-all duration-300"
                 >
-                  <Link href="/contact" className="flex items-center">
+                  <Link href="/contact" className="flex items-center hover:text-white">
                     Get In Touch
                     <motion.span initial={{ x: 0 }} whileHover={{ x: 5 }} transition={{ duration: 0.2 }}>
                       <ArrowRight className="ml-2 h-5 w-5" />

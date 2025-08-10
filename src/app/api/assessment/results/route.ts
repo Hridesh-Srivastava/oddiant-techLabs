@@ -84,16 +84,39 @@ export async function GET(request: NextRequest) {
         query._id = new ObjectId(search)
       } else {
         // Otherwise search by candidate name, email, and test name
-        query.$or = [
+        const searchOr = [
           { candidateName: { $regex: search, $options: "i" } },
           { candidateEmail: { $regex: search, $options: "i" } },
           { testName: { $regex: search, $options: "i" } }
         ]
+        if ((query as any).$or) {
+          // If an $or already exists (from another condition), combine using $and
+          (query as any).$and = [ { $or: (query as any).$or }, { $or: searchOr } ]
+          delete (query as any).$or
+        } else if ((query as any).$and) {
+          (query as any).$and.push({ $or: searchOr })
+        } else {
+          (query as any).$or = searchOr
+        }
       }
     }
 
     if (test) {
-      query.testId = new ObjectId(test)
+      // Support both ObjectId and string-stored testId
+      if (ObjectId.isValid(test)) {
+        const testOr = [ { testId: new ObjectId(test) }, { testId: test } ]
+        if ((query as any).$or) {
+          // Combine existing $or (e.g., search) with test constraint
+          (query as any).$and = [ { $or: (query as any).$or }, { $or: testOr } ]
+          delete (query as any).$or
+        } else if ((query as any).$and) {
+          (query as any).$and.push({ $or: testOr })
+        } else {
+          (query as any).$or = testOr
+        }
+      } else {
+        (query as any).testId = test
+      }
     }
 
     if (status) {
@@ -142,7 +165,7 @@ export async function GET(request: NextRequest) {
     const total = await db.collection("assessment_results").countDocuments(query)
 
     // Get results from database
-    let resultsQuery = db
+    const resultsQuery = db
       .collection("assessment_results")
       .find(query)
       .sort({ [sort]: -1 })

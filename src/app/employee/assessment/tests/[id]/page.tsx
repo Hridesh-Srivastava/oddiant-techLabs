@@ -131,6 +131,7 @@ interface CandidateData {
   completionDate?: string
   resultsDeclared?: boolean
   invitationId?: string
+  assessmentCandidateId?: string | null
 }
 
 interface ResultData {
@@ -179,6 +180,14 @@ export default function TestDetailsPage() {
   const [isDeclaringIndividualResult, setIsDeclaringIndividualResult] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [candidateSearch, setCandidateSearch] = useState("")
+  const [candidatePage, setCandidatePage] = useState(1)
+  const [candidateTotal, setCandidateTotal] = useState(0)
+  const [candidateLimit] = useState(20)
+  const [resultsSearch, setResultsSearch] = useState("")
+  const [resultsPage, setResultsPage] = useState(1)
+  const [resultsTotal, setResultsTotal] = useState(0)
+  const [resultsLimit] = useState(20)
 
   // Set active tab from URL if present
   useEffect(() => {
@@ -228,13 +237,17 @@ export default function TestDetailsPage() {
     }
   }, [testId])
 
-  const fetchResults = useCallback(async () => {
+  // Backend-powered paginated Results fetch for table display
+  const fetchResultsPage = useCallback(async () => {
     try {
       setIsLoadingResults(true)
-      console.log("Fetching results for test ID:", testId)
+      const params = new URLSearchParams()
+      params.set("test", String(testId))
+      params.set("page", String(resultsPage))
+      params.set("limit", String(resultsLimit))
+      if (resultsSearch.trim()) params.set("search", resultsSearch.trim())
 
-      // Fetch all results and filter by testId
-      const response = await fetch("/api/assessment/results?limit=10000", {
+      const response = await fetch(`/api/assessment/results?${params.toString()}`, {
         method: "GET",
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -243,59 +256,60 @@ export default function TestDetailsPage() {
         },
       })
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch results")
-      }
+      if (!response.ok) throw new Error("Failed to fetch results")
 
       const data = await response.json()
-      console.log("All results API response:", data)
-
-      if (data.success && data.results) {
-        // Filter results for this specific test
-        const testResults = (data.results || []).filter((result: ResultData) => {
-          // Handle both string and ObjectId comparisons
-         const resultTestId = result.testId ? result.testId.toString() : ''
-          const currentTestId = testId ? testId.toString() : ''
-          return resultTestId === currentTestId
-        })
-
-        console.log(`Found ${testResults.length} results for test ${testId}`)
-        console.log("Filtered test results:", testResults)
-
-        setResults(testResults)
-
-        // Count pending results - using the same logic as the API
-        const pendingResults = testResults.filter((result: ResultData) => {
-          const isUndeclared = !result.resultsDeclared
-          console.log(
-            `Frontend: Result ${result.candidateEmail}: declared=${result.resultsDeclared}, isUndeclared=${isUndeclared}`,
-          )
-          return isUndeclared
-        })
-
-        setPendingResultsCount(pendingResults.length)
-        console.log(`Found ${pendingResults.length} pending results (frontend calculation)`)
+      if (data.success) {
+        setResults(data.results || [])
+        setResultsTotal(data.total || 0)
       } else {
-        console.log("No results found or API error")
         setResults([])
-        setPendingResultsCount(0)
+        setResultsTotal(0)
       }
     } catch (error) {
-      console.error("Error fetching results:", error)
+      console.error("Error fetching results (paged):", error)
       toast.error("Failed to load results. Please try again.")
       setResults([])
-      setPendingResultsCount(0)
+      setResultsTotal(0)
     } finally {
       setIsLoadingResults(false)
+    }
+  }, [testId, resultsPage, resultsLimit, resultsSearch])
+
+  // Lightweight fetch to compute pending results for the entire test (does not affect table loading state)
+  const fetchAllResultsForPending = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/assessment/results?test=${testId}&limit=10000`, {
+        method: "GET",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      })
+      if (!response.ok) return
+      const data = await response.json()
+      if (data.success && Array.isArray(data.results)) {
+        const pending = data.results.filter((r: ResultData) => !r.resultsDeclared).length
+        setPendingResultsCount(pending)
+      } else {
+        setPendingResultsCount(0)
+      }
+    } catch (e) {
+      setPendingResultsCount(0)
     }
   }, [testId])
 
   const fetchCandidates = useCallback(async () => {
     try {
       setIsLoadingCandidates(true)
+      // New backend-powered search + pagination to support 1000+ users
+      const params = new URLSearchParams()
+      params.set("page", String(candidatePage))
+      params.set("limit", String(candidateLimit))
+      if (candidateSearch.trim()) params.set("search", candidateSearch.trim())
 
-      // Get all invitations for this test by requesting a large limit
-      const invitationsResponse = await fetch(`/api/assessment/invitations?limit=10000`, {
+      const response = await fetch(`/api/assessment/tests/${testId}/candidates?${params.toString()}`, {
         method: "GET",
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -304,148 +318,23 @@ export default function TestDetailsPage() {
         },
       })
 
-      if (!invitationsResponse.ok) {
-        throw new Error("Failed to fetch invitations")
+      if (!response.ok) throw new Error("Failed to fetch candidates")
+
+      const data = await response.json()
+      if (data.success) {
+        setCandidates(data.candidates || [])
+        setCandidateTotal(data.total || 0)
+      } else {
+        setCandidates([])
+        setCandidateTotal(0)
       }
-
-      const invitationsData = await invitationsResponse.json()
-
-      // Create a map of email to candidate data
-      const candidateMap = new Map()
-
-      // Process invitations to build candidate data
-      if (invitationsData.success && invitationsData.invitations) {
-        // Filter invitations for this test
-        const testInvitations = invitationsData.invitations.filter((inv: any) => {
-          const invTestId = inv.testId?.toString()
-          const currentTestId = testId ? testId.toString() : ''
-          return invTestId === currentTestId
-        })
-
-        console.log(`Found ${testInvitations.length} invitations for test ${testId}`)
-
-        for (const invitation of testInvitations) {
-          const email = invitation.email
-
-          if (!candidateMap.has(email)) {
-            // Initialize candidate data with proper status mapping
-            let candidateStatus = "Invited"
-
-            // Map invitation status to candidate status
-            if (invitation.status === "Completed") {
-              candidateStatus = "Completed"
-            } else if (invitation.status === "Expired") {
-              candidateStatus = "Expired"
-            } else if (invitation.status === "Cancelled") {
-              candidateStatus = "Cancelled"
-            }
-
-            candidateMap.set(email, {
-              _id: `invitation-${invitation._id}`,
-              name: constructFullName(invitation, invitation.candidateName || email.split("@")[0]),
-              email,
-              status: candidateStatus,
-              score: 0,
-              createdAt: invitation.createdAt,
-              invitationId: invitation._id,
-            })
-          }
-        }
-      }
-
-      // Update candidate data with results
-      if (results.length > 0) {
-        for (const result of results) {
-          const email = result.candidateEmail
-
-          if (candidateMap.has(email)) {
-            const candidateData = candidateMap.get(email)
-            candidateData.score = result.score
-            candidateData.completionDate = result.completionDate
-            candidateData.resultsDeclared = result.resultsDeclared
-            candidateData._id = result._id // Store result ID for individual declaration
-
-            if (result.resultsDeclared) {
-              candidateData.status = result.status // Passed or Failed
-            } else {
-              candidateData.status = "Completed" // Completed but not declared
-            }
-          } else {
-            // If candidate not found in invitations, add from result
-            candidateMap.set(email, {
-              _id: result._id,
-              name: constructFullName(result, result.candidateName || email.split("@")[0]),
-              email,
-              status: result.resultsDeclared ? result.status : "Completed",
-              score: result.score,
-              completionDate: result.completionDate,
-              resultsDeclared: result.resultsDeclared,
-            })
-          }
-        }
-      }
-
-      // After building candidateMap from results and invitations
-      const candidateEmails = Array.from(candidateMap.keys());
-      // Fetch students with matching emails
-      const res = await fetch(`/api/students/by-emails`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emails: candidateEmails })
-      });
-      if (res.ok) {
-        const { students } = await res.json();
-        
-        // Update existing candidates with proper names and IDs from student data
-        for (const student of students) {
-          if (candidateMap.has(student.email)) {
-            const candidateData = candidateMap.get(student.email);
-            // Update the name with proper full name construction
-            candidateData.name = constructFullName(student, candidateData.name);
-            // Use the actual student ID instead of synthetic ID
-            candidateData._id = student._id;
-            console.log(`Updated candidate ${student.email} with student ID: ${student._id}`);
-          }
-        }
-        
-        // Add new students if not already present
-        for (const student of students) {
-          if (!candidateMap.has(student.email)) {
-            candidateMap.set(student.email, {
-              _id: student._id,
-              name: constructFullName(student),
-              email: student.email,
-              status: "Student",
-              score: null,
-              completionDate: null,
-              resultsDeclared: false,
-            });
-          }
-        }
-      }
-
-      // Convert map to array and sort by status priority
-      const candidatesArray = Array.from(candidateMap.values()).sort((a, b) => {
-        const statusPriority: Record<string, number> = {
-  Completed: 1,
-  Passed: 2,
-  Failed: 3,
-  Invited: 4,
-  Expired: 5,
-  Cancelled: 6,
-}
-return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
-      })
-
-      console.log(`Total candidates for test: ${candidatesArray.length}`)
-      setCandidates(candidatesArray)
     } catch (error) {
       console.error("Error fetching candidates:", error)
       toast.error("Failed to load candidates. Please try again.")
     } finally {
       setIsLoadingCandidates(false)
     }
-  }, [testId, results])
+  }, [testId, results, candidateSearch, candidatePage, candidateLimit])
 
   const fetchTestStats = useCallback(async () => {
     try {
@@ -499,15 +388,34 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
 
   useEffect(() => {
     if (test) {
-      fetchResults()
+      fetchResultsPage()
+      fetchAllResultsForPending()
     }
-  }, [test, fetchResults])
+  }, [test, fetchResultsPage, fetchAllResultsForPending])
 
   useEffect(() => {
     if (test && results.length >= 0) {
       fetchCandidates()
     }
   }, [test, results, fetchCandidates])
+
+  // Debounce candidates search
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setCandidatePage(1)
+      fetchCandidates()
+    }, 300)
+    return () => clearTimeout(t)
+  }, [candidateSearch, fetchCandidates])
+
+  // Debounce results search
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setResultsPage(1)
+      fetchResultsPage()
+    }, 300)
+    return () => clearTimeout(t)
+  }, [resultsSearch, fetchResultsPage])
 
   useEffect(() => {
     if (test && candidates.length >= 0) {
@@ -626,7 +534,8 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
       if (data.success) {
         toast.success(data.message || "Results declared successfully")
         // Refresh results and candidates
-        await fetchResults()
+        await fetchResultsPage()
+        await fetchAllResultsForPending()
         await fetchTestStats()
       } else {
         throw new Error(data.message || "Failed to declare results")
@@ -663,7 +572,8 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
       if (data.success) {
         toast.success(data.message || "Result declared successfully")
         // Refresh results and candidates
-        await fetchResults()
+        await fetchResultsPage()
+        await fetchAllResultsForPending()
         await fetchTestStats()
       } else {
         throw new Error(data.message || "Failed to declare individual result")
@@ -753,7 +663,8 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
     setIsRefreshing(true)
     try {
       await fetchTest()
-      await fetchResults()
+      await fetchResultsPage()
+      await fetchAllResultsForPending()
       await fetchCandidates()
       await fetchTestStats()
       toast.success("Page refreshed!")
@@ -762,7 +673,7 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
     } finally {
       setIsRefreshing(false)
     }
-  }, [fetchTest, fetchResults, fetchCandidates, fetchTestStats])
+  }, [fetchTest, fetchResultsPage, fetchAllResultsForPending, fetchCandidates, fetchTestStats])
 
   // Place auto-refresh effect here, after all functions are defined
 
@@ -813,6 +724,76 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
     currentSectionPage * sectionsPerPage,
     (currentSectionPage + 1) * sectionsPerPage
   ) || [];
+
+  // Generic pagination renderer used by Candidates and Results sections
+  const Pagination: React.FC<{ total: number; limit: number; page: number; onChange: (p: number) => void }>
+    = ({ total, limit, page, onChange }) => {
+      const totalPages = Math.max(1, Math.ceil((total || 0) / (limit || 1)));
+      const buildPageList = (): (number | string)[] => {
+        const pages: (number | string)[] = []
+        const delta = 2
+        const start = Math.max(1, page - delta)
+        const end = Math.min(totalPages, page + delta)
+        if (start > 1) {
+          pages.push(1)
+          if (start > 2) pages.push("...")
+        }
+        for (let p = start; p <= end; p++) pages.push(p)
+        if (end < totalPages) {
+          if (end < totalPages - 1) pages.push("...")
+          pages.push(totalPages)
+        }
+        return pages
+      }
+      const pageItems = buildPageList()
+      const canPrev = page > 1
+      const canNext = page < totalPages
+      const startIndex = (page - 1) * limit + 1
+      const endIndex = Math.min(page * limit, total)
+      const rangeText = total === 0 ? 'Showing 0 of 0' : `Showing ${startIndex} - ${endIndex} of ${total}`
+      return (
+        <div className="mt-4 flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => canPrev && onChange(page - 1)}
+              disabled={!canPrev}
+              className={!canPrev ? "opacity-50 cursor-not-allowed" : ""}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+            </Button>
+            {pageItems.map((item, idx) => (
+              typeof item === 'number' ? (
+                <button
+                  key={`pg-${item}-${idx}`}
+                  onClick={() => onChange(item)}
+                  className={`h-8 min-w-8 px-2 rounded-md border text-sm transition-colors ${
+                    item === page
+                      ? 'bg-black text-white hover:bg-green-600 hover:text-black'
+                      : 'bg-white text-black hover:bg-green-600 hover:text-black'
+                  }`}
+                >
+                  {item}
+                </button>
+              ) : (
+                <span key={`dots-${idx}`} className="px-2 text-muted-foreground">…</span>
+              )
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => canNext && onChange(page + 1)}
+              disabled={!canNext}
+              className={!canNext ? "opacity-50 cursor-not-allowed" : ""}
+            >
+              Next <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+          <div className="text-sm text-muted-foreground">{rangeText}</div>
+        </div>
+      )
+    }
 
   if (isLoading) {
     return (
@@ -1268,6 +1249,19 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
               </Button>
             </CardHeader>
             <CardContent>
+              {/* Search bar for candidates (server-side, debounced) */}
+              <div className="mb-4">
+                <input
+                  type="text"
+                  value={candidateSearch}
+                  onChange={(e) => {
+                    setCandidateSearch(e.target.value)
+                    setCandidatePage(1)
+                  }}
+                  placeholder="Search by name or email"
+                  className="w-full md:w-80 h-9 rounded-md border px-3 text-sm"
+                />
+              </div>
               {isLoadingCandidates ? (
                 <div className="space-y-4">
                   {[...Array(3)].map((_, i) => (
@@ -1308,6 +1302,9 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
                               </td>
                               <td className="py-3 px-4">
                                 <div className="flex gap-2">
+                                  <Button className="bg-black text-white hover:text-black hover:bg-green-600" variant="outline" size="sm" asChild>
+                                    <Link href={`/employee/assessment/candidates/${encodeURIComponent(candidate.assessmentCandidateId || candidate.email || candidate._id || '')}`}>View</Link>
+                                  </Button>
 
                                   {/* Declare individual result if completed but not declared */}
                                   {candidate.status === "Completed" && !candidate.resultsDeclared && (
@@ -1348,6 +1345,13 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
                       </table>
                     </div>
                   </div>
+                  {/* Pagination Controls - always visible (disabled when needed) */}
+                  <Pagination
+                    total={candidateTotal}
+                    limit={candidateLimit}
+                    page={candidatePage}
+                    onChange={setCandidatePage}
+                  />
                 </div>
               ) : (
                 <div className="text-center py-8">
@@ -1385,6 +1389,18 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
               </div>
             </CardHeader>
             <CardContent>
+              {/* Results search bar */}
+              <div className="mb-4">
+                <input
+                  type="text"
+                  value={resultsSearch}
+                  onChange={(e) => {
+                    setResultsSearch(e.target.value)
+                  }}
+                  placeholder="Search by name or email"
+                  className="w-full md:w-80 h-9 rounded-md border px-3 text-sm"
+                />
+              </div>
               {isLoadingResults ? (
                 <div className="space-y-4">
                   {[...Array(3)].map((_, i) => (
@@ -1466,6 +1482,14 @@ return (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
                       </table>
                     </div>
                   </div>
+
+                  {/* Pagination for results - always visible (disabled when needed) */}
+                  <Pagination
+                    total={resultsTotal}
+                    limit={resultsLimit}
+                    page={resultsPage}
+                    onChange={setResultsPage}
+                  />
 
                   {pendingResultsCount > 0 && (
                     <div className="mt-4 p-4 border border-yellow-200 bg-yellow-50 rounded-md">

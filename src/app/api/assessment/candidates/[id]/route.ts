@@ -18,14 +18,31 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     let candidateId = id
     console.log("Original candidate ID:", candidateId)
 
+    // Connect to database
+    const { db } = await connectToDatabase()
+
+    // If an email is provided directly, prefer lookup by email
+    if (candidateId.includes("@")) {
+      const candidateByEmail = await db.collection("assessment_candidates").findOne({
+        email: candidateId,
+        createdBy: new ObjectId(userId),
+      })
+      if (candidateByEmail) {
+        return NextResponse.json({ success: true, candidate: {
+          ...candidateByEmail,
+          _id: candidateByEmail._id?.toString() || "",
+        } }, { status: 200 })
+      }
+      // fall through to other strategies if not found
+    }
+
     // Handle candidate-X format by extracting the actual ID
     if (candidateId.startsWith("candidate-")) {
       candidateId = candidateId.replace("candidate-", "")
       console.log("Extracted candidate ID:", candidateId)
     }
 
-    // Connect to database
-    const { db } = await connectToDatabase()
+    // db already connected above
 
     // Try multiple approaches to find the candidate
     let candidate = null
