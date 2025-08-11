@@ -996,6 +996,16 @@ export default function CandidateDetailsPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
+                                className="bg-black text-white hover:text-black hover:bg-green-600"
+                                asChild
+                              >
+                                <Link href={`/employee/assessment/results/${result._id}`}>
+                                  View
+                                </Link>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={() => handleDownloadResult(result._id)}
                                 disabled={actionLoading === result._id}
                                 className="text-white bg-green-600"
