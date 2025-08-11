@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
         let isCorrect = false;
         let aiScore = null;
         let aiFeedback = null;
-        let answer = ans.answer ?? "";
+        const answer = ans.answer ?? "";
         // MCQ
         if (q.type === "Multiple Choice") {
           const correctAnswer = q.correctAnswer;
@@ -140,6 +140,10 @@ export async function POST(request: NextRequest) {
             aiScore: null,
             aiFeedback: null,
             codingTestResults,
+            // Newly added parity fields for preview storage (non-breaking additions)
+            code: ans.code ?? (typeof answer === 'string' ? answer : ""),
+            language: ans.language ?? ans.selectedLanguage ?? q.language ?? null,
+            codeSubmissions: Array.isArray(ans.codeSubmissions) ? ans.codeSubmissions : [],
           });
           totalPoints += maxPoints;
           earnedPoints += points;

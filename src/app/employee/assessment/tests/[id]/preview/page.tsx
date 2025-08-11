@@ -57,6 +57,7 @@ interface QuestionData {
   points: number
   codeLanguage?: string
   codeTemplate?: string
+  templateLanguage?: string
   testCases?: any[]
   instructions?: string
 }
@@ -1428,6 +1429,30 @@ export default function TestPreviewPage() {
                                   </div>
                                 </div>
                               )}
+                              {/* Language Dropdown for Coding Questions */}
+                              <div className="mb-4">
+                                <h4 className="font-medium text-sm mb-1">Language</h4>
+                                {test.sections[currentSection].questions[currentQuestion]?.codeLanguage === 'any' ? (
+                                  <select
+                                    value={(answers[`__chosenLang_${test.sections[currentSection].id}-${test.sections[currentSection].questions[currentQuestion].id}`] as string) || test.sections[currentSection].questions[currentQuestion]?.templateLanguage || 'javascript'}
+                                    onChange={(e) => handleAnswer(`__chosenLang_${test.sections[currentSection].id}-${test.sections[currentSection].questions[currentQuestion].id}`, e.target.value)}
+                                    className="text-sm border rounded px-2 py-1 bg-background"
+                                  >
+                                    <option value="javascript">JavaScript</option>
+                                    <option value="python">Python</option>
+                                    <option value="java">Java</option>
+                                    <option value="cpp">C++</option>
+                                    <option value="c">C</option>
+                                    <option value="php">PHP</option>
+                                    <option value="rust">Rust</option>
+                                    <option value="go">Go</option>
+                                  </select>
+                                ) : (
+                                  <p className="text-sm text-muted-foreground">
+                                    {test.sections[currentSection].questions[currentQuestion]?.codeLanguage}
+                                  </p>
+                                )}
+                              </div>
                               {/* Enhanced Code Editor with better responsive design */}
                               <div className="space-y-4">
                                 {test.settings.allowCodeEditor ? (
@@ -1440,10 +1465,7 @@ export default function TestPreviewPage() {
                                           ""
                                         }
                                         onChange={(value) => handleAnswer(getCurrentQuestionKey(), value)}
-                                        language={
-                                          test.sections[currentSection].questions[currentQuestion]?.codeLanguage ||
-                                          "javascript"
-                                        }
+                                        language={test.sections[currentSection].questions[currentQuestion]?.codeLanguage === 'any' ? ((answers[`__chosenLang_${test.sections[currentSection].id}-${test.sections[currentSection].questions[currentQuestion].id}`] as string) || test.sections[currentSection].questions[currentQuestion]?.templateLanguage || 'javascript') : (test.sections[currentSection].questions[currentQuestion]?.codeLanguage || "javascript")}
                                         showConsole={true}
                                         testCases={
                                           test.sections[currentSection].questions[currentQuestion]?.testCases || []

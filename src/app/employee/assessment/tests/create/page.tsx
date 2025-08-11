@@ -52,6 +52,7 @@ export default function CreateTestPage() {
     points: 10,
     codeLanguage: "javascript",
     codeTemplate: "",
+    templateLanguage: "python",
     testCases: [] as any[],
     maxWords: 500,
     instructions: "",
@@ -115,6 +116,7 @@ export default function CreateTestPage() {
           points: 10,
           codeLanguage: "javascript",
           codeTemplate: "",
+          templateLanguage: "python",
           testCases: [] as any[],
           maxWords: 500,
           instructions: "",
@@ -132,6 +134,7 @@ function solution() {
     // Your code here
     return "Hello World";
 }`,
+          templateLanguage: "python",
           testCases: [
             {
               id: "1",
@@ -152,6 +155,7 @@ function solution() {
           points: 15,
           codeLanguage: "javascript",
           codeTemplate: "",
+          templateLanguage: "python",
           testCases: [] as any[],
           maxWords: 500,
           instructions: "",
@@ -277,15 +281,18 @@ function solution() {
       }
 
       if (newQuestion.type === "Coding") {
-        if (!newQuestion.codeTemplate.trim()) {
-          toast.error("Code template is required for coding questions")
-          return
-        }
-
-        if (newQuestion.testCases.length === 0) {
-          toast.error("At least one test case is required for coding questions")
-          return
-        }
+          if (!newQuestion.codeTemplate.trim()) {
+            toast.error("Code template is required for coding questions")
+            return
+          }
+          if (newQuestion.codeLanguage === "any" && !newQuestion.templateLanguage) {
+            toast.error("Please select a template language for 'Any Language' coding questions.")
+            return
+          }
+          if (newQuestion.testCases.length === 0) {
+            toast.error("At least one test case is required for coding questions")
+            return
+          }
       }
 
       if (newQuestion.type === "Written Answer") {
@@ -310,8 +317,8 @@ function solution() {
                   : newQuestion.options,
               correctAnswer:
                 newQuestion.type === "Multiple Choice" ? newQuestion.correctAnswer : newQuestion.correctAnswer || "",
-              // FIXED: Ensure code template is properly saved
               codeTemplate: newQuestion.type === "Coding" ? newQuestion.codeTemplate : undefined,
+              templateLanguage: newQuestion.type === "Coding" && newQuestion.codeLanguage === "any" ? newQuestion.templateLanguage : undefined,
             }
 
             console.log("Adding question with codeTemplate:", questionToAdd.codeTemplate)
@@ -348,6 +355,7 @@ function solution() {
           testCases: question.testCases || [],
           maxWords: question.maxWords || 500,
           instructions: question.instructions || "",
+            templateLanguage: question.templateLanguage || (question.codeLanguage === "any" ? "python" : question.codeLanguage),
         })
         setEditingQuestion({ sectionId, questionId })
         setShowAddQuestionForm(sectionId)
@@ -463,6 +471,7 @@ function solution() {
       points: 10,
       codeLanguage: "javascript",
       codeTemplate: "",
+  templateLanguage: "javascript",
       testCases: [] as any[],
       maxWords: 500,
       instructions: "",
@@ -981,6 +990,7 @@ function solution() {
                                   onChange={(e) => handleQuestionChange("codeLanguage", e.target.value)}
                                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
                                 >
+                                  <option value="any">Any Language</option>
                                   <option value="javascript">JavaScript</option>
                                   <option value="python">Python</option>
                                   <option value="java">Java</option>
@@ -992,13 +1002,33 @@ function solution() {
                                 </select>
                               </div>
 
+                                    {/* Template Language Picker for Any Language */}
+                                    {newQuestion.codeLanguage === "any" && (
+                                      <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-gray-700">Template Language</label>
+                                        <select
+                                          value={newQuestion.templateLanguage || "python"}
+                                          onChange={e => handleQuestionChange("templateLanguage", e.target.value)}
+                                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                                        >
+                                          <option value="javascript">JavaScript</option>
+                                          <option value="python">Python</option>
+                                          <option value="java">Java</option>
+                                          <option value="cpp">C++</option>
+                                          <option value="c">C</option>
+                                          <option value="php">PHP</option>
+                                          <option value="rust">Rust</option>
+                                          <option value="go">Go</option>
+                                        </select>
+                                      </div>
+                                    )}
                               <div className="space-y-2">
                                 <label className="block text-sm font-medium text-gray-700">Code Template</label>
                                 <AdvancedCodeEditor
-                                  value={newQuestion.codeTemplate}
-                                  onChange={handleCodeTemplateChange}
-                                  language={newQuestion.codeLanguage}
-                                  showConsole={false}
+                                    value={newQuestion.codeTemplate}
+                                    onChange={handleCodeTemplateChange}
+                                    language={newQuestion.codeLanguage === "any" ? (newQuestion.templateLanguage || "python") : newQuestion.codeLanguage}
+                                    showConsole={false}
                                 />
                               </div>
 

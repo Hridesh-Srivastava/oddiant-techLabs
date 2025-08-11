@@ -85,6 +85,7 @@ interface CodeEditorProps {
   value?: string
   onChange?: (value: string) => void
   language?: string
+  templateLanguage?: string // preferred base language when question allows 'any'
   onLanguageChange?: (language: string) => void
   readOnly?: boolean
   showConsole?: boolean
@@ -630,6 +631,15 @@ const LANGUAGE_SNIPPETS = {
 
 const SUPPORTED_LANGUAGES = [
   {
+    value: "any",
+    label: "Any Language",
+    // defaulting extension/pistonLang to javascript for template until user selects a concrete one
+    extension: "txt",
+    pistonLang: "javascript",
+    version: "18.15.0",
+    template: `// Select your desired language from the dropdown if restricted\n// Provide your solution below\n`,
+  },
+  {
     value: "javascript",
     label: "JavaScript",
     extension: "js",
@@ -1135,6 +1145,7 @@ export function AdvancedCodeEditor({
   value = "",
   onChange,
   language = "javascript",
+  templateLanguage,
   onLanguageChange,
   readOnly = false,
   showConsole = true,
@@ -1158,6 +1169,11 @@ export function AdvancedCodeEditor({
   const [lineNumbers, setLineNumbers] = useState(true)
   const [showCopyPasteWarning, setShowCopyPasteWarning] = useState(false)
   const [codeSubmissions, setCodeSubmissions] = useState<CodeSubmission[]>([])
+  // Internal free language when parent supplies 'any'
+  // When parent allows 'any' language, we track the user-chosen language separately.
+  // Initialize with provided templateLanguage (fallback javascript)
+  const [freeLang, setFreeLang] = useState(templateLanguage || 'javascript')
+  const effectiveLanguage = language === 'any' ? freeLang : language
 
   // REFS - No re-render triggers
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -1166,8 +1182,8 @@ export function AdvancedCodeEditor({
 
   // STABLE MEMOIZED VALUES - Only depend on primitive props
   const currentLang = useMemo(
-    () => SUPPORTED_LANGUAGES.find((lang) => lang.value === language) || SUPPORTED_LANGUAGES[0],
-    [language],
+    () => SUPPORTED_LANGUAGES.find((lang) => lang.value === effectiveLanguage) || SUPPORTED_LANGUAGES[0],
+    [effectiveLanguage],
   )
 
   const executionStats = useMemo(() => {
@@ -1321,7 +1337,7 @@ export function AdvancedCodeEditor({
           let rawResult: ExecutionResult
 
           if (onRunCode) {
-            rawResult = await onRunCode(value, language, testCase.input)
+            rawResult = await onRunCode(value, effectiveLanguage, testCase.input)
           } else {
             // Real execution via API with proper language mapping
             const response = await fetch("/api/code/execute", {
@@ -1359,7 +1375,7 @@ export function AdvancedCodeEditor({
 
         const submission: CodeSubmission = {
           code: value,
-          language: language,
+          language: effectiveLanguage,
           timestamp: new Date(),
           results: allResults,
           allPassed: allResults.every((r) => r.passed),
@@ -1403,25 +1419,27 @@ export function AdvancedCodeEditor({
     } finally {
       setIsRunning(false)
     }
-  }, [value, language, customInput, testCases, onRunCode, currentLang.pistonLang, currentLang.version, questionId])
+  }, [value, effectiveLanguage, customInput, testCases, onRunCode, currentLang.pistonLang, currentLang.version, questionId])
 
-  const handleLanguageChange = useCallback(
-    (newLanguage: string) => {
-      const newLangConfig = SUPPORTED_LANGUAGES.find((lang) => lang.value === newLanguage)
-      if (!newLangConfig) return
-
-      onLanguageChange?.(newLanguage)
-
-      const currentTemplate = currentLang.template
-      const newTemplate = newLangConfig.template
-
-      if (!value?.trim() || value === currentTemplate) {
-        onChange?.(newTemplate)
-        toast.success(`Switched to ${newLangConfig.label}`)
+  const handleLanguageChange = useCallback((newLanguage: string) => {
+    const newLangConfig = SUPPORTED_LANGUAGES.find((l) => l.value === newLanguage)
+    if (!newLangConfig) return
+    if (language === 'any') {
+      const prevTemplate = currentLang.template
+      if (!value?.trim() || value === prevTemplate) {
+        onChange?.(newLangConfig.template)
       }
-    },
-    [value, onChange, onLanguageChange, currentLang.template],
-  )
+      setFreeLang(newLanguage)
+      toast.success(`Switched to ${newLangConfig.label}`)
+      return
+    }
+    onLanguageChange?.(newLanguage)
+    const prevTemplate = currentLang.template
+    if (!value?.trim() || value === prevTemplate) {
+      onChange?.(newLangConfig.template)
+      toast.success(`Switched to ${newLangConfig.label}`)
+    }
+  }, [language, value, currentLang.template, onChange, onLanguageChange])
 
   const handleReset = useCallback(() => {
     const resetTemplate = template || currentLang.template
@@ -1523,11 +1541,14 @@ export function AdvancedCodeEditor({
             </CardTitle>
             <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
               <select
-                value={language}
+                value={language === 'any' ? freeLang : language}
                 onChange={(e) => handleLanguageChange(e.target.value)}
                 className="px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent min-w-[100px] sm:min-w-[140px]"
               >
-                {SUPPORTED_LANGUAGES.map((lang) => (
+                {(language === 'any'
+                  ? SUPPORTED_LANGUAGES.filter((l) => l.value !== 'any')
+                  : SUPPORTED_LANGUAGES.filter((l) => l.value === language)
+                ).map((lang) => (
                   <option key={lang.value} value={lang.value}>
                     {lang.label}
                   </option>

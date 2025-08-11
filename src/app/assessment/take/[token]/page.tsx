@@ -69,6 +69,7 @@ interface QuestionData {
   points: number
   codeLanguage?: string
   codeTemplate?: string
+  templateLanguage?: string
   testCases?: any[]
   maxWords?: number
   instructions?: string
@@ -203,6 +204,45 @@ export default function TakeTestPage() {
   // Notepad modal state and content
   const [showNotepad, setShowNotepad] = useState(false)
   const [notepadContent, setNotepadContent] = useState("")
+  const notepadStorageKey = `notepad_${token}`
+  const notepadInitializedRef = useRef(false)
+
+  // Load notepad content from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(notepadStorageKey)
+      console.log('Notepad loaded:', stored)
+      if (stored !== null) setNotepadContent(stored)
+  // mark initialized after attempting load (even if nothing stored)
+  notepadInitializedRef.current = true
+    } catch (e) { console.error('Notepad load error', e) }
+  }, [notepadStorageKey])
+
+  // Save notepad content to localStorage on change
+  useEffect(() => {
+    try {
+  // Avoid overwriting existing stored value with initial empty string before load completes
+  if (!notepadInitializedRef.current) return
+      localStorage.setItem(notepadStorageKey, notepadContent)
+      console.log('Notepad saved:', notepadContent)
+    } catch (e) { console.error('Notepad save error', e) }
+  }, [notepadContent, notepadStorageKey])
+
+  // Clear notepad ONLY when test truly completes or actual timer ends (avoid initial timeLeft===0 wipe)
+  useEffect(() => {
+    // Don't act until initial load finished
+    if (!notepadInitializedRef.current) return
+    if (testCompleted) {
+      try { localStorage.removeItem(notepadStorageKey) } catch (e) {}
+      setNotepadContent("")
+      return
+    }
+    // Require a started test (startTime set) before considering timeLeft === 0 as end
+    if (startTime && timeLeft === 0) {
+      try { localStorage.removeItem(notepadStorageKey) } catch (e) {}
+      setNotepadContent("")
+    }
+  }, [testCompleted, timeLeft, startTime, notepadStorageKey])
 
   // Cleanup function to stop all webcam streams
   const cleanupWebcam = useCallback(() => {
@@ -438,6 +478,8 @@ export default function TakeTestPage() {
                 earnedPoints += question.points
               }
               // Push coding answer now including final code & language, then continue to next question
+              const chosenLangKey = `__chosenLang_${questionKey}`
+              const chosenLang = question.codeLanguage === 'any' ? (answers[chosenLangKey] || 'javascript') : latestSubmission.language
               answersWithDetails.push({
                 questionId: question.id,
                 questionText: question.text,
@@ -450,10 +492,10 @@ export default function TakeTestPage() {
                 maxPoints: question.points,
                 codingTestResults: codingTestResults,
                 code: latestSubmission.code,
-                language: latestSubmission.language,
+                language: chosenLang,
                 codeSubmissions: storedSubmissions.map((s: any) => ({
                   code: s.code,
-                  language: s.language,
+                  language: question.codeLanguage === 'any' ? (answers[chosenLangKey] || s.language) : s.language,
                   timestamp: s.timestamp,
                   allPassed: s.allPassed,
                   passedCount: s.passedCount,
@@ -2360,9 +2402,29 @@ export default function TakeTestPage() {
                                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                                     <div>
                                       <h4 className="font-medium text-sm mb-1">Language</h4>
-                                      <p className="text-sm text-muted-foreground">
-                                        {test.sections[currentSection].questions[currentQuestion].codeLanguage}
-                                      </p>
+                                      {test.sections[currentSection].questions[currentQuestion].codeLanguage === 'any' ? (
+                                        <select
+                                          value={test.sections[currentSection].questions[currentQuestion].codeLanguage === 'any' ? (codes[`__chosenLang_${getCurrentQuestionKey()}`] || test.sections[currentSection].questions[currentQuestion].templateLanguage || 'javascript') : test.sections[currentSection].questions[currentQuestion].codeLanguage}
+                                          onChange={(e) => {
+                                            // store chosen language in codes map with a special key (non-invasive)
+                                            handleAnswer(`__chosenLang_${getCurrentQuestionKey()}`, e.target.value)
+                                          }}
+                                          className="text-sm border rounded px-2 py-1 bg-background"
+                                        >
+                                          <option value="javascript">JavaScript</option>
+                                          <option value="python">Python</option>
+                                          <option value="java">Java</option>
+                                          <option value="cpp">C++</option>
+                                          <option value="c">C</option>
+                                          <option value="php">PHP</option>
+                                          <option value="rust">Rust</option>
+                                          <option value="go">Go</option>
+                                        </select>
+                                      ) : (
+                                        <p className="text-sm text-muted-foreground">
+                                          {test.sections[currentSection].questions[currentQuestion].codeLanguage}
+                                        </p>
+                                      )}
                                     </div>
                                     <div>
                                       <h4 className="font-medium text-sm mb-1">Points</h4>
@@ -2429,18 +2491,19 @@ export default function TakeTestPage() {
                                         handleAnswer(getCurrentQuestionKey(), value)
                                       }
                                     }}
-                                    language={test.sections[currentSection].questions[currentQuestion].codeLanguage || "javascript"}
-                                    showConsole={true}
-                                    testCases={test.sections[currentSection].questions[currentQuestion].testCases || []}
-                                    className="w-full"
-                                    questionId={getCurrentQuestionId()}
-                                    onTestCaseResults={handleCodeSubmissions}
-                                    initialTestCaseResults={(() => {
-                                      const currentQuestionData = test.sections[currentSection].questions[currentQuestion]
-                                      const questionKey = `${test.sections[currentSection].id}-${currentQuestionData.id}`
-                                      return questionCodeSubmissions[questionKey] || []
-                                    })()}
-                                    template={test.sections[currentSection].questions[currentQuestion].codeTemplate || ""}
+                                    language={test.sections[currentSection].questions[currentQuestion].codeLanguage === 'any' ? (codes[`__chosenLang_${getCurrentQuestionKey()}`] || test.sections[currentSection].questions[currentQuestion].templateLanguage || 'javascript') : (test.sections[currentSection].questions[currentQuestion].codeLanguage || "javascript")}
+                                      showConsole={true}
+                                      testCases={test.sections[currentSection].questions[currentQuestion].testCases || []}
+                                      className="w-full"
+                                      questionId={getCurrentQuestionId()}
+                                      onTestCaseResults={handleCodeSubmissions}
+                                      initialTestCaseResults={(() => {
+                                        const currentQuestionData = test.sections[currentSection].questions[currentQuestion]
+                                        const questionKey = `${test.sections[currentSection].id}-${currentQuestionData.id}`
+                                        return questionCodeSubmissions[questionKey] || []
+                                      })()}
+                                      template={test.sections[currentSection].questions[currentQuestion].codeTemplate || ""}
+                                      templateLanguage={test.sections[currentSection].questions[currentQuestion].codeLanguage === 'any' ? (test.sections[currentSection].questions[currentQuestion].templateLanguage || 'python') : undefined}
                                   />
                                 </div>
                               ) : (
@@ -3410,7 +3473,7 @@ export default function TakeTestPage() {
         )}
 
         {/* Notepad Dialog */}
-        <Dialog open={showNotepad} onOpenChange={setShowNotepad}>
+  <Dialog open={showNotepad} onOpenChange={setShowNotepad}>
           <DialogContent className="sm:max-w-[400px]">
             <DialogHeader>
               <DialogTitle>Rough Work Notepad</DialogTitle>

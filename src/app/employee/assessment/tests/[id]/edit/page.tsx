@@ -63,6 +63,7 @@ interface QuestionData {
   // Coding question specific fields
   codeLanguage?: string
   codeTemplate?: string
+  templateLanguage?: string
   expectedOutput?: string
   testCases?: TestCase[]
   instructions?: string
@@ -798,6 +799,7 @@ function solution() {
                 }
                 className="w-full p-2 border border-gray-300 rounded-md"
               >
+                <option value="any">Any Language</option>
                 <option value="javascript">JavaScript</option>
                 <option value="python">Python</option>
                 <option value="java">Java</option>
@@ -808,6 +810,27 @@ function solution() {
                 <option value="go">Go</option>
               </select>
             </div>
+              {/* Template Language Picker for Any Language */}
+              {questionForm.codeLanguage === "any" && (
+                <div className="space-y-2">
+                  <Label htmlFor="template-language">Template Language</Label>
+                  <select
+                    id="template-language"
+                    value={questionForm.templateLanguage || "python"}
+                    onChange={e => setQuestionForm({ ...questionForm, templateLanguage: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                  >
+                    <option value="javascript">JavaScript</option>
+                    <option value="python">Python</option>
+                    <option value="java">Java</option>
+                    <option value="cpp">C++</option>
+                    <option value="c">C</option>
+                    <option value="php">PHP</option>
+                    <option value="rust">Rust</option>
+                    <option value="go">Go</option>
+                  </select>
+                </div>
+              )}
             <div>
               <Label htmlFor="question-points">Points</Label>
               <Input
@@ -828,10 +851,10 @@ function solution() {
             <Label htmlFor="code-template">Code Template</Label>
             <div className="mt-2">
               <AdvancedCodeEditor
-                value={questionForm.codeTemplate || ""}
-                onChange={handleCodeTemplateChange}
-                language={questionForm.codeLanguage || "javascript"}
-                showConsole={false}
+                  value={questionForm.codeTemplate || ""}
+                  onChange={handleCodeTemplateChange}
+                  language={questionForm.codeLanguage === "any" ? (questionForm.templateLanguage || "python") : questionForm.codeLanguage || "javascript"}
+                  showConsole={false}
               />
             </div>
           </div>
