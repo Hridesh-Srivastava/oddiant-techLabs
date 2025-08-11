@@ -19,6 +19,7 @@ import { AdvancedCodeEditor } from "@/components/advanced-code-editor"
 import { CameraModal } from "@/components/camera-modal"
 import ReactMarkdown from "react-markdown"
 import rehypeRaw from "rehype-raw"
+import { AssessmentSession } from "@/lib/models/assessment-session"
 
 interface InvitationData {
   _id: string
@@ -120,6 +121,7 @@ export default function TakeTestPage() {
   const [currentSection, setCurrentSection] = useState(0)
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({})
+  // Local displayed remaining seconds (will be driven by server session when available)
   const [timeLeft, setTimeLeft] = useState(0)
   const [activeTab, setActiveTab] = useState("instructions")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -132,6 +134,10 @@ export default function TakeTestPage() {
   } | null>(null)
   const [startTime, setStartTime] = useState<Date | null>(null)
   const [visitedQuestionKeys, setVisitedQuestionKeys] = useState<Set<string>>(new Set())
+  // Server session & authoritative timer
+  const [session, setSession] = useState<AssessmentSession | null>(null)
+  const [serverExpiry, setServerExpiry] = useState<Date | null>(null)
+  const lastAutosaveRef = useRef("")
 
   // Tab switching detection with improved logic
   const [showTabWarning, setShowTabWarning] = useState(false)
@@ -273,9 +279,25 @@ export default function TakeTestPage() {
 
   const handleSubmitTest = useCallback(async () => {
     try {
-      if (!test || !invitation) return
+      // Guard against duplicate or invalid submissions
+      if (!test || !invitation || isSubmitting || testCompleted || testTerminated) return
 
       setIsSubmitting(true)
+      // NEW: Patch session with completion snapshot before submitting results (non-blocking)
+      if (session && !isPreviewMode) {
+        fetch(`/api/assessment/sessions/${token}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            answers,
+            codes,
+            currentSection,
+            currentQuestion,
+            tabSwitchCount,
+            completedAt: new Date().toISOString(),
+          }),
+        }).catch(e => console.warn('Session completion patch failed:', e))
+      }
 
       // FIXED: Updated validation for coding questions - check if code has been executed
       const codingQuestionsValidation = test.sections.some((section) => {
@@ -516,7 +538,7 @@ export default function TakeTestPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [test, invitation, startTime, answers, tabSwitchCount, testTerminated, isPreviewMode, cleanupWebcam])
+  }, [test, invitation, startTime, answers, codes, currentSection, currentQuestion, tabSwitchCount, testTerminated, testCompleted, isPreviewMode, session, cleanupWebcam, token, isSubmitting])
 
   // Enhanced webcam functions with better error handling and video element checks
   const isVideoElementAvailable = useCallback(
@@ -1196,34 +1218,161 @@ export default function TakeTestPage() {
 
   useEffect(() => {
     if (test) {
-      // Only initialize timer once when test is first loaded
       setTimeLeft(test.duration * 60)
-      // Initialize answers with unique keys - only once
-      const initialAnswers: Record<string, string | string[]> = {}
-      test.sections.forEach((section) => {
-        section.questions.forEach((question) => {
-          const questionKey = `${section.id}-${question.id}`
-          initialAnswers[questionKey] = question.type === "Multiple Choice" ? "" : ""
-        })
-      })
-      setAnswers(initialAnswers)
+      const initial: Record<string, string | string[]> = {}
+      test.sections.forEach(sec => sec.questions.forEach(q => { initial[`${sec.id}-${q.id}`] = q.type === 'Multiple Choice' ? '' : '' }))
+      if (Object.keys(answers).length === 0) setAnswers(initial)
     }
   }, [test?._id])
 
+  // ensure / restore server session when test & invitation loaded
+  const ensureSession = useCallback(async () => {
+    if (isPreviewMode || !test || !token) return
+    try {
+      const res = await fetch(`/api/assessment/sessions/${token}`, { cache: 'no-store' })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.success && data.session) {
+          const s: AssessmentSession = data.session
+          setSession(s)
+          if (s.expiresAt) setServerExpiry(new Date(s.expiresAt))
+          if (s.startedAt) setStartTime(new Date(s.startedAt))
+          if (typeof s.currentSection === 'number') setCurrentSection(s.currentSection)
+          if (typeof s.currentQuestion === 'number') setCurrentQuestion(s.currentQuestion)
+          if (s.answers) {
+            setAnswers(prev => {
+              const saved = s.answers as Record<string, string | string[]>
+              // Merge: prefer saved non-empty over empty placeholder in prev
+              const merged: Record<string, string | string[]> = { ...prev }
+              Object.entries(saved).forEach(([k, v]) => {
+                if (Array.isArray(v)) {
+                  if (!merged[k] || (Array.isArray(merged[k]) && (merged[k] as string[]).length === 0)) {
+                    merged[k] = v
+                  }
+                } else if (typeof v === 'string') {
+                  if (!merged[k] || (typeof merged[k] === 'string' && (merged[k] as string).trim() === '')) {
+                    merged[k] = v
+                  }
+                }
+              })
+              return merged
+            })
+          }
+          if (s.codes) {
+            setCodes(prev => {
+              const saved = s.codes as Record<string, string>
+              const merged: Record<string, string> = { ...prev }
+              Object.entries(saved).forEach(([k, v]) => {
+                // Always prefer saved value from server (authoritative) over current (which might just be template)
+                if (typeof v === 'string') {
+                  merged[k] = v
+                }
+              })
+              return merged
+            })
+          }
+          if (s.tabSwitchCount) setTabSwitchCount(s.tabSwitchCount)
+          if (s.completedAt) setTestCompleted(true)
+          if (s.terminatedAt) setTestTerminated(true)
+          return
+        }
+      }
+      // create new session
+      const createRes = await fetch(`/api/assessment/sessions/${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          testId: test._id, // required by API
+          durationSeconds: (test.duration || 0) * 60,
+          invitationId: invitation?._id
+        })
+      })
+      if (createRes.ok) {
+        const data = await createRes.json()
+        if (data.success && data.session) {
+          const s: AssessmentSession = data.session
+          setSession(s)
+          if (s.expiresAt) setServerExpiry(new Date(s.expiresAt))
+          if (s.startedAt) setStartTime(new Date(s.startedAt))
+        }
+      } else {
+        console.warn('Failed to create session', createRes.status)
+      }
+    } catch (e) {
+      console.warn('ensureSession failed:', e)
+    }
+  }, [isPreviewMode, test, token, invitation?._id])
+
   useEffect(() => {
-    let timer: NodeJS.Timeout
-    if (timeLeft > 0 && activeTab === "test" && !testCompleted && !testTerminated) {
-      timer = setTimeout(() => {
-        setTimeLeft((prev) => prev - 1)
-      }, 1000)
-    } else if (timeLeft === 0 && activeTab === "test" && test?.settings.autoSubmit && !testTerminated) {
+    if (test && invitation && !session) {
+      ensureSession()
+    }
+  }, [test, invitation, session, ensureSession])
+
+  // fallback local timer (before server session established)
+  useEffect(() => {
+    if (serverExpiry) return
+    let timer: NodeJS.Timeout | null = null
+    if (timeLeft > 0 && activeTab === 'test' && !testCompleted && !testTerminated) {
+      timer = setTimeout(() => setTimeLeft(p => p - 1), 1000)
+    } else if (timeLeft === 0 && activeTab === 'test' && test?.settings.autoSubmit && !testTerminated) {
       handleSubmitTest()
     }
+    return () => { if (timer) clearTimeout(timer) }
+  }, [timeLeft, activeTab, testCompleted, testTerminated, test?.settings.autoSubmit, handleSubmitTest, serverExpiry])
 
-    return () => {
-      if (timer) clearTimeout(timer)
+  // server authoritative timer
+  useEffect(() => {
+    if (!serverExpiry || testCompleted || testTerminated) return
+    const tick = () => {
+      const remaining = Math.max(0, Math.floor((serverExpiry.getTime() - Date.now()) / 1000))
+      setTimeLeft(remaining)
+      if (remaining === 0 && test?.settings.autoSubmit && activeTab === 'test' && !testCompleted && !testTerminated) {
+        handleSubmitTest()
+      }
     }
-  }, [timeLeft, activeTab, testCompleted, testTerminated, test?.settings.autoSubmit, handleSubmitTest])
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [serverExpiry, test?.settings.autoSubmit, activeTab, testCompleted, testTerminated, handleSubmitTest])
+
+  // periodic autosave (12s)
+  useEffect(() => {
+    if (!session || isPreviewMode || testCompleted || testTerminated) return
+    const id = setInterval(() => {
+      const payload = { answers, codes, currentSection, currentQuestion, tabSwitchCount }
+      const ser = JSON.stringify(payload)
+      if (ser === lastAutosaveRef.current) return
+      lastAutosaveRef.current = ser
+      fetch(`/api/assessment/sessions/${token}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(e => console.warn('Autosave failed:', e))
+    }, 12000)
+    return () => clearInterval(id)
+  }, [session, isPreviewMode, testCompleted, testTerminated, answers, codes, currentSection, currentQuestion, tabSwitchCount, token])
+
+  // Debounced immediate autosave (2s) after changes
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  useEffect(() => {
+    if (!session || isPreviewMode || testCompleted || testTerminated) return
+    if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current)
+    debounceTimeoutRef.current = setTimeout(() => {
+      const payload = { answers, codes, currentSection, currentQuestion, tabSwitchCount }
+      const ser = JSON.stringify(payload)
+      if (ser === lastAutosaveRef.current) return
+      lastAutosaveRef.current = ser
+      fetch(`/api/assessment/sessions/${token}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(e => console.warn('Debounced autosave failed:', e))
+    }, 2000)
+    return () => { if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current) }
+  }, [answers, codes, currentSection, currentQuestion, tabSwitchCount, session, isPreviewMode, testCompleted, testTerminated, token])
+
+  // (Removed duplicate local timer effect to avoid double decrement)
 
   // Disable webcam when test is completed or terminated
   useEffect(() => {
@@ -1238,6 +1387,14 @@ export default function TakeTestPage() {
     setWebcamEnabled(false)
     cleanupWebcam()
     toast.error("Test terminated due to excessive tab switching violations!")
+    // NEW: mark session terminated
+    if (session && !isPreviewMode) {
+      fetch(`/api/assessment/sessions/${token}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ terminatedAt: new Date().toISOString(), tabSwitchCount }),
+      }).catch(e => console.warn('Termination patch failed:', e))
+    }
     setTimeout(() => {
       handleSubmitTest()
     }, 2000)
@@ -1419,14 +1576,12 @@ export default function TakeTestPage() {
     }
   }
 
-  const handleStartTest = () => {
-    // Only allow starting the test if verification is complete
+  const handleStartTest = async () => {
     if (!verificationComplete) {
       setVerificationStep("system")
       setShowSystemCheck(true)
       return
     }
-
     // Clear code and code submission localStorage for this test session
     try {
       const prefix = `${testSessionKey}-`;
@@ -1451,9 +1606,9 @@ export default function TakeTestPage() {
       setCodes(newCodes);
     }
 
+    await ensureSession()
     setActiveTab("test")
-    setStartTime(new Date())
-    // Ensure webcam is started only if enabled
+    if (!startTime) setStartTime(new Date())
     if (!webcamInitializedRef.current && webcamEnabled) {
       startWebcam()
     }
@@ -2020,7 +2175,7 @@ export default function TakeTestPage() {
                   setVerificationStep("rules")
                   setShowRules(true)
                 }}
-              >
+             >
                 Preview Exam Rules
               </Button>
             </div>
@@ -2482,8 +2637,8 @@ export default function TakeTestPage() {
                             />
                             {/* Webcam Status Overlay */}
                             {webcamStatus !== "active" && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/80 text-white text-center p-2">
-                                <div className="space-y-2">
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
+                                <div className="flex flex-col items-center">
                                   {webcamStatus === "error" && webcamError ? (
                                     <>
                                       <AlertTriangle className="h-6 w-6 text-red-500 mx-auto" />
@@ -2492,15 +2647,15 @@ export default function TakeTestPage() {
                                         variant="outline"
                                         size="sm"
                                         onClick={startWebcam}
-                                        className="bg-white text-black hover:bg-gray-200 text-xs px-2 py-1"
+                                        className="mt-2 bg-white text-black hover:bg-gray-200"
                                       >
                                         Retry ({webcamRetryCount}/3)
                                       </Button>
                                     </>
                                   ) : webcamStatus === "requesting" ? (
                                     <>
-                                      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white mx-auto"></div>
-                                      <p className="text-xs">Starting webcam...</p>
+                                      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white mb-2"></div>
+                                      <p className="text-xs">Starting camera...</p>
                                     </>
                                   ) : (
                                     <>
@@ -2510,7 +2665,7 @@ export default function TakeTestPage() {
                                         variant="outline"
                                         size="sm"
                                         onClick={startWebcam}
-                                        className="bg-white text-black hover:bg-gray-200 text-xs px-2 py-1"
+                                        className="mt-2 bg-white text-black hover:bg-gray-200"
                                       >
                                         Start Camera
                                       </Button>
@@ -2536,7 +2691,7 @@ export default function TakeTestPage() {
                               className={`w-2 h-2 rounded-full ${
                                 webcamStatus === "active"
                                   ? "bg-green-500"
-                                  : webcamStatus === ("requesting" as any)
+                                      : webcamStatus === "requesting"
                                     ? "bg-yellow-500 animate-pulse"
                                     : webcamStatus === "error"
                                       ? "bg-red-500"
@@ -2609,7 +2764,8 @@ export default function TakeTestPage() {
                           section.questions.some((q) => {
                             if (q.type === "Coding") {
                               const questionKey = `${section.id}-${q.id}`
-                              const userCode = answers[questionKey] as string
+                              // FIX: use codes state (not answers) for coding question code presence check
+                              const userCode = codes[questionKey] as string
                               const hasCode =
                                 userCode && userCode.trim() !== "" && userCode.trim() !== q.codeTemplate?.trim()
                               const storedSubmissions =
@@ -2706,7 +2862,7 @@ export default function TakeTestPage() {
                                   size="sm"
                                   onClick={startWebcam}
                                   className="mt-2 bg-white text-black hover:bg-gray-200"
-                                  disabled={webcamStatus === ("requesting" as any)}
+                                      disabled={webcamStatus === ("requesting" as any)}
                                 >
                                   {webcamStatus === ("requesting" as any) ? "Starting..." : "Try Again"}
                                 </Button>

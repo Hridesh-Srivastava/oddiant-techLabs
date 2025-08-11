@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { AdvancedCodeEditor } from "@/components/advanced-code-editor"
+import { AssessmentSession } from "@/lib/models/assessment-session"
 import { useCameraManager } from "@/hooks/useCameraManager"
 import { CameraVideo } from "@/components/camera-video"
 import ReactMarkdown from "react-markdown"
@@ -101,6 +102,9 @@ export default function TestPreviewPage() {
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({})
   const [timeLeft, setTimeLeft] = useState(0)
   const [activeTab, setActiveTab] = useState("instructions")
+  // Backend session & authoritative expiry for preview timer
+  const [session, setSession] = useState<AssessmentSession | null>(null)
+  const [serverExpiry, setServerExpiry] = useState<Date | null>(null)
 
   // Step completion tracking
   const [stepCompletion, setStepCompletion] = useState<StepCompletion>({
@@ -522,12 +526,13 @@ export default function TestPreviewPage() {
     }
   }
 
-  const handleStartTest = () => {
+  const handleStartTest = async () => {
     if (!stepCompletion.instructions) {
       toast.error("Please complete all preview steps before starting the test")
       return
     }
-
+    // Ensure backend session (preview scope) before starting
+    await ensureSession()
     setActiveTab("test")
   }
 
@@ -936,17 +941,81 @@ export default function TestPreviewPage() {
     }
   }, [test])
 
-  useEffect(() => {
-    if (timeLeft > 0 && activeTab === "test" && !testTerminated) {
-      const timer = setTimeout(() => {
-        setTimeLeft(timeLeft - 1)
-      }, 1000)
-
-      return () => clearTimeout(timer)
-    } else if (timeLeft === 0 && activeTab === "test" && test?.settings.autoSubmit && !testTerminated) {
-      handleSubmitTest()
+  // Backend session ensure (preview). Only responsible for timer; does NOT overwrite local answers to avoid side-effects.
+  const ensureSession = useCallback(async () => {
+    if (!testId || !test) return
+    const token = `preview-${testId}`
+    try {
+      // Try existing session
+      const res = await fetch(`/api/assessment/sessions/${token}`, { cache: 'no-store' })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.success && data.session) {
+          const s: AssessmentSession = data.session
+          setSession(s)
+          if (s.expiresAt) {
+            const exp = new Date(s.expiresAt)
+            setServerExpiry(exp)
+            setTimeLeft(Math.max(0, Math.floor((exp.getTime() - Date.now()) / 1000)))
+          }
+          return
+        }
+      }
+      // Create new session if none
+      const createRes = await fetch(`/api/assessment/sessions/${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ testId, durationSeconds: (test.duration || 0) * 60 })
+      })
+      if (createRes.ok) {
+        const data = await createRes.json()
+        if (data.success && data.session) {
+          const s: AssessmentSession = data.session
+          setSession(s)
+          if (s.expiresAt) {
+            const exp = new Date(s.expiresAt)
+            setServerExpiry(exp)
+            setTimeLeft(Math.max(0, Math.floor((exp.getTime() - Date.now()) / 1000)))
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('preview ensureSession failed:', e)
     }
-  }, [timeLeft, activeTab, test?.settings.autoSubmit, testTerminated])
+  }, [testId, test])
+
+  // Kick off session when entering test tab if not already.
+  useEffect(() => {
+    if (activeTab === 'test' && test && !session) {
+      ensureSession()
+    }
+  }, [activeTab, test, session, ensureSession])
+
+  // Fallback local timer before server expiry known
+  useEffect(() => {
+    if (serverExpiry || activeTab !== 'test' || testTerminated) return
+    if (timeLeft <= 0) {
+      if (timeLeft === 0 && test?.settings.autoSubmit) handleSubmitTest()
+      return
+    }
+    const id = setTimeout(() => setTimeLeft(p => p - 1), 1000)
+    return () => clearTimeout(id)
+  }, [serverExpiry, timeLeft, activeTab, test?.settings.autoSubmit, testTerminated])
+
+  // Server authoritative timer
+  useEffect(() => {
+    if (!serverExpiry || activeTab !== 'test' || testTerminated) return
+    const tick = () => {
+      const remaining = Math.max(0, Math.floor((serverExpiry.getTime() - Date.now()) / 1000))
+      setTimeLeft(remaining)
+      if (remaining === 0 && test?.settings.autoSubmit && !testTerminated) {
+        handleSubmitTest()
+      }
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [serverExpiry, activeTab, test?.settings.autoSubmit, testTerminated])
 
   // Add this helper to compute code stats for the current coding question
   const getCurrentCodeStats = () => {
