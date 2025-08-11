@@ -437,10 +437,38 @@ export default function TakeTestPage() {
                 isCorrect = true
                 earnedPoints += question.points
               }
-
-              console.log(
-                `Coding Question ${question.id}: Using latest submission - ${latestSubmission.passedCount}/${latestSubmission.totalCount} test cases passed`,
-              )
+              // Push coding answer now including final code & language, then continue to next question
+              answersWithDetails.push({
+                questionId: question.id,
+                questionText: question.text,
+                questionType: question.type,
+                answer: codes[`${section.id}-${question.id}`] || latestSubmission.code || '',
+                correctAnswer: undefined,
+                options: [],
+                isCorrect,
+                points: isCorrect ? question.points : 0,
+                maxPoints: question.points,
+                codingTestResults: codingTestResults,
+                code: latestSubmission.code,
+                language: latestSubmission.language,
+                codeSubmissions: storedSubmissions.map((s: any) => ({
+                  code: s.code,
+                  language: s.language,
+                  timestamp: s.timestamp,
+                  allPassed: s.allPassed,
+                  passedCount: s.passedCount,
+                  totalCount: s.totalCount,
+                  results: s.results?.map((r: any) => ({
+                    input: r.input,
+                    expectedOutput: r.expectedOutput,
+                    actualOutput: r.actualOutput,
+                    passed: r.passed,
+                    error: r.error,
+                  })) || []
+                }))
+              })
+              console.log(`Coding Question ${question.id}: Using latest submission - ${latestSubmission.passedCount}/${latestSubmission.totalCount} test cases passed`)
+              return
             } else {
               // Fallback: create placeholder results if no submissions
               codingTestResults =
@@ -469,6 +497,9 @@ export default function TakeTestPage() {
             points: isCorrect ? question.points : 0,
             maxPoints: question.points,
             codingTestResults: codingTestResults, // Store test case results
+            // Add code only in fallback path for coding (when not executed)
+            ...(question.type === 'Coding' ? { code: codes[`${section.id}-${question.id}`] || '' } : {}),
+            ...(question.type === 'Coding' ? { codeSubmissions: [] as any[] } : {}),
           })
 
           console.log(
@@ -2602,15 +2633,15 @@ export default function TakeTestPage() {
                                         setCurrentSection(sIndex)
                                         setCurrentQuestion(qIndex)
                                       }}
-                                                                              className={`w-8 h-8 text-xs flex items-center justify-center rounded-md transition-colors ${
-                                          currentSection === sIndex && currentQuestion === qIndex
-                                            ? "bg-primary text-primary-foreground hover:bg-green-600 hover:text-black"
-                                            : isAnswered
-                                              ? "bg-green-100 text-green-800 hover:bg-green-600 hover:text-black"
-                                              : hasCodeButNotExecuted || hasVisitedButNotAttempted
-                                                ? "bg-red-100 text-red-800 hover:bg-red-200"
-                                                : "bg-muted hover:bg-green-600 hover:text-black"
-                                        }`}
+                                      className={`w-8 h-8 text-xs flex items-center justify-center rounded-md transition-colors ${
+                                        currentSection === sIndex && currentQuestion === qIndex
+                                          ? "bg-primary text-primary-foreground hover:bg-green-600 hover:text-black"
+                                          : isAnswered
+                                            ? "bg-green-100 text-green-800 hover:bg-green-600 hover:text-black"
+                                            : (!isCurrentQuestion && isVisited && !isAnswered)
+                                              ? "bg-red-100 text-red-800 hover:bg-red-200"
+                                              : "bg-white border text-gray-700 hover:bg-green-600 hover:text-black"
+                                      }`}
                                     >
                                       {qIndex + 1}
                                     </button>

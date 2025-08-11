@@ -1625,9 +1625,9 @@ export default function TestPreviewPage() {
                                             ? "bg-primary text-primary-foreground hover:bg-green-600 hover:text-black"
                                             : isAnswered
                                               ? "bg-green-100 text-green-800 hover:bg-green-600 hover:text-black"
-                                              : hasCodeButNotExecuted || hasVisitedButNotAttempted
+                                              : (!isCurrentQuestion && isVisited && !isAnswered)
                                                 ? "bg-red-100 text-red-800 hover:bg-red-200"
-                                                : "bg-muted hover:bg-green-600 hover:text-black"
+                                                : "bg-white border text-gray-700 hover:bg-green-600 hover:text-black"
                                         }`}
                                       >
                                         {qIndex + 1}

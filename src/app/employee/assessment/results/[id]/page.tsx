@@ -57,6 +57,17 @@ interface AnswerData {
   aiFeedback?: string
   aiScore?: number
   options?: string[]
+  code?: string // final submitted code (for coding questions)
+  language?: string // language used
+  codeSubmissions?: Array<{
+    code: string
+    language: string
+    timestamp: string | Date
+    allPassed?: boolean
+    passedCount?: number
+    totalCount?: number
+    results?: CodingTestResult[]
+  }>
 }
 
 interface CodingTestResult {
@@ -484,12 +495,19 @@ export default function ResultDetailsPage() {
                       {answer.questionType !== 'Coding' && (
                         <div>
                           <Label className="text-sm font-medium text-muted-foreground">Candidate Answer:</Label>
-                          <div className="mt-1 p-3 bg-muted rounded-md">
+                          <div
+                            className={
+                              "mt-1 p-3 bg-muted rounded-md text-sm leading-relaxed overflow-y-auto max-h-[400px] pr-1 " +
+                              (answer.questionType === 'Written Answer'
+                                ? 'whitespace-pre-wrap break-words overflow-x-hidden'
+                                : '')
+                            }
+                          >
                             {answer.questionType === "Multiple Choice" && Array.isArray(answer.options)
                               ? answer.options.find(opt => String(opt).trim().toLowerCase() === String(answer.answer).trim().toLowerCase()) || answer.answer || "No answer provided"
                               : Array.isArray(answer.answer)
                                 ? answer.answer.join(", ")
-                                : answer.answer || "No answer provided"}
+                                : (answer.answer || "No answer provided")}
                           </div>
                         </div>
                       )}
@@ -505,6 +523,28 @@ export default function ResultDetailsPage() {
                         <div>
                           <Label className="text-sm font-medium text-muted-foreground">Test Case Results:</Label>
                           <div className="mt-1 space-y-2">
+                            {!answer.code && (
+                              <div className="p-3 border rounded-md bg-muted text-xs italic text-muted-foreground">
+                                Legacy result: source code was not captured for this submission.
+                              </div>
+                            )}
+                            {answer.code && (
+                              <div className="p-3 border rounded-md bg-white/80 dark:bg-slate-900/20">
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="text-sm font-medium">Final Submitted Code{answer.language ? ` (${answer.language})` : ''}</span>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(String(answer.code || ''))
+                                      toast.success('Code copied')
+                                    }}
+                                    className="text-xs px-2 py-1 rounded bg-black text-white hover:bg-green-600 hover:text-black transition-colors"
+                                  >Copy</button>
+                                </div>
+                                <pre className="mt-1 p-3 rounded bg-black/90 text-xs sm:text-sm font-mono text-white overflow-auto max-h-[60vh]">
+{String(answer.code || '')}
+                                </pre>
+                              </div>
+                            )}
                             {answer.codingTestResults.map((testResult, testIndex) => (
                               <div key={testIndex} className="p-3 border rounded-md">
                                 <div className="flex justify-between items-center mb-2">
@@ -535,6 +575,66 @@ export default function ResultDetailsPage() {
                                 </div>
                               </div>
                             ))}
+                            {answer.codeSubmissions && answer.codeSubmissions.length > 0 && (
+                              <div className="mt-4">
+                                <Label className="text-sm font-medium text-muted-foreground mb-2 block">Submission History ({answer.codeSubmissions.length})</Label>
+                                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+                                  {answer.codeSubmissions.slice().reverse().map((sub, idx) => {
+                                    const indexFromEnd = answer.codeSubmissions!.length - idx;
+                                    return (
+                                      <div key={idx} className="border rounded-md p-3 bg-white/80 dark:bg-slate-900/20">
+                                        <div className="flex flex-wrap justify-between gap-2 items-center mb-2 text-xs">
+                                          <div className="font-medium">
+                                            Attempt #{indexFromEnd}{" "}
+                                            <span className={sub.allPassed ? 'text-green-600' : 'text-red-500'}>
+                                              {sub.passedCount}/{sub.totalCount} passed
+                                            </span>
+                                          </div>
+                                          <div className="flex gap-2">
+                                            <span className="text-muted-foreground">{new Date(sub.timestamp).toLocaleString()}</span>
+                                            <button
+                                              onClick={() => { navigator.clipboard.writeText(sub.code); toast.success('Copied'); }}
+                                              className="px-2 py-0.5 border rounded text-xs bg-black text-white hover:bg-green-600 hover:text-black transition-colors"
+                                            >Copy</button>
+                                            <button
+                                              onClick={() => {
+                                                const blob = new Blob([sub.code], { type: 'text/plain' });
+                                                const a = document.createElement('a');
+                                                a.href = URL.createObjectURL(blob);
+                                                a.download = `submission_${answer.questionId}_${indexFromEnd}.${(sub.language||'txt').toLowerCase()}`;
+                                                a.click();
+                                                URL.revokeObjectURL(a.href);
+                                              }}
+                                              className="px-2 py-0.5 border rounded text-xs bg-blue-600 text-white hover:bg-blue-700 border-blue-600 transition-colors"
+                                            >Download</button>
+                                          </div>
+                                        </div>
+                                        <pre className="p-3 text-xs sm:text-[13px] rounded bg-black/90 font-mono text-white overflow-auto leading-relaxed whitespace-pre max-h-[50vh]">
+{sub.code}
+                                        </pre>
+                                        {sub.results && sub.results.length > 0 && (
+                                          <div className="mt-2 grid gap-2 md:grid-cols-2">
+                                            {sub.results.map((r, rIdx) => (
+                                              <div key={rIdx} className="border rounded p-2 text-[10px] bg-muted/30">
+                                                <div className="flex justify-between mb-1">
+                                                  <span className="font-medium">Case {rIdx+1}</span>
+                                                  <span className={r.passed ? 'text-green-600' : 'text-red-500'}>{r.passed ? 'PASS' : 'FAIL'}</span>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-1">
+                                                  <div><span className="font-medium">In:</span><div className="truncate">{r.input||''}</div></div>
+                                                  <div><span className="font-medium">Exp:</span><div className="truncate">{r.expectedOutput||''}</div></div>
+                                                  <div><span className="font-medium">Act:</span><div className="truncate">{r.actualOutput||''}</div></div>
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
