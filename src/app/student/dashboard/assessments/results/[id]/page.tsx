@@ -26,6 +26,7 @@ import { useParams, useRouter } from "next/navigation"
 import { Navbar } from "@/components/layout/navbar"
 import ReactMarkdown from "react-markdown"
 import rehypeRaw from "rehype-raw"
+import { toast, Toaster } from "sonner"
 
 interface Question {
   id: string
@@ -216,7 +217,8 @@ export default function TestResultPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Navbar />
+  <Navbar />
+  <Toaster position="top-center" />
       <div className="pt-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col">
           {/* Student Dashboard Sub-Navbar */}
@@ -416,7 +418,7 @@ export default function TestResultPage() {
                               <div className="flex justify-between items-center mb-2">
                                 <span className="text-sm font-medium">Final Submitted Code{question.language ? ` (${question.language})` : ''}</span>
                                 <button
-                                  onClick={() => { navigator.clipboard.writeText(String(question.code || '')); }}
+                                  onClick={() => { navigator.clipboard.writeText(String(question.code || '')).then(() => toast.success('Code copied')).catch(() => toast.error('Copy failed')); }}
                                   className="text-xs px-2 py-1 rounded bg-black text-white hover:bg-green-600 hover:text-black transition-colors"
                                 >Copy</button>
                               </div>
@@ -443,7 +445,7 @@ export default function TestResultPage() {
                                         <div className="flex gap-2">
                                           <span className="text-muted-foreground">{new Date(sub.timestamp).toLocaleString()}</span>
                                           <button
-                                            onClick={() => { navigator.clipboard.writeText(sub.code); }}
+                                            onClick={() => { navigator.clipboard.writeText(sub.code).then(() => toast.success('Copied')).catch(() => toast.error('Copy failed')); }}
                                             className="px-2 py-0.5 border rounded text-xs bg-black text-white hover:bg-green-600 hover:text-black transition-colors"
                                           >Copy</button>
                                           <button
@@ -454,6 +456,7 @@ export default function TestResultPage() {
                                               a.download = `submission_${question.id}_${indexFromEnd}.${(sub.language||'txt').toLowerCase()}`;
                                               a.click();
                                               URL.revokeObjectURL(a.href);
+                                              toast.success('Download started');
                                             }}
                                             className="px-2 py-0.5 border rounded text-xs bg-blue-600 text-white hover:bg-blue-700 border-blue-600 transition-colors"
                                           >Download</button>
