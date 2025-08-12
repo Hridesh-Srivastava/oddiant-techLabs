@@ -306,7 +306,7 @@ export default function VerifyEmployeePage() {
           )}
         </div>
 
-        <Card className="shadow-lg">
+  <Card className="shadow-lg border-l-4 border-l-green-500 rounded-md overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50 border-b">
             <div className="flex justify-between items-start">
               <div>

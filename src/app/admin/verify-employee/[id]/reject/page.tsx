@@ -112,7 +112,7 @@ export default function RejectEmployeePage() {
           </Button>
         </div>
 
-        <Card className="shadow-lg">
+  <Card className="shadow-lg border-l-4 border-l-red-600">
           <CardHeader className="bg-red-50 border-b">
             <CardTitle className="text-2xl text-red-700 flex items-center gap-2">
               <AlertCircle className="h-6 w-6" />

@@ -278,7 +278,7 @@ export default function AdminEmployeesPage() {
             <tbody>
               {filteredEmployees.map((employee) => (
                 <tr key={employee._id}>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm border-l-4 border-l-blue-800">
                     <div className="flex items-center">
                       <div className="ml-3">
                         <p className="text-gray-900 whitespace-no-wrap">
