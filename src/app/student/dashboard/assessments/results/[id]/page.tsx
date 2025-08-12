@@ -44,6 +44,24 @@ interface Question {
     actualOutput: string;
     passed: boolean;
   }[];
+  // For Coding questions: final submitted code and language
+  code?: string;
+  language?: string;
+  // For Coding questions: submission history
+  codeSubmissions?: Array<{
+    code: string;
+    language: string;
+    timestamp: string | Date;
+    allPassed?: boolean;
+    passedCount?: number;
+    totalCount?: number;
+    results?: Array<{
+      input: string;
+      expectedOutput: string;
+      actualOutput: string;
+      passed: boolean;
+    }>;
+  }>;
 }
 
 interface CategoryBreakdown {
@@ -112,6 +130,7 @@ export default function TestResultPage() {
     if (params.id) {
       fetchResultDetails()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id])
 
   const formatDate = (dateString: string) => {
@@ -383,6 +402,91 @@ export default function TestResultPage() {
                           )}
                         </div>
                       </div>
+
+                      {/* Coding: Final Submitted Code and Submission History */}
+                      {question.type === 'Coding' && (
+                        <div className="space-y-3 mb-4">
+                          {!question.code && (
+                            <div className="p-3 border rounded-md bg-muted text-xs italic text-muted-foreground">
+                              Legacy result: source code was not captured for this submission.
+                            </div>
+                          )}
+                          {question.code && (
+                            <div className="p-3 border rounded-md bg-white/80 dark:bg-slate-900/20">
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-medium">Final Submitted Code{question.language ? ` (${question.language})` : ''}</span>
+                                <button
+                                  onClick={() => { navigator.clipboard.writeText(String(question.code || '')); }}
+                                  className="text-xs px-2 py-1 rounded bg-black text-white hover:bg-green-600 hover:text-black transition-colors"
+                                >Copy</button>
+                              </div>
+                              <pre className="mt-1 p-3 rounded bg-black/90 text-xs sm:text-sm font-mono text-white overflow-auto max-h-[60vh]">
+{String(question.code || '')}
+                              </pre>
+                            </div>
+                          )}
+                          {Array.isArray(question.codeSubmissions) && question.codeSubmissions.length > 0 && (
+                            <div className="mt-2">
+                              <div className="text-sm font-medium text-muted-foreground mb-2">Submission History ({question.codeSubmissions.length})</div>
+                              <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+                                {question.codeSubmissions.slice().reverse().map((sub, idx) => {
+                                  const indexFromEnd = question.codeSubmissions!.length - idx;
+                                  return (
+                                    <div key={idx} className="border rounded-md p-3 bg-white/80 dark:bg-slate-900/20">
+                                      <div className="flex flex-wrap justify-between gap-2 items-center mb-2 text-xs">
+                                        <div className="font-medium">
+                                          Attempt #{indexFromEnd}{' '}
+                                          <span className={sub.allPassed ? 'text-green-600' : 'text-red-500'}>
+                                            {sub.passedCount}/{sub.totalCount} passed
+                                          </span>
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <span className="text-muted-foreground">{new Date(sub.timestamp).toLocaleString()}</span>
+                                          <button
+                                            onClick={() => { navigator.clipboard.writeText(sub.code); }}
+                                            className="px-2 py-0.5 border rounded text-xs bg-black text-white hover:bg-green-600 hover:text-black transition-colors"
+                                          >Copy</button>
+                                          <button
+                                            onClick={() => {
+                                              const blob = new Blob([sub.code], { type: 'text/plain' });
+                                              const a = document.createElement('a');
+                                              a.href = URL.createObjectURL(blob);
+                                              a.download = `submission_${question.id}_${indexFromEnd}.${(sub.language||'txt').toLowerCase()}`;
+                                              a.click();
+                                              URL.revokeObjectURL(a.href);
+                                            }}
+                                            className="px-2 py-0.5 border rounded text-xs bg-blue-600 text-white hover:bg-blue-700 border-blue-600 transition-colors"
+                                          >Download</button>
+                                        </div>
+                                      </div>
+                                      <pre className="p-3 text-xs sm:text-[13px] rounded bg-black/90 font-mono text-white overflow-auto leading-relaxed whitespace-pre max-h-[50vh]">
+{sub.code}
+                                      </pre>
+                                      {Array.isArray(sub.results) && sub.results.length > 0 && (
+                                        <div className="mt-2 grid gap-2 md:grid-cols-2">
+                                          {sub.results.map((r, rIdx) => (
+                                            <div key={rIdx} className="border rounded p-2 text-[10px] bg-muted/30">
+                                              <div className="flex justify-between mb-1">
+                                                <span className="font-medium">Case {rIdx+1}</span>
+                                                <span className={r.passed ? 'text-green-600' : 'text-red-500'}>{r.passed ? 'PASS' : 'FAIL'}</span>
+                                              </div>
+                                              <div className="grid grid-cols-3 gap-1">
+                                                <div><span className="font-medium">In:</span><div className="truncate">{r.input||''}</div></div>
+                                                <div><span className="font-medium">Exp:</span><div className="truncate">{r.expectedOutput||''}</div></div>
+                                                <div><span className="font-medium">Act:</span><div className="truncate">{r.actualOutput||''}</div></div>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Show coding test case results if this is a coding question */}
                       {question.type === 'Coding' && Array.isArray(question.codingTestResults) && question.codingTestResults.length > 0 && (

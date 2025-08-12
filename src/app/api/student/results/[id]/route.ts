@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb"
 import { verifyToken } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function GET(request: Request, context: any) {
   try {
     // Verify authentication
@@ -40,7 +41,9 @@ export async function GET(request: Request, context: any) {
     let questions = [];
     if (Array.isArray(test?.sections)) {
       questions = test.sections.flatMap((section) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (section.questions || []).map((q: any) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const userAnswerObj = (result.answers || []).find((a: any) => a.questionId === q.id);
           return {
             id: q.id,
@@ -55,6 +58,12 @@ export async function GET(request: Request, context: any) {
             timeSpent: userAnswerObj?.timeSpent || 0,
             // Add codingTestResults for coding questions
             ...(q.type === 'Coding' && userAnswerObj?.codingTestResults ? { codingTestResults: userAnswerObj.codingTestResults } : {}),
+            // Include final submitted code and language if available
+            ...(q.type === 'Coding' && userAnswerObj?.code ? { code: userAnswerObj.code, language: userAnswerObj.language } : {}),
+            // Include submission history if available
+            ...(q.type === 'Coding' && Array.isArray(userAnswerObj?.codeSubmissions) && userAnswerObj.codeSubmissions.length > 0
+              ? { codeSubmissions: userAnswerObj.codeSubmissions }
+              : {}),
           };
         })
       );
