@@ -261,7 +261,7 @@ export default function VerifyEmployeePage() {
             <Button variant="outline" onClick={handleBackToEmployees} className="flex-1">
               {isEmailAccess ? "Go to Login" : "Back to Employers"}
             </Button>
-            <Button onClick={() => window.location.reload()} className="flex-1">
+            <Button onClick={() => window.location.reload()} className="flex-1 bg-black text-white hover:text-black hover:bg-green-600">
               Try Again
             </Button>
           </CardFooter>

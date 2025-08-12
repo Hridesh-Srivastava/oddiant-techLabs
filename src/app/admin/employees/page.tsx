@@ -242,7 +242,7 @@ export default function AdminEmployeesPage() {
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <p className="text-red-700 font-medium">Error loading employers</p>
           <p className="text-red-600 text-sm mt-1">{error}</p>
-          <Button onClick={handleRefresh} className="mt-4" variant="outline">
+          <Button onClick={handleRefresh} className="mt-4 bg-black text-white hover:text-black hover:bg-green-600" variant="outline">
             Try Again
           </Button>
         </div>
