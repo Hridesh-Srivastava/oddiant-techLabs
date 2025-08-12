@@ -25,11 +25,18 @@ export async function POST(request: NextRequest) {
 
       // For email access, verify admin exists and allow access
       const { db } = await connectToDatabase()
-      const adminEmail = process.env.EMAIL_TO
+      const adminEmail = process.env.SUPER_ADMIN_EMAIL
       let admin = await db.collection("admins").findOne({ email: adminEmail })
 
       if (!admin) {
-        const hashedPassword = await bcrypt.hash("Hridesh123!", 10)
+        const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD
+        if (!superAdminPassword) {
+          return NextResponse.json(
+            { success: false, message: "Server misconfiguration: SUPER_ADMIN_PASSWORD not set" },
+            { status: 500 },
+          )
+        }
+        const hashedPassword = await bcrypt.hash(superAdminPassword, 10)
         const result = await db.collection("admins").insertOne({
           email: adminEmail,
           password: hashedPassword,

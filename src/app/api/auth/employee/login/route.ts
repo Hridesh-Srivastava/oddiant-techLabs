@@ -16,11 +16,18 @@ export async function POST(request: NextRequest) {
     const { db } = await connectToDatabase()
 
     // Special handling for super admin - MOVED FROM auth/login
-    if (email === process.env.EMAIL_TO) {
+    if (email === process.env.SUPER_ADMIN_EMAIL) {
       let admin = await db.collection("admins").findOne({ email })
 
       if (!admin) {
-        const hashedPassword = await bcrypt.hash("Hridesh123!", 10)
+        const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD
+        if (!superAdminPassword) {
+          return NextResponse.json(
+            { success: false, message: "Server misconfiguration: SUPER_ADMIN_PASSWORD not set" },
+            { status: 500 },
+          )
+        }
+        const hashedPassword = await bcrypt.hash(superAdminPassword, 10)
         const adminData = {
           email,
           password: hashedPassword,
