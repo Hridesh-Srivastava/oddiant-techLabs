@@ -449,7 +449,7 @@ export default function CandidatesPage() {
           ) : candidates.length > 0 ? (
             <div>
               {candidates.map((candidate) => (
-                <div key={candidate._id} className="p-4 grid grid-cols-7 border-t hover:bg-muted/30 transition-colors">
+                <div key={candidate._id} className="p-4 grid grid-cols-7 border-t hover:bg-muted/30 transition-colors border-l-4 border-l-blue-500">
                   <div className="col-span-2 flex items-center">
                     <Avatar className="h-8 w-8 mr-2">
                       <AvatarFallback>{candidate.name.charAt(0)}</AvatarFallback>

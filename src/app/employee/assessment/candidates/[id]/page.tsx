@@ -815,7 +815,7 @@ export default function CandidateDetailsPage() {
                     <tbody>
                       {paginatedInvitations.map((invitation) => (
                         <tr key={invitation._id} className="border-t hover:bg-muted/30">
-                          <td className="py-3 px-4">{invitation.testName}</td>
+                          <td className="py-3 px-4 border-l-4 border-l-blue-900">{invitation.testName}</td>
                           <td className="py-3 px-4">
                             <Badge variant="outline" className={getStatusColor(invitation.status)}>
                               {invitation.status}
@@ -982,7 +982,7 @@ export default function CandidateDetailsPage() {
                     <tbody>
                       {paginatedResults.map((result) => (
                         <tr key={result._id} className="border-t hover:bg-muted/30">
-                          <td className="py-3 px-4">{result.testName}</td>
+                          <td className="py-3 px-4 border-l-4 border-l-blue-500">{result.testName}</td>
                           <td className="py-3 px-4">{result.score}%</td>
                           <td className="py-3 px-4">
                             <Badge variant="outline" className={getStatusColor(result.status)}>
@@ -1102,7 +1102,7 @@ export default function CandidateDetailsPage() {
                     <tbody>
                       {paginatedVerifications.map((verification) => (
                         <tr key={verification._id} className="border-t hover:bg-muted/30">
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 border-l-4 border-l-green-500">
                             {verification.idCardImageUrl ? (
                               <a href={verification.idCardImageUrl} target="_blank" rel="noopener noreferrer">
                                 <img src={verification.idCardImageUrl} alt="ID Card" className="h-12 rounded" />

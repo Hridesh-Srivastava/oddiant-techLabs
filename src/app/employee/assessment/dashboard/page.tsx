@@ -443,7 +443,7 @@ export default function AssessmentDashboard() {
                       <tbody>
                         {paginatedTests.map((test) => (
                           <tr key={test._id} className="border-b hover:bg-muted/50">
-                            <td className="py-3 px-4">
+                            <td className="py-3 px-4 border-l-4 border-l-orange-500">
                               <Link
                                 href={`/employee/assessment/tests/${test._id}`}
                                 className="font-medium text-primary hover:underline"
@@ -559,7 +559,7 @@ export default function AssessmentDashboard() {
                       <tbody>
                         {paginatedResults.map((result) => (
                           <tr key={result._id} className="border-b hover:bg-muted/50">
-                            <td className="py-3 px-4 font-medium">{result.candidateName}</td>
+                            <td className="py-3 px-4 font-medium border-l-4 border-l-yellow-400">{result.candidateName}</td>
                             <td className="py-3 px-4">{result.testName}</td>
                             <td className="py-3 px-4">{result.score}%</td>
                             <td className="py-3 px-4">{formatDate(result.completionDate)}</td>

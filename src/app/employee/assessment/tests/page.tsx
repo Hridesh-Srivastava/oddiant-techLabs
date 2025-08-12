@@ -411,7 +411,7 @@ export default function TestsPage() {
       ) : tests.length > 0 ? (
         <div className="space-y-4">
           {tests.map((test) => (
-            <div key={test._id} className="border rounded-lg p-4 bg-background hover:bg-muted/50 transition-colors">
+            <div key={test._id} className="border rounded-lg p-4 bg-background hover:bg-muted/50 transition-colors border-l-4 border-l-green-500">
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="font-medium text-lg">

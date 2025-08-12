@@ -953,7 +953,7 @@ export default function TestDetailsPage() {
         <TabsContent value="overview">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              <Card>
+              <Card className="border-l-4 border-l-red-500 rounded-md overflow-hidden">
                 <CardHeader>
                   <CardTitle>Test Details</CardTitle>
                 </CardHeader>
@@ -999,7 +999,7 @@ export default function TestDetailsPage() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-l-4 border-l-red-500 rounded-md overflow-hidden">
                 <CardHeader>
                   <CardTitle>Test Content</CardTitle>
                 </CardHeader>
@@ -1082,7 +1082,7 @@ export default function TestDetailsPage() {
             </div>
 
             <div className="space-y-6">
-              <Card>
+              <Card className="border-l-4 border-l-purple-500 rounded-md overflow-hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Shield className="h-5 w-5" />
@@ -1173,7 +1173,7 @@ export default function TestDetailsPage() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-l-4 border-l-purple-500 rounded-md overflow-hidden">
                 <CardHeader>
                   <CardTitle>Quick Stats</CardTitle>
                 </CardHeader>
@@ -1293,7 +1293,7 @@ export default function TestDetailsPage() {
                         <tbody>
                           {candidates.map((candidate) => (
                             <tr key={candidate._id} className="border-t hover:bg-muted/30">
-                              <td className="py-3 px-4">{candidate.name}</td>
+                              <td className="py-3 px-4 border-l-4 border-l-blue-900">{candidate.name}</td>
                               <td className="py-3 px-4">{candidate.email}</td>
                               <td className="py-3 px-4">
                                 <Badge variant="outline" className={getCandidateStatusColor(candidate.status)}>
@@ -1435,7 +1435,7 @@ export default function TestDetailsPage() {
                         <tbody>
                           {results.map((result) => (
                             <tr key={result._id} className="border-t hover:bg-muted/30">
-                              <td className="py-3 px-4">{result.candidateName || "N/A"}</td>
+                              <td className="py-3 px-4 border-l-4 border-l-blue-500">{result.candidateName || "N/A"}</td>
                               <td className="py-3 px-4">{result.candidateEmail}</td>
                               <td className="py-3 px-4">{result.resultsDeclared ? `${result.score}%` : "Pending"}</td>
                               <td className="py-3 px-4">

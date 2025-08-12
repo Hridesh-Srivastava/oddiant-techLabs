@@ -22,7 +22,7 @@ export function AtsScoreFilter({ onFilterChange }: AtsScoreFilterProps) {
   }
 
   return (
-    <Card>
+    <Card className="border-l-4 border-l-red-500 rounded-md overflow-hidden">
       <CardHeader>
         <CardTitle className="text-lg">ATS Score Filter</CardTitle>
       </CardHeader>

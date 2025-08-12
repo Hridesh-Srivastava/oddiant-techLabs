@@ -16,6 +16,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast, Toaster } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import StudentAvatarUpload from "@/components/student-avatar-upload";
 import {
   User,
@@ -498,6 +506,31 @@ export default function StudentDashboardPage() {
     useState(false);
 
   const [globalSearch, setGlobalSearch] = useState("");
+
+  // Danger Zone state
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    try {
+      setIsDeletingAccount(true);
+      const res = await fetch("/api/student/delete-account", { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.message || "Failed to delete account");
+      }
+      toast.success("Account deleted successfully");
+      // Small delay for toast visibility and cookie cleanup
+      setTimeout(() => {
+        router.push("/auth/register");
+      }, 400);
+    } catch (err) {
+      toast.error((err as Error).message || "Failed to delete account");
+    } finally {
+      setIsDeletingAccount(false);
+      setShowDeleteAccountDialog(false);
+    }
+  };
   const [searchResults, setSearchResults] = useState<{
     jobs: JobPosting[];
     applications: Application[];
@@ -4224,6 +4257,57 @@ export default function StudentDashboardPage() {
                 </div>
               </CardContent>
             </Card>
+            {/* Danger Zone Card */}
+            <Card className="mt-6 border border-red-700/60 bg-red-500/10">
+              <CardHeader>
+                <CardTitle className="text-red-800">Danger Zone</CardTitle>
+                <CardDescription className="text-red-700">
+                  Permanently delete your account and all associated data. This action cannot be undone.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="text-sm text-red-800/90">
+                    Deleting your account will remove your profile, applications, and data from our systems.
+                  </div>
+                  <Button
+                    variant="destructive"
+                    className="bg-red-600 hover:bg-red-700"
+                    onClick={() => setShowDeleteAccountDialog(true)}
+                  >
+                    Delete Account
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Delete Account Confirmation Dialog */}
+            <Dialog open={showDeleteAccountDialog} onOpenChange={setShowDeleteAccountDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete Account</DialogTitle>
+                  <DialogDescription>
+                    Are you sure you want to permanently delete your account? This action cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="text-sm text-muted-foreground">
+                  Your account will be removed from our database. You will be signed out and redirected to registration.
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowDeleteAccountDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="bg-red-600 hover:bg-red-700"
+                    disabled={isDeletingAccount}
+                    onClick={handleDeleteAccount}
+                  >
+                    {isDeletingAccount ? "Deleting..." : "Delete Account"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
       </main>

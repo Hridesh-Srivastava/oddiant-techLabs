@@ -3081,7 +3081,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
           )}
 
           {activeTab === "settings" && (
-            <Card>
+            <Card className="border-l-4 border-l-blue-900 rounded-md overflow-hidden">
               <CardHeader>
                 <CardTitle className="text-center font-lg">Account Settings</CardTitle>
                 <CardDescription className="text-center">Manage your account preferences</CardDescription>
@@ -3600,7 +3600,7 @@ function EmployeeDashboard({ userData = null }: EmployeeDashboardProps) {
           )}
 
           {activeTab === "settings" && (
-            <Card>
+            <Card className="border-l-4 border-l-blue-900 rounded-md overflow-hidden">
               <CardHeader>
                 <CardTitle>Account Settings</CardTitle>
                 <CardDescription>Manage your account preferences</CardDescription>

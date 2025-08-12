@@ -404,7 +404,7 @@ export default function ResultDetailsPage() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Candidate Information */}
-          <Card>
+          <Card className="border-l-4 border-l-green-500 rounded-md overflow-hidden">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
@@ -458,7 +458,7 @@ export default function ResultDetailsPage() {
           </Card>
 
           {/* Question-wise Analysis */}
-          <Card>
+          <Card className="border-l-4 border-l-green-500 rounded-md overflow-hidden">
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
@@ -663,7 +663,7 @@ export default function ResultDetailsPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Test Score */}
-          <Card>
+          <Card className="border-l-4 border-l-blue-500 rounded-md overflow-hidden">
             <CardHeader>
               <CardTitle>Test Score</CardTitle>
             </CardHeader>
@@ -712,7 +712,7 @@ export default function ResultDetailsPage() {
           </Card>
 
           {/* Actions */}
-          <Card>
+          <Card className="border-l-4 border-l-blue-500 rounded-md overflow-hidden">
             <CardHeader>
               <CardTitle>Actions</CardTitle>
             </CardHeader>

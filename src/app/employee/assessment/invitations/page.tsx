@@ -498,7 +498,7 @@ export default function InvitationsPage() {
                         <tbody>
                           {invitations.map((invitation) => (
                             <tr key={invitation._id} className="border-b hover:bg-muted/50">
-                              <td className="py-3 px-4">
+                              <td className="py-3 px-4 border-l-4 border-l-red-500">
                                 <div>
                                   <div className="font-medium">{invitation.email}</div>
                                   <div className="text-xs text-muted-foreground font-mono bg-gray-100 px-2 py-1 rounded mt-1 inline-block">
@@ -596,7 +596,7 @@ export default function InvitationsPage() {
 
           {/* Right Column - Send Invitations & Links */}
           <div className="space-y-6">
-            <Card>
+            <Card className="border-l-4 border-l-pink-500 rounded-md overflow-hidden">
               <CardHeader>
                 <CardTitle>Send Invitations</CardTitle>
                 <p className="text-sm text-muted-foreground">Invite candidates to take your assessment tests</p>

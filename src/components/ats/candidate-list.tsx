@@ -178,10 +178,8 @@ export function CandidateList({
           candidates.map((candidate) => (
             <div
               key={candidate._id}
-              className={`candidate-card p-4 hover:bg-gray-50 transition-colors border-l-2 ${
-                selectedCandidateId === candidate._id
-                  ? "bg-gray-100 border-l-blue-500"
-                  : "border-l-transparent"
+              className={`candidate-card p-4 hover:bg-gray-50 transition-colors border-l-4 border-l-blue-500 ${
+                selectedCandidateId === candidate._id ? "bg-gray-100" : ""
               }`}
             >
               <div className="flex items-start">

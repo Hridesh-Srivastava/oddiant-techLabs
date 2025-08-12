@@ -556,7 +556,7 @@ export default function ResultsPage() {
               ) : results.length > 0 ? (
                 results.map((result) => (
                   <tr key={result._id} className="border-t hover:bg-muted/30">
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4 border-l-4 border-l-amber-400">
                       <div>
                         <div className="font-medium">{result.candidateName}</div>
                         <div className="text-sm text-muted-foreground">{result.candidateEmail}</div>

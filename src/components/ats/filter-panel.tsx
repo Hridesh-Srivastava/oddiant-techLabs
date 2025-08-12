@@ -857,7 +857,7 @@ export function FilterPanel({ filters, setFilters, applyAtsScoreFilter, applyCus
         </Button>
       </div>
 
-      <Card>
+  <Card className="border-l-4 border-l-red-500 rounded-md overflow-hidden">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">ATS Score Filter</CardTitle>
         </CardHeader>
