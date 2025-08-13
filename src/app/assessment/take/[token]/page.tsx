@@ -207,6 +207,54 @@ export default function TakeTestPage() {
   const notepadStorageKey = `notepad_${token}`
   const notepadInitializedRef = useRef(false)
 
+  // Fullscreen enforcement dialog state (additive, does not affect existing logic)
+  const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(false)
+
+  // Detect exiting fullscreen and show prompt (non-invasive)
+  useEffect(() => {
+    if (testCompleted || testTerminated) {
+      setShowFullscreenPrompt(false)
+      return
+    }
+    const handleFsChange = () => {
+      const inFullscreen = !!document.fullscreenElement
+      if (!inFullscreen) {
+        setShowFullscreenPrompt(true)
+      } else {
+        setShowFullscreenPrompt(false)
+      }
+      // Keep system check fullscreen status in sync (additive)
+      setSystemChecks(prev => ({ ...prev, fullscreenMode: inFullscreen }))
+    }
+    document.addEventListener('fullscreenchange', handleFsChange)
+    // Initial check (in case already not fullscreen)
+    setTimeout(handleFsChange, 0)
+    return () => document.removeEventListener('fullscreenchange', handleFsChange)
+  }, [testCompleted, testTerminated])
+
+  const requestFullscreen = useCallback(() => {
+    try {
+      const el: any = document.documentElement
+      if (el.requestFullscreen) {
+        el.requestFullscreen().catch(() => { toast.error('Failed to enter fullscreen') })
+      } else if (el.webkitRequestFullscreen) {
+        el.webkitRequestFullscreen()
+      } else if (el.msRequestFullscreen) {
+        el.msRequestFullscreen()
+      }
+    } catch (e) {
+      console.warn('Fullscreen request error', e)
+      toast.error('Fullscreen not supported')
+    }
+  }, [])
+
+  // Auto-enter fullscreen the moment the actual test view becomes active (additive & idempotent)
+  useEffect(() => {
+    if (activeTab === 'test' && !testCompleted && !testTerminated && startTime && !document.fullscreenElement) {
+      requestFullscreen()
+    }
+  }, [activeTab, startTime, testCompleted, testTerminated, requestFullscreen])
+
   // Load notepad content from localStorage on mount
   useEffect(() => {
     try {
@@ -1685,6 +1733,10 @@ export default function TakeTestPage() {
     if (!webcamInitializedRef.current && webcamEnabled) {
       startWebcam()
     }
+    // Ensure fullscreen when entering test from instructions (user gesture)
+    if (!document.fullscreenElement) {
+      requestFullscreen()
+    }
   }
 
   const getCurrentQuestionKey = () => {
@@ -1878,6 +1930,10 @@ export default function TakeTestPage() {
     // Start the test
     setActiveTab("test")
     setStartTime(new Date())
+    // Attempt fullscreen immediately on starting exam (user gesture context)
+    if (!document.fullscreenElement) {
+      requestFullscreen()
+    }
   }
 
   // Scientific Calculator functions
@@ -2065,9 +2121,6 @@ export default function TakeTestPage() {
               <h1 className="text-2xl font-bold text-red-600 mb-2">Test Terminated</h1>
               <p className="text-muted-foreground mb-4">
                 Your test has been terminated due to excessive tab switching violations ({tabSwitchCount}/3).
-              </p>
-              <p className="text-sm text-muted-foreground mb-6">
-                Your current progress has been saved and submitted automatically.
               </p>
               <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => router.push("/")}>Return to Home</Button>
             </CardContent>
@@ -3471,6 +3524,31 @@ export default function TakeTestPage() {
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Fullscreen Enforcement Dialog */}
+        <Dialog open={showFullscreenPrompt} onOpenChange={() => { /* Prevent manual close unless re-entered */ }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Fullscreen Required</DialogTitle>
+            </DialogHeader>
+            <div className="py-4 space-y-3">
+              <p className="text-sm">
+                The test is paused because you exited fullscreen. To continue, please return to fullscreen mode. This helps prevent accidental navigation and ensures a distraction-free environment.
+              </p>
+              <p className="text-xs text-muted-foreground">(Your current answers are preserved.)</p>
+              <div className="pt-2 flex justify-end">
+                <Button
+                  className="bg-black text-white hover:text-black hover:bg-green-600"
+                  onClick={() => {
+                    requestFullscreen()
+                  }}
+                >
+                  Continue (Enter Fullscreen)
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Notepad Dialog */}
   <Dialog open={showNotepad} onOpenChange={setShowNotepad}>

@@ -1131,9 +1131,6 @@ export default function TestPreviewPage() {
                 <p className="text-muted-foreground mb-4">
                   Your test has been terminated due to excessive tab switching violations ({tabSwitchCount}/3).
                 </p>
-                <p className="text-sm text-muted-foreground mb-6">
-                  Your current progress has been saved and submitted automatically.
-                </p>
                 <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => router.push(`/employee/assessment/tests/${testId}`)}>
                   Return to Test Overview
                 </Button>
