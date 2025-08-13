@@ -1566,7 +1566,7 @@ export default function TestDetailsPage() {
             <Button variant="outline" onClick={() => setShowStatusDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleChangeStatus} disabled={isChangingStatus}>
+            <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={handleChangeStatus} disabled={isChangingStatus}>
               {isChangingStatus ? "Updating..." : `Change to ${newStatus}`}
             </Button>
           </DialogFooter>
