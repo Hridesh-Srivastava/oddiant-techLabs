@@ -1953,7 +1953,7 @@ export default function TestPreviewPage() {
                   monitored.
                 </p>
                 <div className="flex justify-end">
-                  <Button onClick={() => setShowTabWarning(false)}>I Understand</Button>
+                  <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={() => setShowTabWarning(false)}>I Understand</Button>
                 </div>
               </div>
             </DialogContent>
