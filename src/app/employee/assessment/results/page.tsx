@@ -676,7 +676,7 @@ export default function ResultsPage() {
             <Button variant="outline" onClick={() => setShowDeclareResultsDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleDeclareResult} disabled={isDeclaringResult}>
+            <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={handleDeclareResult} disabled={isDeclaringResult}>
               {isDeclaringResult ? (
                 "Declaring..."
               ) : (

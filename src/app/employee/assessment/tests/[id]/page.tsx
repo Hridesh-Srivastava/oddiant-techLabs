@@ -1616,7 +1616,7 @@ export default function TestDetailsPage() {
             <Button variant="outline" onClick={() => setShowDeclareIndividualResultDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleDeclareIndividualResult} disabled={isDeclaringIndividualResult}>
+            <Button className="bg-black text-white hover:text-black hover:bg-green-600" onClick={handleDeclareIndividualResult} disabled={isDeclaringIndividualResult}>
               {isDeclaringIndividualResult ? (
                 "Declaring..."
               ) : (

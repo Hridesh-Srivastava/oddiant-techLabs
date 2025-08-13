@@ -416,7 +416,15 @@ export default function TestResultPage() {
                           {question.code && (
                             <div className="p-3 border rounded-md bg-white/80 dark:bg-slate-900/20">
                               <div className="flex justify-between items-center mb-2">
-                                <span className="text-sm font-medium">Final Submitted Code{question.language ? ` (${question.language})` : ''}</span>
+                                <span className="text-sm font-medium">
+                                  {(() => {
+                                    const fallbackLang = (question.codeSubmissions && question.codeSubmissions.length > 0)
+                                      ? question.codeSubmissions[question.codeSubmissions.length - 1]?.language
+                                      : '';
+                                    const displayLang = fallbackLang || question.language || '';
+                                    return `Final Submitted Code${displayLang ? ` (${displayLang})` : ''}`;
+                                  })()}
+                                </span>
                                 <button
                                   onClick={() => { navigator.clipboard.writeText(String(question.code || '')).then(() => toast.success('Code copied')).catch(() => toast.error('Copy failed')); }}
                                   className="text-xs px-2 py-1 rounded bg-black text-white hover:bg-green-600 hover:text-black transition-colors"

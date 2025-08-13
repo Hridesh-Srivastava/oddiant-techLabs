@@ -144,6 +144,30 @@ export async function generateAssessmentResultExcel(
 
     currentRow++ // Empty row
 
+    // Identifiers (Result ID and Test ID)
+    summarySheet.getCell(`A${currentRow}`).value = "IDENTIFIERS"
+    summarySheet.getCell(`A${currentRow}`).font = { bold: true, size: 12 }
+    summarySheet.getCell(`A${currentRow}`).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFF0F0F0" },
+    }
+    summarySheet.mergeCells(`A${currentRow}:B${currentRow}`)
+    currentRow++
+
+    const identifiersData = [
+      ["Result ID", result._id],
+      ["Test ID", result.testId],
+    ]
+
+    identifiersData.forEach(([field, value]) => {
+      summarySheet.getCell(`A${currentRow}`).value = field
+      summarySheet.getCell(`B${currentRow}`).value = value
+      currentRow++
+    })
+
+    currentRow++ // Empty row
+
     // Test Information
     summarySheet.getCell(`A${currentRow}`).value = "TEST INFORMATION"
     summarySheet.getCell(`A${currentRow}`).font = { bold: true, size: 12 }
@@ -294,6 +318,129 @@ export async function generateAssessmentResultExcel(
       })
     }
 
+  // Coding-specific sheets (Final Code, Test Cases, Submissions)
+    // Minimal structural types to describe coding extras without changing existing logic
+    type CodingCase = { input?: string; expectedOutput?: string; actualOutput?: string; passed?: boolean }
+    type CodeSubmission = {
+      code?: string; language?: string; timestamp?: string | Date; allPassed?: boolean;
+      passedCount?: number; totalCount?: number; results?: CodingCase[]
+    }
+    type AnswerLike = {
+      questionId?: string; questionType?: string; type?: string; language?: string; code?: string;
+      codeSubmissions?: CodeSubmission[]; codingTestResults?: CodingCase[]
+    }
+  const answersAny = (result as unknown as { answers?: Array<AnswerLike> }).answers
+    const codingAnswers = (answersAny || []).filter((a) => {
+      const qt = a.questionType || a.type
+      return typeof qt === 'string' && qt.toLowerCase() === 'coding'
+    })
+
+    if (codingAnswers.length > 0) {
+      // Final Code sheet
+      const codeSheet = workbook.addWorksheet("Coding Final Code")
+      codeSheet.columns = [
+        { header: "Q. No.", key: "qno", width: 8 },
+        { header: "Question ID", key: "qid", width: 26 },
+        { header: "Language", key: "lang", width: 14 },
+        { header: "Final Code", key: "code", width: 120 },
+      ]
+
+      codingAnswers.forEach((ans, idx) => {
+        const subs = Array.isArray(ans.codeSubmissions) ? ans.codeSubmissions : []
+        const fallbackLang = subs.length > 0 ? subs[subs.length - 1]?.language : undefined
+        const displayLang = fallbackLang || ans.language || ''
+        const row = codeSheet.addRow({
+          qno: idx + 1,
+          qid: ans.questionId || '',
+          lang: displayLang,
+          code: ans.code || '',
+        })
+        row.getCell('code').alignment = { wrapText: true, vertical: 'top' }
+        row.height = 120
+      })
+
+      // Coding Test Cases sheet (if any)
+      const anyHasCases = codingAnswers.some(a => Array.isArray(a.codingTestResults) && a.codingTestResults.length > 0)
+      if (anyHasCases) {
+        const casesSheet = workbook.addWorksheet("Coding Test Cases")
+        casesSheet.columns = [
+          { header: "Q. No.", key: "qno", width: 8 },
+          { header: "Case #", key: "caseNo", width: 8 },
+          { header: "Input", key: "input", width: 40 },
+          { header: "Expected", key: "expected", width: 40 },
+          { header: "Actual", key: "actual", width: 40 },
+          { header: "Passed", key: "passed", width: 10 },
+        ]
+
+        codingAnswers.forEach((ans, idx) => {
+          const cases = Array.isArray(ans.codingTestResults) ? ans.codingTestResults : []
+          cases.forEach((tc: CodingCase, cIdx: number) => {
+            const row = casesSheet.addRow({
+              qno: idx + 1,
+              caseNo: cIdx + 1,
+              input: tc?.input ?? '',
+              expected: tc?.expectedOutput ?? '',
+              actual: tc?.actualOutput ?? '',
+              passed: tc?.passed ? 'Yes' : 'No',
+            })
+            row.getCell('input').alignment = { wrapText: true, vertical: 'top' }
+            row.getCell('expected').alignment = { wrapText: true, vertical: 'top' }
+            row.getCell('actual').alignment = { wrapText: true, vertical: 'top' }
+          })
+        })
+      }
+
+      // Coding Submissions sheet (history)
+  const anyHasSubs = codingAnswers.some(a => Array.isArray(a.codeSubmissions) && a.codeSubmissions.length > 0)
+      if (anyHasSubs) {
+        const subsSheet = workbook.addWorksheet("Coding Submissions")
+        subsSheet.columns = [
+          { header: "Q. No.", key: "qno", width: 8 },
+          { header: "Attempt #", key: "attempt", width: 10 },
+          { header: "Timestamp", key: "ts", width: 22 },
+          { header: "Language", key: "lang", width: 14 },
+          { header: "Passed Count", key: "passed", width: 12 },
+          { header: "Total Count", key: "total", width: 12 },
+          { header: "All Passed", key: "all", width: 10 },
+          { header: "Code", key: "code", width: 100 },
+          { header: "Results (JSON)", key: "results", width: 80 },
+        ]
+
+        codingAnswers.forEach((ans, idx) => {
+    const subs = Array.isArray(ans.codeSubmissions) ? ans.codeSubmissions as CodeSubmission[] : []
+    subs.forEach((s: CodeSubmission, sIdx: number) => {
+            const attemptNo = sIdx + 1
+            let resultsJson = ''
+            try {
+              if (Array.isArray(s.results)) {
+                resultsJson = JSON.stringify(
+      s.results.map((r: CodingCase) => ({
+                    passed: !!r?.passed,
+                    input: r?.input ?? '',
+                    expectedOutput: r?.expectedOutput ?? '',
+                    actualOutput: r?.actualOutput ?? '',
+                  }))
+                )
+              }
+            } catch {}
+            const row = subsSheet.addRow({
+              qno: idx + 1,
+              attempt: attemptNo,
+              ts: s?.timestamp ? new Date(s.timestamp).toLocaleString() : '',
+              lang: s?.language || '',
+              passed: s?.passedCount ?? '',
+              total: s?.totalCount ?? '',
+              all: s?.allPassed ? 'Yes' : 'No',
+              code: s?.code || '',
+              results: resultsJson,
+            })
+            row.getCell('code').alignment = { wrapText: true, vertical: 'top' }
+            row.getCell('results').alignment = { wrapText: true, vertical: 'top' }
+          })
+        })
+      }
+    }
+
     // Test Configuration Sheet
     const configSheet = workbook.addWorksheet("Test Configuration")
 
@@ -344,6 +491,7 @@ export async function generateAssessmentResultExcel(
     console.log("Assessment Excel generation complete, buffer size:", buffer.length)
 
     return buffer
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error("Error in Assessment Excel generation:", error)
     throw new Error(`Failed to generate Assessment Excel file: ${error.message}`)
@@ -398,6 +546,7 @@ export async function createFallbackAssessmentExcel(result: AssessmentResultData
     const buffer = Buffer.from(uint8Array)
     console.log("Fallback Assessment Excel file created successfully, buffer size:", buffer.length)
     return buffer
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (fallbackError: any) {
     console.error("Error creating fallback Assessment Excel:", fallbackError)
     throw new Error(`Failed to create fallback Assessment Excel: ${fallbackError.message}`)

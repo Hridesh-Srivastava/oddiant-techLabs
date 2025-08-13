@@ -108,6 +108,7 @@ export default function ResultDetailsPage() {
 
   useEffect(() => {
     fetchResult()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resultId])
 
   const fetchResult = async () => {
@@ -531,7 +532,15 @@ export default function ResultDetailsPage() {
                             {answer.code && (
                               <div className="p-3 border rounded-md bg-white/80 dark:bg-slate-900/20">
                                 <div className="flex justify-between items-center mb-2">
-                                  <span className="text-sm font-medium">Final Submitted Code{answer.language ? ` (${answer.language})` : ''}</span>
+                                  <span className="text-sm font-medium">
+                                    {(() => {
+                                      const fallbackLang = (answer.codeSubmissions && answer.codeSubmissions.length > 0)
+                                        ? answer.codeSubmissions[answer.codeSubmissions.length - 1]?.language
+                                        : '';
+                                      const displayLang = fallbackLang || answer.language || '';
+                                      return `Final Submitted Code${displayLang ? ` (${displayLang})` : ''}`;
+                                    })()}
+                                  </span>
                                   <button
                                     onClick={() => {
                                       navigator.clipboard.writeText(String(answer.code || ''))
