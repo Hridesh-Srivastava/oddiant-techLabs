@@ -277,14 +277,18 @@ export default function RegisterForm() {
     <div className="space-y-6">
       {/* Progress indicator with clickable steps */}
       <div className="space-y-2.5">
-        <div className="flex justify-between">
+        <div className="flex flex-wrap gap-2 sm:gap-4 justify-start sm:justify-between">
           {steps.map((step, index) => (
             <button
               key={step.id}
               onClick={() => setCurrentStep(index)}
-              className={`text-sm font-medium cursor-pointer ${
-                index <= currentStep ? "text-blue-600" : "text-gray-400"
-              } hover:text-blue-800 transition-colors`}
+              className={`text-xs sm:text-sm font-medium cursor-pointer px-2 py-1 rounded-md transition-colors ${
+                index === currentStep
+                  ? "bg-blue-100 text-blue-700"
+                  : index < currentStep
+                  ? "text-blue-600 hover:text-blue-700"
+                  : "text-gray-400 hover:text-gray-500"
+              }`}
               type="button"
             >
               {step.label}
@@ -298,18 +302,24 @@ export default function RegisterForm() {
       <div className="mt-6">{renderStep()}</div>
 
       {/* Navigation buttons */}
-      <div className="flex justify-between mt-8">
-        <Button type="button" variant="outline" onClick={handlePrevious} disabled={currentStep === 0 || isSubmitting}>
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between mt-8">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handlePrevious}
+          disabled={currentStep === 0 || isSubmitting}
+          className="w-full sm:w-auto"
+        >
           Previous
         </Button>
 
         {currentStep < steps.length - 1 ? (
-          <Button type="button" onClick={handleNext} disabled={isSubmitting}>
+          <Button type="button" onClick={handleNext} disabled={isSubmitting} className="w-full sm:w-auto">
             Next
           </Button>
         ) : (
           <Button
-            className="hover:bg-green-600 hover:text-black"
+            className="w-full sm:w-auto hover:bg-green-600 hover:text-black"
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting}

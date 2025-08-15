@@ -27,7 +27,8 @@ export default function RegisterPage() {
         
         <div className="bg-white rounded-xl shadow-xl overflow-hidden">
         <div className="md:flex">
-          <div className="hidden md:block md:w-1/3 bg-gradient-to-br from-blue-900 to-purple-900 p-8 text-white">
+          {/* Side benefit panel now visible on mobile and stacks above the form */}
+          <div className="w-full md:w-1/3 bg-gradient-to-br from-blue-900 to-purple-900 p-6 md:p-8 text-white">
             <h2 className="text-2xl font-bold mb-6 text-white">Join Our Community</h2>
             <p className="mb-4">Create an account to access exclusive resources and opportunities.</p>
             <ul className="space-y-2">
@@ -81,7 +82,7 @@ export default function RegisterPage() {
               </li>
             </ul>
           </div>
-          <div className="w-full md:w-2/3 p-8">
+          <div className="w-full md:w-2/3 p-6 md:p-8">
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold text-gray-800">Create Your Account</h1>
               <p className="text-gray-600">Fill out the form to get started</p>
